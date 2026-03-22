@@ -1,0 +1,238 @@
+/* ─── Reset ─────────────────────────────────────────────── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ─── Design Tokens ─────────────────────────────────────── */
+:root {
+  --mitzy-coral: #FF5C5C;
+  --mitzy-coralDeep: #E53A3A;
+  --mitzy-yellow: #FFD93D;
+  --mitzy-yellowDeep: #E6B800;
+  --mitzy-mint: #6BCB77;
+  --mitzy-mintDeep: #3FAE4E;
+  --mitzy-sky: #4ECDC4;
+  --mitzy-skyDeep: #19AFA5;
+  --mitzy-lav: #C77DFF;
+  --mitzy-lavDeep: #9B4DE1;
+  --mitzy-orange: #FF9F1C;
+  --mitzy-orangeDeep: #E37E00;
+  --mitzy-off: #FFF8F0;
+  --mitzy-white: #FFFFFF;
+  --mitzy-ink: #1A1A2E;
+  --mitzy-muted: #9B9B9B;
+  --mitzy-light: #F3F3F3;
+
+  --r-12: 12px;
+  --r-14: 14px;
+  --r-16: 16px;
+  --r-20: 20px;
+  --r-24: 24px;
+  --r-28: 28px;
+  --r-32: 32px;
+
+  --fs-h1: 28px;
+  --fs-h2: 24px;
+  --fs-label: 15px;
+  --fs-task: 18px;
+  --fs-body: 16px;
+  --fs-small: 13px;
+}
+
+/* ─── Root Layout ────────────────────────────────────────── */
+.mr {
+  background: transparent;
+  min-height: 100vh;
+  font-family: 'DM Sans', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  padding-bottom: 86px;
+}
+
+/* ─── Typography ─────────────────────────────────────────── */
+.mf { font-family: 'Fredoka One', cursive; }
+.fontRead { font-family: 'DM Sans', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+
+/* ─── Paper Texture ──────────────────────────────────────── */
+.paper {
+  background-color: var(--mitzy-off);
+  background-image:
+    radial-gradient(circle at 14px 10px, rgba(255,92,92,0.06) 0 1.2px, transparent 1.2px),
+    radial-gradient(circle at 34px 28px, rgba(78,205,196,0.055) 0 1.1px, transparent 1.1px),
+    radial-gradient(circle at 18px 42px, rgba(199,125,255,0.05) 0 1px, transparent 1px),
+    conic-gradient(from 45deg at 30px 30px, rgba(255,217,61,0.045) 0 25%, transparent 0 100%);
+  background-size: 52px 52px, 68px 68px, 58px 58px, 76px 76px;
+  background-position: 0 0, 10px 2px, 6px 18px, 0 0;
+}
+
+/* ─── Shadows ────────────────────────────────────────────── */
+.shadowCoral  { box-shadow: 0 10px 0 rgba(229,58,58,0.55),   0 18px 26px rgba(229,58,58,0.14); }
+.shadowYellow { box-shadow: 0 10px 0 rgba(230,184,0,0.45),   0 18px 26px rgba(230,184,0,0.12); }
+.shadowMint   { box-shadow: 0 10px 0 rgba(63,174,78,0.45),   0 18px 26px rgba(63,174,78,0.12); }
+.shadowLav    { box-shadow: 0 10px 0 rgba(155,77,225,0.42),  0 18px 26px rgba(155,77,225,0.12); }
+.shadowSky    { box-shadow: 0 10px 0 rgba(25,175,165,0.42),  0 18px 26px rgba(25,175,165,0.12); }
+.shadowOrange { box-shadow: 0 10px 0 rgba(227,126,0,0.42),   0 18px 26px rgba(227,126,0,0.12); }
+
+/* ─── Buttons ────────────────────────────────────────────── */
+.pb {
+  font-family: 'Fredoka One', cursive;
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+.pb:active { transform: translateY(2px) scale(0.985); }
+
+.tc { transition: transform 0.12s; }
+.tc:hover { transform: translateY(-2px) rotate(0.2deg); }
+
+.btnPrimary   { border: none; border-radius: var(--r-16); font-weight: 700; }
+.btnSecondary { border: none; border-radius: var(--r-14); font-weight: 700; }
+.btnGhost     { background: transparent; border: none; border-radius: var(--r-14); font-weight: 700; }
+
+/* ─── Section Header ─────────────────────────────────────── */
+.sectionLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  letter-spacing: 0.2px;
+}
+
+.sectionSquiggle {
+  width: 26px;
+  height: 10px;
+  display: inline-block;
+  background:
+    radial-gradient(circle at 6px 5px,  currentColor 0 1.5px, transparent 1.6px),
+    radial-gradient(circle at 14px 3px, currentColor 0 1.5px, transparent 1.6px),
+    radial-gradient(circle at 22px 6px, currentColor 0 1.5px, transparent 1.6px);
+  opacity: 0.75;
+}
+
+/* ─── Category Badge ─────────────────────────────────────── */
+.patchBadge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1;
+  transform: rotate(2deg);
+  border: 3px solid rgba(255,255,255,0.85);
+  background:
+    radial-gradient(circle at 6px 6px,  rgba(255,255,255,0.55) 0 1px, transparent 1.1px),
+    radial-gradient(circle at 12px 14px, rgba(255,255,255,0.45) 0 1px, transparent 1.1px),
+    radial-gradient(circle at 20px 8px,  rgba(255,255,255,0.42) 0 1px, transparent 1.1px);
+}
+
+/* ─── Greeting Note ──────────────────────────────────────── */
+.stickyNote {
+  position: relative;
+  border-radius: var(--r-28);
+  border: 4px solid rgba(255,92,92,0.25);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.92)),
+    radial-gradient(circle at 14px 14px, rgba(255,92,92,0.06) 0 1.2px, transparent 1.2px),
+    radial-gradient(circle at 34px 28px, rgba(78,205,196,0.05) 0 1.1px, transparent 1.1px);
+  background-size: auto, 52px 52px, 68px 68px;
+  background-position: 0 0, 0 0, 10px 2px;
+  overflow: hidden;
+}
+.stickyNote::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 10px 0px,  rgba(255,255,255,0.7)  0 12px, transparent 13px),
+    radial-gradient(circle at 60px 2px,  rgba(255,255,255,0.55) 0 10px, transparent 11px),
+    radial-gradient(circle at 120px 0px, rgba(255,255,255,0.6)  0 11px, transparent 12px);
+  opacity: 0.55;
+  mix-blend-mode: overlay;
+}
+
+/* ─── Nav ────────────────────────────────────────────────── */
+.navBlob {
+  position: absolute;
+  inset: 6px 10px 8px;
+  border-radius: 999px;
+  transform: rotate(-2.5deg);
+  filter: saturate(1.05);
+}
+
+/* ─── Celebration Text ───────────────────────────────────── */
+.radt {
+  position: absolute;
+  font-family: 'Fredoka One', cursive;
+  font-size: clamp(56px, 10vw, 110px);
+  white-space: nowrap;
+  letter-spacing: 1px;
+  transform: translateX(-50%) rotate(-10deg);
+  animation: rf 1.8s ease-out forwards;
+  text-shadow:
+    -4px -4px 0 rgba(255,255,255,0.95),
+     4px -4px 0 rgba(255,255,255,0.95),
+    -4px  4px 0 rgba(255,255,255,0.95),
+     4px  4px 0 rgba(255,255,255,0.95);
+}
+
+/* ─── Animations ─────────────────────────────────────────── */
+@keyframes bIn {
+  0%   { transform: scale(0.88) translateY(10px); opacity: 0; }
+  65%  { transform: scale(1.03); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes sUp {
+  0%   { transform: translateY(22px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+@keyframes pIn {
+  0%   { transform: scale(0.93); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes rf {
+  0%   { transform: translateX(-120%) rotate(-8deg); opacity: 0; }
+  10%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translateX(120vw) rotate(5deg); opacity: 0; }
+}
+@keyframes kw {
+  0%   { left: -80px; }
+  100% { left: calc(100vw + 80px); }
+}
+@keyframes kb {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-16px); }
+}
+@keyframes sh {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+@keyframes cf {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+.bIn   { animation: bIn 0.32s ease-out forwards; }
+.sUp   { animation: sUp 0.26s ease-out forwards; }
+.pIn   { animation: pIn 0.2s ease-out forwards; }
+.kitty { position: fixed; bottom: 72px; font-size: 32px; animation: kw 3s linear forwards, kb 0.35s ease-in-out infinite; z-index: 8889; pointer-events: none; }
+.sh    { background: linear-gradient(90deg, #f0f0f0 25%, #fafafa 50%, #f0f0f0 75%); background-size: 800px 100%; animation: sh 1.5s infinite; }
+
+/* ─── Form Elements ──────────────────────────────────────── */
+input, select {
+  font-family: 'DM Sans', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  background: rgba(255,255,255,0.92);
+  border: 3px solid rgba(255,92,92,0.22);
+  border-radius: var(--r-16);
+  padding: 12px 14px;
+  font-size: 15px;
+  width: 100%;
+  color: #1A1A2E;
+  outline: none;
+}
+input:focus, select:focus {
+  border-color: #FF5C5C;
+  box-shadow: 0 0 0 4px rgba(255,92,92,0.16);
+}
+input::placeholder { color: #C4BAB0; }
+select { appearance: none; }
