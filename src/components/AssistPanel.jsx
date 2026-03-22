@@ -2,10 +2,7 @@ import { useState, useEffect } from "react";
 import { C } from "../data/constants";
 import { Sheet } from "./Sheet";
 import { saveS, ASSIST_CACHE_PREFIX, ASSIST_CACHE_TTL } from "../utils/storage";
-
-// NOTE: Real AI calls must go through a Vercel Edge Function proxy (/api/assist).
-// Never call the Anthropic API directly from the frontend.
-// buildAssistPrompt() is already wired — just needs the proxy endpoint.
+import { buildAssistPrompt } from "../utils/assistPrompt";
 
 const ASSIST_LABELS = {
   providers: "I found these for you ✦",
@@ -13,25 +10,6 @@ const ASSIST_LABELS = {
   deadline:  "Dates + links ✦",
   guidance:  "How to handle this ✦",
 };
-
-const MOCK_RESULTS = {
-  providers: JSON.stringify([
-    { name: "Sunrise Home Services",    rating: "4.8", phone: "(503) 555-0142", website: "https://example.com", bookingUrl: "https://example.com/book",     hasOnlineBooking: true,  priceRange: "$80-120", insuranceNote: "", blurb: "Highly responsive, books online in minutes." },
-    { name: "Pacific Northwest Pros",   rating: "4.7", phone: "(503) 555-0198", website: "https://example.com", bookingUrl: null,                            hasOnlineBooking: false, priceRange: "$70-110", insuranceNote: "", blurb: "15 years in business, fully licensed and bonded." },
-    { name: "QuickFix Home Care",       rating: "4.5", phone: "(971) 555-0231", website: "https://example.com", bookingUrl: "https://example.com/schedule", hasOnlineBooking: true,  priceRange: "$60-95",  insuranceNote: "", blurb: "Best price in area. Good reviews for punctuality." },
-  ]),
-  script: (task) =>
-    `SUBJECT: Scheduling — ${task.label}\n\nHi there,\n\nI'd like to schedule ${task.label.toLowerCase()} at your earliest convenience. I'm generally available weekdays and Saturday mornings.\n\nCould you let me know your next available slots?\n\nThanks!\n\nWHAT TO ASK:\n• How long does the appointment take?\n• What should I prepare beforehand?\n• What's your cancellation policy?`,
-  deadline:
-    `KEY DATES + LINKS\n\nCheck your renewal notice — dates vary by state and provider.\n\nWHAT TO DO FIRST:\nLocate your most recent notice — expiration date is printed there.\n\nOFFICIAL RESOURCES:\n• Your state's relevant agency website\n• Your provider's member portal\n\n[Live results pull real dates for your zip when deployed]`,
-  guidance:
-    `HOW TO HANDLE THIS\n\nMOST IMPORTANT:\nDon't wait until you're in a pinch — a few weeks of lead time gives you options.\n\nWHAT TO LOOK FOR:\n4.7+ stars with 50+ reviews. Check for mentions of reliability.\n\nWHAT TO ASK:\n• Are you licensed and insured?\n• What's included in the base price?\n• How long will it take?\n\nRED FLAGS:\nCash-only, no written estimate, pressure to decide on the spot.\n\n[Live results tailored to your location when deployed]`,
-};
-
-function getMockResult(task) {
-  if (task.assistType === "script") return MOCK_RESULTS.script(task);
-  return MOCK_RESULTS[task.assistType] || MOCK_RESULTS.guidance;
-}
 
 function parseProviders(text) {
   try {
@@ -42,7 +20,7 @@ function parseProviders(text) {
 }
 
 export function AssistPanel({ task, profile, providerHistory, onSaveProvider, onClose }) {
-  const [status, setStatus] = useState("loading");
+  const [status, setStatus] = useState("idle");
   const [result, setResult] = useState(null);
   const [cached, setCached] = useState(null);
 
@@ -69,13 +47,22 @@ export function AssistPanel({ task, profile, providerHistory, onSaveProvider, on
       if (hit) { setCached(hit); setResult(hit.data); setStatus("done"); return; }
     }
     setStatus("loading");
-    // Simulated delay — replace with: const res = await fetch("/api/assist", { method: "POST", body: JSON.stringify({ task, profile }) })
-    await new Promise(r => setTimeout(r, 900));
-    const mock = getMockResult(task);
-    saveCache(mock);
-    setResult(mock);
-    setStatus("done");
-    setCached({ data: mock, ts: Date.now() });
+    try {
+      const prompt = buildAssistPrompt(task, profile);
+      const res = await fetch("/api/assist", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+      if (!res.ok) throw new Error(`${res.status}`);
+      const { text } = await res.json();
+      saveCache(text);
+      setResult(text);
+      setStatus("done");
+      setCached({ data: text, ts: Date.now() });
+    } catch {
+      setStatus("error");
+    }
   };
 
   useEffect(() => { fetchResult(false); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -98,6 +85,13 @@ export function AssistPanel({ task, profile, providerHistory, onSaveProvider, on
         <div>
           <div className="mf" style={{ fontSize: 14, color: C.muted, marginBottom: 12 }}>Mitzy is looking this up...</div>
           {[80, 64, 80].map((h, i) => <div key={i} className="sh" style={{ height: h, borderRadius: 12, marginBottom: 10 }} />)}
+        </div>
+      )}
+
+      {status === "error" && (
+        <div style={{ textAlign: "center", padding: "32px 0" }}>
+          <div style={{ fontSize: 14, color: C.muted, marginBottom: 16 }}>Something went wrong. Try again?</div>
+          <button className="pb" onClick={() => fetchResult(true)} style={{ fontSize: 13, background: C.coral, color: C.white, border: "none", borderRadius: 10, padding: "8px 20px", fontWeight: 600 }}>retry</button>
         </div>
       )}
 

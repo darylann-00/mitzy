@@ -7,7 +7,9 @@
       "Bash(git --version)",
       "Bash(/opt/homebrew/bin/git --version)",
       "Bash(/usr/local/bin/git --version)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git remote:*)",
+      "Bash(git push:*)"
     ]
   }
 }
