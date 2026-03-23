@@ -20,40 +20,37 @@ export function TaskCard({ task, status, days, hasSavedProvider, onSelect, onDon
   return (
     <div
       className={`tc bIn ${shadowClass}`}
-      style={{ position: "relative", background: bg, borderRadius: 28, padding: "18px 18px 16px", marginBottom: 12, cursor: "pointer", transform: isUrgent ? `rotate(${tilt}deg)` : "none" }}
+      style={{ position: "relative", background: bg, borderRadius: 20, padding: "12px 12px 10px", marginBottom: 8, cursor: "pointer", transform: isUrgent ? `rotate(${tilt}deg)` : "none" }}
     >
       <div className="patchBadge mf" style={{ background: `${meta.color}E6`, color: C.white }}>
-        <span style={{ fontSize: 14, lineHeight: 1 }}>{meta.emoji}</span>
+        <span style={{ fontSize: 13, lineHeight: 1 }}>{meta.emoji}</span>
         <span>{meta.label}</span>
       </div>
 
       <div onClick={() => onSelect(task)}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-          <span className="mf" style={{ fontSize: 12, background: badgeBg, color: textColor, padding: "4px 10px", borderRadius: 999, letterSpacing: 0.2, border: badgeBorder }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+          <span className="mf" style={{ fontSize: 10, background: badgeBg, color: textColor, padding: "3px 8px", borderRadius: 999, letterSpacing: 0.15, border: badgeBorder }}>
             {badge}
           </span>
-          {hasSavedProvider && <span className="mf" style={{ fontSize: 12, color: textColor, opacity: 0.85 }}>★ saved</span>}
+          {hasSavedProvider && <span className="mf" style={{ fontSize: 10, color: textColor, opacity: 0.78 }}>★ saved</span>}
         </div>
-        <div className="fontRead" style={{ fontSize: 18, color: textColor, fontWeight: 700, lineHeight: 1.35, marginBottom: 6 }}>
+        <div className="fontRead" style={{ fontSize: 18, color: textColor, fontWeight: 800, lineHeight: 1.25 }}>
           {task.label}
-        </div>
-        <div className="fontRead" style={{ fontSize: 13, color: textColor, opacity: 0.78 }}>
-          {meta.emoji} {meta.label}
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+      <div className="taskActions" style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 9 }}>
         <button
-          className="pb btnSecondary"
+          className="pb btnGhost"
           onClick={e => { e.stopPropagation(); onSelect(task); }}
-          style={{ flex: 1, padding: "11px 10px", fontSize: 14, background: isUrgent || isScheduled ? "rgba(255,255,255,0.24)" : "rgba(255,255,255,0.55)", color: textColor, border: isUrgent || isScheduled ? "2px solid rgba(255,255,255,0.28)" : "2px solid rgba(0,0,0,0.06)" }}
+          style={{ padding: "4px 6px", fontSize: 11, color: textColor, opacity: 0.82 }}
         >
           details
         </button>
         <button
           className={`pb btnPrimary ${isUrgent ? "shadowCoral" : isScheduled ? "shadowLav" : isComingUp ? "shadowYellow" : "shadowMint"}`}
           onClick={e => { e.stopPropagation(); onDone(task); }}
-          style={{ flex: 2, padding: "12px 10px", fontSize: 15, background: "rgba(255,255,255,0.95)", color: isUrgent ? C.coral : isScheduled ? C.lav : C.ink }}
+          style={{ flex: 1, padding: "10px 9px", fontSize: 13, background: "rgba(255,255,255,0.96)", color: isUrgent ? C.coral : isScheduled ? C.lav : C.ink }}
         >
           DONE ✓
         </button>

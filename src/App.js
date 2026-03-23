@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "./styles/app.css";
 
-import { loadS, saveS, ONBOARDED_KEY, VISIT_COUNT_KEY, TASK_STATE_KEY, DISABLED_KEY, PROFILE_KEY, PROVIDER_HISTORY_KEY, GREETINGS_KEY, ASSIST_CACHE_PREFIX, HAZARD_DONE_KEY, KNOWLEDGE_REFRESH_KEY, PROFILE_QUESTIONS_KEY } from "./utils/storage";
+import { loadS, saveS, ONBOARDED_KEY, VISIT_COUNT_KEY, TASK_STATE_KEY, DISABLED_KEY, PROFILE_KEY, PROVIDER_HISTORY_KEY, ASSIST_CACHE_PREFIX, HAZARD_DONE_KEY, KNOWLEDGE_REFRESH_KEY, PROFILE_QUESTIONS_KEY } from "./utils/storage";
 import { taskStatus, taskScore, nextDueStr, isActiveMonth } from "./utils/taskLogic";
 import { buildTaskLibrary } from "./data/taskFactory";
 
@@ -36,7 +36,7 @@ export default function Mitzy() {
   const { profile, taskLibrary, setTaskLibrary, updateProfile, addCustomTask } = useProfile();
   const { taskState, setTaskState, disabledTasks, setDisabledTasks, markDone, markScheduled } = useTasks();
   const { providerHistory, saveProvider } = useProviders();
-  const { greeting, trickleQ, dismissTrickle, answerTrickle, pendingHazards, setPendingHazards } = useSession({ onboarded, profile });
+  const { trickleQ, dismissTrickle, answerTrickle, pendingHazards, setPendingHazards } = useSession({ onboarded, profile });
 
   // ─── UI state ────────────────────────────────────────────────────────────────
   const [view,          setView]          = useState("home");
@@ -99,7 +99,7 @@ export default function Mitzy() {
 
   const handleReset = () => {
     [ONBOARDED_KEY, ONBOARDED_KEY + "-p", TASK_STATE_KEY, DISABLED_KEY,
-     PROFILE_KEY, PROVIDER_HISTORY_KEY, GREETINGS_KEY, ASSIST_CACHE_PREFIX,
+     PROFILE_KEY, PROVIDER_HISTORY_KEY, ASSIST_CACHE_PREFIX,
      HAZARD_DONE_KEY, KNOWLEDGE_REFRESH_KEY, PROFILE_QUESTIONS_KEY, VISIT_COUNT_KEY,
     ].forEach(k => localStorage.removeItem(k));
     window.location.reload();
@@ -162,7 +162,6 @@ export default function Mitzy() {
 
       {view === "home" && (
         <HomeView
-          greeting={greeting}
           trickleQ={trickleQ}
           profile={profile}
           pendingHazards={pendingHazards}

@@ -4,7 +4,6 @@ import { TrickleCard } from "../components/TrickleCard";
 import { HazardCard } from "../components/HazardCard";
 
 export function HomeView({
-  greeting,
   trickleQ,
   profile,
   pendingHazards,
@@ -25,13 +24,7 @@ export function HomeView({
   onHazardDismiss,
 }) {
   return (
-    <div style={{ maxWidth: 680, margin: "0 auto", padding: "16px" }}>
-
-      {/* Greeting */}
-      <div className="stickyNote shadowCoral" style={{ padding: "16px 18px", marginBottom: 18, transform: "rotate(-0.8deg)" }}>
-        <div className="mf" style={{ fontSize: 14, color: C.coral, marginBottom: 8, letterSpacing: 0.2 }}>mitzy says ✦</div>
-        <div className="fontRead" style={{ fontSize: 16, color: C.ink, lineHeight: 1.7 }}>{greeting}</div>
-      </div>
+    <div className="viewWrap">
 
       {/* Trickle question */}
       {trickleQ && (
@@ -54,7 +47,7 @@ export function HomeView({
 
       {/* Scheduled date confirmations */}
       {needsConfirm.length > 0 && (
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 12 }}>
           <div className="mf" style={{ fontSize: 14, color: C.muted, marginBottom: 10 }}>quick check-in</div>
           {needsConfirm.map(task => (
             <div key={task.id} style={{ background: C.white, borderRadius: 16, padding: "14px 16px", marginBottom: 8, border: `1.5px solid ${C.mint}` }}>
@@ -70,7 +63,7 @@ export function HomeView({
 
       {/* Urgent tasks */}
       {urgentTasks.length > 0 && (
-        <div style={{ marginBottom: 6 }}>
+        <div style={{ marginBottom: 4 }}>
           <div className="mf sectionLabel" style={{ color: C.coral, marginBottom: 12, fontSize: 17 }}>
             <span className="sectionSquiggle" style={{ color: C.coral }} />
             <span>do these now</span>
@@ -92,7 +85,7 @@ export function HomeView({
 
       {/* Upcoming tasks */}
       {upcomingTasks.length > 0 && (
-        <div style={{ marginTop: urgentTasks.length > 0 ? 22 : 0 }}>
+        <div style={{ marginTop: urgentTasks.length > 0 ? 16 : 0 }}>
           <div className="mf sectionLabel" style={{ color: "#A07800", marginBottom: 12, fontSize: 17 }}>
             <span className="sectionSquiggle" style={{ color: "#A07800" }} />
             <span>coming up</span>

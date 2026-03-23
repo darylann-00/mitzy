@@ -28,19 +28,6 @@ export const RAD_WORDS = [
   "COWABUNGA", "STELLAR", "FAR OUT", "RIGHTEOUS", "TRIUMPHANT",
 ];
 
-export const GREETINGS = [
-  "I already looked up three gutter cleaners. You're going to want to see this.",
-  "Dentist called. I told them you'd be in touch. You're welcome.",
-  "Already found someone for the furnace. You just have to say the word.",
-  "Camp registration opens soon. I have the links ready. Don't thank me yet.",
-  "Your insurance renews soon. I already pulled the comparison numbers.",
-  "Someone needs to be on top of things around here. Clearly that's me.",
-  "The vet called. I handled it. Mostly.",
-  "Went ahead and researched everything. Cleared my schedule for this.",
-  "Your smoke detector and I had a productive meeting. You're welcome.",
-  "I've been busy. Turns out your car battery has also been busy. Dying.",
-];
-
 export const TRICKLE_QUESTIONS = [
   {
     id: "car_details",

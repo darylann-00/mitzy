@@ -4,7 +4,6 @@ export const TASK_STATE_KEY         = "mitzy-v6";
 export const ONBOARDED_KEY          = "mitzy-ob-v6";
 export const DISABLED_KEY           = "mitzy-dis-v6";
 export const PROFILE_KEY            = "mitzy-pro-v6";
-export const GREETINGS_KEY          = "mitzy-greet-v6";
 export const ASSIST_CACHE_PREFIX    = "mitzy-assist-v6";
 export const PROVIDER_HISTORY_KEY   = "mitzy-ph-v6";
 export const VISIT_COUNT_KEY        = "mitzy-visits-v6";

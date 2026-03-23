@@ -11,10 +11,10 @@ export function AllView({ activeTasks, getStatus, getDays, providerHistory, onSe
   const shownTasks          = showAll ? categoryTasks : categoryTasks.filter(t => getStatus(t) !== "ok");
 
   return (
-    <div style={{ maxWidth: 680, margin: "0 auto", padding: "16px" }}>
+    <div className="viewWrap">
 
       {/* Category tabs */}
-      <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 12, marginBottom: 16, WebkitOverflowScrolling: "touch" }}>
+      <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 10, marginBottom: 12, WebkitOverflowScrolling: "touch" }}>
         {availableCategories.map(cat => {
           const meta   = CAT_META[cat];
           const active = activeCategory === cat;
@@ -32,7 +32,7 @@ export function AllView({ activeTasks, getStatus, getDays, providerHistory, onSe
       </div>
 
       {/* Count + filter toggle */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
         <div className="mf" style={{ fontSize: 14, color: C.muted }}>{shownTasks.length} task{shownTasks.length !== 1 ? "s" : ""}</div>
         <button className="pb" onClick={() => setShowAll(x => !x)} style={{ fontSize: 13, background: showAll ? C.ink : C.light, color: showAll ? C.white : C.muted, border: "none", borderRadius: 10, padding: "5px 12px", fontWeight: 600 }}>
           {showAll ? "due only" : "show all"}
@@ -60,7 +60,7 @@ export function AllView({ activeTasks, getStatus, getDays, providerHistory, onSe
         />
       ))}
 
-      <button className="pb" onClick={onAddTask} style={{ width: "100%", marginTop: 16, padding: "14px", fontSize: 15, background: C.white, color: C.ink, border: "1.5px dashed #C4BAB0", borderRadius: 16, fontWeight: 600 }}>
+      <button className="pb" onClick={onAddTask} style={{ width: "100%", marginTop: 12, padding: "12px", fontSize: 14, background: C.white, color: C.ink, border: "1.5px dashed #C4BAB0", borderRadius: 14, fontWeight: 600 }}>
         + add custom task
       </button>
     </div>

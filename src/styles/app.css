@@ -107,17 +107,17 @@
 /* ─── Category Badge ─────────────────────────────────────── */
 .patchBadge {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 10px;
+  right: 10px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
+  gap: 5px;
+  padding: 5px 8px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1;
-  transform: rotate(2deg);
-  border: 3px solid rgba(255,255,255,0.85);
+  transform: rotate(1deg);
+  border: 2px solid rgba(255,255,255,0.8);
   background:
     radial-gradient(circle at 6px 6px,  rgba(255,255,255,0.55) 0 1px, transparent 1.1px),
     radial-gradient(circle at 12px 14px, rgba(255,255,255,0.45) 0 1px, transparent 1.1px),
@@ -218,6 +218,13 @@
 .kitty { position: fixed; bottom: 72px; font-size: 32px; animation: kw 3s linear forwards, kb 0.35s ease-in-out infinite; z-index: 8889; pointer-events: none; }
 .sh    { background: linear-gradient(90deg, #f0f0f0 25%, #fafafa 50%, #f0f0f0 75%); background-size: 800px 100%; animation: sh 1.5s infinite; }
 
+/* ─── View Density ────────────────────────────────────────── */
+.viewWrap {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 14px;
+}
+
 /* ─── Form Elements ──────────────────────────────────────── */
 input, select {
   font-family: 'DM Sans', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
@@ -236,3 +243,31 @@ input:focus, select:focus {
 }
 input::placeholder { color: #C4BAB0; }
 select { appearance: none; }
+
+/* ─── Mobile tightening ───────────────────────────────────── */
+@media (max-width: 640px) {
+  .mr {
+    padding-bottom: 80px;
+  }
+
+  .viewWrap {
+    padding: 12px;
+  }
+
+  .sectionLabel {
+    gap: 7px;
+    font-size: 15px;
+  }
+
+  .sectionSquiggle {
+    width: 24px;
+    height: 9px;
+  }
+
+  .patchBadge {
+    top: 8px;
+    right: 8px;
+    padding: 4px 7px;
+    font-size: 10px;
+  }
+}

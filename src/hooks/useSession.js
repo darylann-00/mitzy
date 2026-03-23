@@ -1,15 +1,14 @@
 import { useState, useEffect } from "react";
 import {
   loadS, saveS,
-  VISIT_COUNT_KEY, GREETINGS_KEY, HAZARD_DONE_KEY,
+  VISIT_COUNT_KEY, HAZARD_DONE_KEY,
   KNOWLEDGE_REFRESH_KEY, KNOWLEDGE_REFRESH_TTL, PROFILE_QUESTIONS_KEY,
 } from "../utils/storage";
-import { GREETINGS, TRICKLE_QUESTIONS } from "../data/constants";
+import { TRICKLE_QUESTIONS } from "../data/constants";
 import { detectHazards } from "../utils/hazards";
 
 export function useSession({ onboarded, profile }) {
   const [visitCount,       setVisitCount]       = useState(() => loadS(VISIT_COUNT_KEY, 0));
-  const [greeting,         setGreeting]          = useState("");
   const [trickleQ,         setTrickleQ]          = useState(null);
   const [knowledgeUpdates, setKnowledgeUpdates]  = useState(null); // eslint-disable-line no-unused-vars
   const [pendingHazards,   setPendingHazards]    = useState(null);
@@ -49,17 +48,6 @@ export function useSession({ onboarded, profile }) {
     }
   }, [onboarded]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Pick greeting for this session
-  useEffect(() => {
-    if (!onboarded) return;
-    const used = loadS(GREETINGS_KEY, []);
-    const pool = GREETINGS.filter(g => !used.includes(g));
-    const src  = pool.length > 0 ? pool : GREETINGS;
-    const pick = src[Math.floor(Math.random() * src.length)];
-    setGreeting(pick);
-    saveS(GREETINGS_KEY, [...used.filter(g => GREETINGS.includes(g)), pick].slice(-GREETINGS.length + 1));
-  }, [onboarded]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const dismissTrickle = () => {
     const answered = loadS(PROFILE_QUESTIONS_KEY, []);
     saveS(PROFILE_QUESTIONS_KEY, [...answered, trickleQ.id]);
@@ -75,7 +63,6 @@ export function useSession({ onboarded, profile }) {
 
   return {
     visitCount,
-    greeting,
     trickleQ,
     dismissTrickle,
     answerTrickle,
