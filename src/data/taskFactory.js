@@ -48,23 +48,23 @@ export function petTasks(pet) {
   const senior = age >= 7;
   const tasks  = [];
 
-  tasks.push(T(`p-vet-${slug}`,     "health",  `${name}: vet wellness visit`,         senior ? 180 : 365, 21, "high",   null, [], "providers", senior ? `${name} is a senior pet — twice-yearly visits recommended.` : "Annual wellness exam."));
-  tasks.push(T(`p-flea-${slug}`,    "health",  `${name}: flea/tick prevention refill`, 90,  14, "medium", null, [], "guidance",  "Every 3 months. Don't let this lapse."));
-  tasks.push(T(`p-license-${slug}`, "finance", `${name}: pet license renewal`,         365, 30, "medium", null, [], "deadline",  "Most municipalities require annual pet licensing."));
-  tasks.push(T(`p-dental-${slug}`,  "health",  `${name}: dental cleaning`,             365, 30, "medium", null, [], "providers", "Annual dental cleaning."));
+  tasks.push(T(`p-vet-${slug}`,     "pet", `${name}: vet wellness visit`,         senior ? 180 : 365, 21, "high",   null, [], "providers", senior ? `${name} is a senior pet — twice-yearly visits recommended.` : "Annual wellness exam."));
+  tasks.push(T(`p-flea-${slug}`,    "pet", `${name}: flea/tick prevention refill`, 90,  14, "medium", null, [], "guidance",  "Every 3 months. Don't let this lapse."));
+  tasks.push(T(`p-license-${slug}`, "pet", `${name}: pet license renewal`,         365, 30, "medium", null, [], "deadline",  "Most municipalities require annual pet licensing."));
+  tasks.push(T(`p-dental-${slug}`,  "pet", `${name}: dental cleaning`,             365, 30, "medium", null, [], "providers", "Annual dental cleaning."));
 
   if (type === "dog") {
-    tasks.push(T(`p-hw-${slug}`,    "health", `${name}: heartworm prevention refill`, 90, 14, "high",   null, [], "guidance",  "Monthly or quarterly. Missing doses creates real risk."));
-    tasks.push(T(`p-vax-${slug}`,   "health", `${name}: rabies/booster vaccines`,    365, 30, "high",   null, [], "providers", "Rabies legally required in most states."));
-    tasks.push(T(`p-nails-${slug}`, "health", `${name}: nail trim`,                   60, 10, "low",    null, [], "providers", "Every 6-8 weeks."));
+    tasks.push(T(`p-hw-${slug}`,    "pet", `${name}: heartworm prevention refill`, 90, 14, "high",   null, [], "guidance",  "Monthly or quarterly. Missing doses creates real risk."));
+    tasks.push(T(`p-vax-${slug}`,   "pet", `${name}: rabies/booster vaccines`,    365, 30, "high",   null, [], "providers", "Rabies legally required in most states."));
+    tasks.push(T(`p-nails-${slug}`, "pet", `${name}: nail trim`,                   60, 10, "low",    null, [], "providers", "Every 6-8 weeks."));
     if (longCoat) {
-      tasks.push(T(`p-groom-${slug}`, "health", `${name}: grooming appointment`, 60, 14, "low", null, [], "providers", "Every 6-8 weeks for long-coat breeds."));
+      tasks.push(T(`p-groom-${slug}`, "pet", `${name}: grooming appointment`, 60, 14, "low", null, [], "providers", "Every 6-8 weeks for long-coat breeds."));
     }
   }
 
   if (type === "cat") {
-    tasks.push(T(`p-nails-${slug}`,  "health", `${name}: nail trim`,             30, 7, "low", null, [], "guidance", "Monthly."));
-    tasks.push(T(`p-litter-${slug}`, "health", `${name}: litter box deep clean`, 30, 7, "low", null, [], "guidance", "Monthly deep clean beyond daily scooping."));
+    tasks.push(T(`p-nails-${slug}`,  "pet", `${name}: nail trim`,             30, 7, "low", null, [], "guidance", "Monthly."));
+    tasks.push(T(`p-litter-${slug}`, "pet", `${name}: litter box deep clean`, 30, 7, "low", null, [], "guidance", "Monthly deep clean beyond daily scooping."));
   }
 
   return tasks;

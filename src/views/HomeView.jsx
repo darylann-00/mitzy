@@ -1,134 +1,175 @@
-import { C, KID_COLORS } from "../data/constants";
-import { TaskCard } from "../components/TaskCard";
 import { TrickleCard } from "../components/TrickleCard";
-import { HazardCard } from "../components/HazardCard";
+import { TaskCard }    from "../components/TaskCard";
+import { HazardCard }  from "../components/HazardCard";
+
+// ─── Shared header pattern ─────────────────────────────────────────────────────
+export function AppHeader({ rightContent }) {
+  return (
+    <div style={{
+      background: '#1A5C3A',
+      padding: '22px 22px 18px',
+      position: 'relative',
+      overflow: 'hidden',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    }}>
+      {/* Scatter shapes */}
+      <div style={{ position:'absolute', width:60, height:60, borderRadius:'50%', background:'#0F3D27', top:-18, right:-16 }} />
+      <div style={{ position:'absolute', width:30, height:30, borderRadius:'50%', background:'#06A77D', top:10, right:30 }} />
+      <div style={{ position:'absolute', width:12, height:12, background:'#F77F00', transform:'rotate(45deg)', bottom:10, right:22 }} />
+      <div style={{ position:'absolute', width:10, height:10, borderRadius:'50%', background:'#F4C430', top:6, right:72 }} />
+      <div style={{ position:'absolute', width:8, height:8, borderRadius:'50%', background:'#D62828', bottom:14, right:58 }} />
+      <div style={{ position:'absolute', width:22, height:22, borderRadius:'50%', border:'2.5px solid #06A77D', opacity:0.5, bottom:-6, right:90 }} />
+
+      {/* Wordmark */}
+      <div style={{ display:'flex', alignItems:'center', gap:11, position:'relative' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:4, flexShrink:0 }}>
+          <div style={{ width:10, height:10, borderRadius:'50%', background:'#D62828' }} />
+          <div style={{ width:10, height:10, borderRadius:'50%', background:'#F77F00' }} />
+          <div style={{ width:10, height:10, borderRadius:'50%', background:'#06A77D' }} />
+          <div style={{ width:10, height:10, borderRadius:'50%', background:'#F4C430' }} />
+        </div>
+        <span style={{ fontFamily:"'Righteous', 'Trebuchet MS', cursive", fontSize:36, color:'#E8F5EE', lineHeight:1 }}>
+          mitzy
+        </span>
+      </div>
+
+      {/* Right side */}
+      <div style={{ fontSize:11, letterSpacing:'0.07em', textTransform:'uppercase', color:'#B8DCC8', textAlign:'right', lineHeight:1.5, position:'relative', fontFamily:'DM Sans, sans-serif' }}>
+        {rightContent}
+      </div>
+    </div>
+  );
+}
+
+function Divider() {
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:8, margin:'16px 0' }}>
+      <div style={{ flex:1, height:1, background:'#EAE4DA' }} />
+      <div style={{ width:8, height:8, background:'#FDFAF2', border:'1.5px solid #D0E4D8', transform:'rotate(45deg)', flexShrink:0 }} />
+      <div style={{ flex:1, height:1, background:'#EAE4DA' }} />
+    </div>
+  );
+}
+
+function SectionLabel({ label, color }) {
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
+      <div style={{ width:10, height:10, borderRadius:'50%', background:color, flexShrink:0 }} />
+      <span style={{ fontFamily:"'Righteous', 'Trebuchet MS', cursive", fontSize:11, letterSpacing:'0.12em', textTransform:'uppercase', color:'#1C2B22', flex:1 }}>
+        {label}
+      </span>
+      <div style={{ flex:1, height:2, borderRadius:1, background:color, opacity:0.2 }} />
+    </div>
+  );
+}
 
 export function HomeView({
   trickleQ,
   profile,
   pendingHazards,
-  needsConfirm,
   urgentTasks,
   upcomingTasks,
   providerHistory,
-  taskState,
   getStatus,
   getDays,
-  getNext,
   onSelectTask,
   onDoneTask,
-  onScheduleTask,
   onTrickleAnswer,
   onTrickleDismiss,
   onHazardAccept,
   onHazardDismiss,
 }) {
+  const now = new Date();
+  const dayOfWeek    = now.toLocaleDateString('en-US', { weekday: 'long' });
+  const monthAndDate = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+
   return (
-    <div className="viewWrap">
+    <div style={{ background:'#FDFAF2', minHeight:'100vh' }}>
+      <AppHeader rightContent={<>{dayOfWeek}<br />{monthAndDate}</>} />
 
-      {/* Trickle question */}
-      {trickleQ && (
-        <TrickleCard
-          question={trickleQ}
-          profile={profile}
-          onAnswer={onTrickleAnswer}
-          onDismiss={onTrickleDismiss}
-        />
-      )}
+      <div style={{ padding:'20px 18px 18px', maxWidth:680, margin:'0 auto' }}>
 
-      {/* Hazard card */}
-      {pendingHazards && (
-        <HazardCard
-          hazards={pendingHazards}
-          onAccept={onHazardAccept}
-          onDismiss={onHazardDismiss}
-        />
-      )}
-
-      {/* Scheduled date confirmations */}
-      {needsConfirm.length > 0 && (
-        <div style={{ marginBottom: 12 }}>
-          <div className="mf" style={{ fontSize: 14, color: C.muted, marginBottom: 10 }}>quick check-in</div>
-          {needsConfirm.map(task => (
-            <div key={task.id} style={{ background: C.white, borderRadius: 16, padding: "14px 16px", marginBottom: 8, border: `1.5px solid ${C.mint}` }}>
-              <div style={{ fontSize: 15, color: C.ink, fontWeight: 600, marginBottom: 10 }}>{task.label}</div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button className="pb" onClick={() => onDoneTask(task)}     style={{ flex: 2, padding: "9px", fontSize: 14, background: C.mint, color: C.white, border: "none", borderRadius: 12, fontWeight: 700 }}>yep, done ✓</button>
-                <button className="pb" onClick={() => onScheduleTask(task)} style={{ flex: 1, padding: "9px", fontSize: 14, background: C.light, color: C.ink,  border: "none", borderRadius: 12, fontWeight: 600 }}>reschedule</button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Urgent tasks */}
-      {urgentTasks.length > 0 && (
-        <div style={{ marginBottom: 4 }}>
-          <div className="mf sectionLabel" style={{ color: C.coral, marginBottom: 12, fontSize: 17 }}>
-            <span className="sectionSquiggle" style={{ color: C.coral }} />
-            <span>do these now</span>
-            <span style={{ opacity: 0.9 }}>✦</span>
-          </div>
-          {urgentTasks.map(task => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              status={getStatus(task)}
-              days={getDays(task)}
-              hasSavedProvider={!!providerHistory[task.id]}
-              onSelect={onSelectTask}
-              onDone={onDoneTask}
+        {/* Trickle question */}
+        {trickleQ && (
+          <>
+            <TrickleCard
+              question={trickleQ}
+              profile={profile}
+              onAnswer={onTrickleAnswer}
+              onDismiss={onTrickleDismiss}
             />
-          ))}
-        </div>
-      )}
+            <Divider />
+          </>
+        )}
 
-      {/* Upcoming tasks */}
-      {upcomingTasks.length > 0 && (
-        <div style={{ marginTop: urgentTasks.length > 0 ? 16 : 0 }}>
-          <div className="mf sectionLabel" style={{ color: "#A07800", marginBottom: 12, fontSize: 17 }}>
-            <span className="sectionSquiggle" style={{ color: "#A07800" }} />
-            <span>coming up</span>
-            <span style={{ opacity: 0.9 }}>★</span>
+        {/* Due now */}
+        {urgentTasks.length > 0 && (
+          <div style={{ marginBottom:4 }}>
+            <SectionLabel label="Do these now" color="#D62828" />
+            {urgentTasks.map(task => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                status={getStatus(task)}
+                days={getDays(task)}
+                hasSavedProvider={!!providerHistory[task.id]}
+                onSelect={onSelectTask}
+                onDone={onDoneTask}
+              />
+            ))}
           </div>
-          {upcomingTasks.map(task => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              status={getStatus(task)}
-              days={getDays(task)}
-              hasSavedProvider={!!providerHistory[task.id]}
-              onSelect={onSelectTask}
-              onDone={onDoneTask}
+        )}
+
+        {urgentTasks.length > 0 && upcomingTasks.length > 0 && <Divider />}
+
+        {/* Coming up */}
+        {upcomingTasks.length > 0 && (
+          <div>
+            <SectionLabel label="Coming up" color="#F77F00" />
+            {upcomingTasks.map(task => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                status={getStatus(task)}
+                days={getDays(task)}
+                hasSavedProvider={!!providerHistory[task.id]}
+                onSelect={onSelectTask}
+                onDone={onDoneTask}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Hazard card */}
+        {pendingHazards && (
+          <>
+            <Divider />
+            <HazardCard
+              hazards={pendingHazards}
+              onAccept={onHazardAccept}
+              onDismiss={onHazardDismiss}
             />
-          ))}
-        </div>
-      )}
+          </>
+        )}
 
-      {/* All clear state */}
-      {urgentTasks.length === 0 && upcomingTasks.length === 0 && needsConfirm.length === 0 && (
-        <div style={{ background: C.white, borderRadius: 20, padding: "36px 20px", textAlign: "center" }}>
-          <div style={{ fontSize: 32, marginBottom: 10 }}>✨</div>
-          <div className="mf" style={{ fontSize: 18, color: C.mint, marginBottom: 8 }}>all clear!</div>
-          <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.7 }}>Nothing pressing. Mitzy is satisfied.</div>
-        </div>
-      )}
+        {/* All clear */}
+        {urgentTasks.length === 0 && upcomingTasks.length === 0 && !pendingHazards && (
+          <div style={{ background:'#FFFFFF', borderRadius:14, padding:'36px 20px', textAlign:'center', border:'1px solid #EAE4DA' }}>
+            <div style={{ width:36, height:36, borderRadius:'50%', background:'#E8F5EE', margin:'0 auto 12px', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <polyline points="4,10 8,14 16,5" stroke="#06A77D" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <div style={{ fontFamily:"'Righteous', cursive", fontSize:18, color:'#06A77D', marginBottom:6 }}>All clear</div>
+            <div style={{ fontSize:13, color:'#4A6256', lineHeight:1.7, fontFamily:'DM Sans, sans-serif' }}>
+              Nothing pressing right now. Mitzy has you covered.
+            </div>
+          </div>
+        )}
 
-      {/* Kid / pet chips */}
-      {(profile.kids?.length > 0 || profile.pets?.length > 0) && (
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 20 }}>
-          {profile.kids?.map((k, i) => (
-            <div key={`k${k.name}`} style={{ padding: "5px 12px", fontSize: 13, background: `${KID_COLORS[i % KID_COLORS.length]}20`, border: `1.5px solid ${KID_COLORS[i % KID_COLORS.length]}`, borderRadius: 20, color: KID_COLORS[i % KID_COLORS.length], fontWeight: 600 }}>
-              {k.name} · {k.age}
-            </div>
-          ))}
-          {profile.pets?.map(a => (
-            <div key={`p${a.name}`} style={{ padding: "5px 12px", fontSize: 13, background: `${C.orange}15`, border: `1.5px solid ${C.orange}`, borderRadius: 20, color: C.orange, fontWeight: 600 }}>
-              {a.type === "dog" ? "🐕" : a.type === "cat" ? "🐈" : "🐾"} {a.name}
-            </div>
-          ))}
-        </div>
-      )}
+      </div>
     </div>
   );
 }

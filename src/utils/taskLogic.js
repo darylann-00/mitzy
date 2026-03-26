@@ -22,7 +22,7 @@ export function taskStatus(task, taskState) {
 
   if (entry?.scheduledDate && new Date(entry.scheduledDate) > new Date()) return "scheduled";
   if (entry?.scheduledDate && new Date(entry.scheduledDate) <= new Date()) return "confirm";
-  if (!entry?.lastDone) return "due";
+  if (!entry?.lastDone) return "unknown";
 
   const daysSinceDone = Math.floor((Date.now() - new Date(entry.lastDone)) / 86400000);
   const daysRemaining = task.intervalDays - daysSinceDone;

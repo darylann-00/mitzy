@@ -20,19 +20,50 @@ import { SchedulePanel }  from "./components/SchedulePanel";
 import { MarkDoneModal }  from "./components/MarkDoneModal";
 import { AddTaskPanel }   from "./components/AddTaskPanel";
 
-import { HomeView }       from "./views/HomeView";
-import { AllView }        from "./views/AllView";
-import { YouView }        from "./views/YouView";
+import { HomeView }    from "./views/HomeView";
+import { AllView }     from "./views/AllView";
+import { ProfileView } from "./views/ProfileView";
 import { TaskDetailView } from "./views/TaskDetailView";
 
-import { C } from "./data/constants";
+// ─── Mitzy Prompt Bar ──────────────────────────────────────────────────────────
+function MitzyPromptBar({ onOpen }) {
+  return (
+    <div style={{ padding:'10px 14px', background:'#FDFAF2', borderTop:'1px solid #E0D8CC' }}>
+      <div
+        onClick={onOpen}
+        style={{
+          display:'flex', alignItems:'center', gap:10,
+          background:'#fff', border:'2px solid #1A5C3A',
+          borderRadius:14, padding:'10px 14px', cursor:'pointer',
+          maxWidth:680, margin:'0 auto',
+        }}
+      >
+        {/* Four dot mark */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:3, flexShrink:0 }}>
+          <div style={{ width:7, height:7, borderRadius:'50%', background:'#D62828' }} />
+          <div style={{ width:7, height:7, borderRadius:'50%', background:'#F77F00' }} />
+          <div style={{ width:7, height:7, borderRadius:'50%', background:'#06A77D' }} />
+          <div style={{ width:7, height:7, borderRadius:'50%', background:'#F4C430' }} />
+        </div>
+        <span style={{ flex:1, fontSize:13, fontWeight:500, color:'#4A6256', fontFamily:'DM Sans, sans-serif' }}>
+          What do you need to get done?
+        </span>
+        <div style={{ width:28, height:28, borderRadius:8, background:'#1A5C3A', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M3 7h8M7 3l4 4-4 4" stroke="#E8F5EE" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Mitzy() {
-  // ─── Onboarding state ───────────────────────────────────────────────────────
+  // ─── Onboarding state ────────────────────────────────────────────────────────
   const [profileDone, setProfileDone] = useState(() => loadS(ONBOARDED_KEY + "-p", false));
   const [onboarded,   setOnboarded]   = useState(() => loadS(ONBOARDED_KEY, false));
 
-  // ─── Domain state (via hooks) ────────────────────────────────────────────────
+  // ─── Domain state ────────────────────────────────────────────────────────────
   const { profile, taskLibrary, setTaskLibrary, updateProfile, addCustomTask } = useProfile();
   const { taskState, setTaskState, disabledTasks, setDisabledTasks, markDone, markScheduled } = useTasks();
   const { providerHistory, saveProvider } = useProviders();
@@ -87,6 +118,10 @@ export default function Mitzy() {
   const handleMarkDone = (id, dateStr) => {
     markDone(id, dateStr);
     setCelebration(true);
+    // Don't close modal — PostDoneFlow in MarkDoneModal handles "Back to my list"
+  };
+
+  const handleMarkDoneClose = () => {
     setMarkDoneModal(null);
     setSelectedTask(null);
   };
@@ -110,7 +145,6 @@ export default function Mitzy() {
   const scoredDue     = [...visibleTasks].filter(t => getStatus(t) !== "ok").sort((a, b) => getScore(b) - getScore(a));
   const urgentTasks   = scoredDue.filter(t => getStatus(t) === "due" || getStatus(t) === "confirm").slice(0, 3);
   const upcomingTasks = scoredDue.filter(t => getStatus(t) === "coming-up" || getStatus(t) === "scheduled").slice(0, 3);
-  const needsConfirm  = activeTasks.filter(t => getStatus(t) === "confirm");
 
   // ─── Onboarding gates ─────────────────────────────────────────────────────────
   if (!profileDone) return <SlimOnboarding onComplete={handleSlimOnboardingComplete} />;
@@ -121,11 +155,11 @@ export default function Mitzy() {
     return (
       <>
         <Overlays
-          celebration={celebration}  onCelebrationDone={() => setCelebration(false)}
-          markDoneModal={markDoneModal} onMarkDone={handleMarkDone} onMarkDoneClose={() => setMarkDoneModal(null)}
-          assistTask={assistTask}    onAssistClose={() => setAssistTask(null)}
-          scheduleTask={scheduleTask} onSchedule={(d) => markScheduled(scheduleTask.id, d)} onScheduleClose={() => setScheduleTask(null)}
-          addingTask={addingTask}    onAddTask={addCustomTask} onAddClose={() => setAddingTask(false)}
+          celebration={celebration}     onCelebrationDone={() => setCelebration(false)}
+          markDoneModal={markDoneModal}  onMarkDone={handleMarkDone} onMarkDoneClose={handleMarkDoneClose}
+          assistTask={assistTask}        onAssistClose={() => setAssistTask(null)}
+          scheduleTask={scheduleTask}    onSchedule={(d) => markScheduled(scheduleTask.id, d)} onScheduleClose={() => setScheduleTask(null)}
+          addingTask={addingTask}        onAddTask={addCustomTask} onAddClose={() => setAddingTask(false)}
           profile={profile} providerHistory={providerHistory} onSaveProvider={saveProvider}
         />
         <TaskDetailView
@@ -145,37 +179,28 @@ export default function Mitzy() {
 
   // ─── Main app ─────────────────────────────────────────────────────────────────
   return (
-    <div className="mr paper">
+    <div style={{ background:'#FDFAF2', minHeight:'100vh' }}>
       <Overlays
-        celebration={celebration}  onCelebrationDone={() => setCelebration(false)}
-        markDoneModal={markDoneModal} onMarkDone={handleMarkDone} onMarkDoneClose={() => setMarkDoneModal(null)}
-        assistTask={assistTask}    onAssistClose={() => setAssistTask(null)}
-        scheduleTask={scheduleTask} onSchedule={(d) => markScheduled(scheduleTask.id, d)} onScheduleClose={() => setScheduleTask(null)}
-        addingTask={addingTask}    onAddTask={addCustomTask} onAddClose={() => setAddingTask(false)}
+        celebration={celebration}     onCelebrationDone={() => setCelebration(false)}
+        markDoneModal={markDoneModal}  onMarkDone={handleMarkDone} onMarkDoneClose={handleMarkDoneClose}
+        assistTask={assistTask}        onAssistClose={() => setAssistTask(null)}
+        scheduleTask={scheduleTask}    onSchedule={(d) => markScheduled(scheduleTask.id, d)} onScheduleClose={() => setScheduleTask(null)}
+        addingTask={addingTask}        onAddTask={addCustomTask} onAddClose={() => setAddingTask(false)}
         profile={profile} providerHistory={providerHistory} onSaveProvider={saveProvider}
       />
-
-      {/* Header */}
-      <div className="paper" style={{ borderBottom: "4px solid rgba(255,92,92,0.16)", padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
-        <div className="mf" style={{ fontSize: 28, color: C.coral, letterSpacing: 0.2 }}>mitzy ✦</div>
-      </div>
 
       {view === "home" && (
         <HomeView
           trickleQ={trickleQ}
           profile={profile}
           pendingHazards={pendingHazards}
-          needsConfirm={needsConfirm}
           urgentTasks={urgentTasks}
           upcomingTasks={upcomingTasks}
           providerHistory={providerHistory}
-          taskState={taskState}
           getStatus={getStatus}
           getDays={getDays}
-          getNext={getNext}
           onSelectTask={setSelectedTask}
           onDoneTask={setMarkDoneModal}
-          onScheduleTask={setScheduleTask}
           onTrickleAnswer={(updates) => answerTrickle(updates, updateProfile)}
           onTrickleDismiss={dismissTrickle}
           onHazardAccept={handleHazardAccept}
@@ -191,14 +216,19 @@ export default function Mitzy() {
           providerHistory={providerHistory}
           onSelectTask={setSelectedTask}
           onDoneTask={setMarkDoneModal}
-          onAddTask={() => setAddingTask(true)}
+          markDone={markDone}
         />
       )}
 
       {view === "you" && (
-        <YouView profile={profile} onReset={handleReset} />
+        <ProfileView
+          profile={profile}
+          providerHistory={providerHistory}
+          onReset={handleReset}
+        />
       )}
 
+      <MitzyPromptBar onOpen={() => setAddingTask(true)} />
       <BottomNav view={view} setView={setView} />
     </div>
   );
@@ -208,8 +238,16 @@ export default function Mitzy() {
 function Overlays({ celebration, onCelebrationDone, markDoneModal, onMarkDone, onMarkDoneClose, assistTask, onAssistClose, scheduleTask, onSchedule, onScheduleClose, addingTask, onAddTask, onAddClose, profile, providerHistory, onSaveProvider }) {
   return (
     <>
-      {celebration  && <Celebration onDone={onCelebrationDone} />}
-      {markDoneModal && <MarkDoneModal task={markDoneModal} onDone={onMarkDone} onClose={onMarkDoneClose} />}
+      {celebration   && <Celebration onDone={onCelebrationDone} />}
+      {markDoneModal && (
+        <MarkDoneModal
+          task={markDoneModal}
+          onDone={onMarkDone}
+          onClose={onMarkDoneClose}
+          providerHistory={providerHistory}
+          onSaveProvider={onSaveProvider}
+        />
+      )}
       {assistTask   && <AssistPanel task={assistTask} profile={profile} providerHistory={providerHistory} onSaveProvider={onSaveProvider} onClose={onAssistClose} />}
       {scheduleTask && <SchedulePanel task={scheduleTask} onSchedule={onSchedule} onClose={onScheduleClose} />}
       {addingTask   && <AddTaskPanel onAdd={onAddTask} onClose={onAddClose} />}

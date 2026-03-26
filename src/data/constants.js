@@ -1,26 +1,44 @@
 export const C = {
-  coral:  "#FF5C5C",
-  yellow: "#FFD93D",
-  mint:   "#6BCB77",
-  sky:    "#4ECDC4",
-  lav:    "#C77DFF",
-  orange: "#FF9F1C",
-  white:  "#FFFFFF",
-  off:    "#FFF8F0",
-  ink:    "#1A1A2E",
-  muted:  "#9B9B9B",
-  light:  "#F3F3F3",
+  // Brand
+  brand:       '#1A5C3A',
+  brandDark:   '#0F3D27',
+  brandLight:  '#E8F5EE',
+  brandTint:   '#E8F0EC',
+
+  // Status colors
+  red:         '#D62828',
+  orange:      '#F77F00',
+  green:       '#06A77D',
+  yellow:      '#F4C430',
+
+  // Neutrals
+  ink:         '#1C2B22',
+  muted:       '#4A6256',
+  bg:          '#FDFAF2',
+  card:        '#FFFFFF',
+  cardBorder:  '#EAE4DA',
+  surface:     '#F0EDE4',
+
+  // Backward-compat aliases
+  coral:       '#D62828',
+  mint:        '#06A77D',
+  lav:         '#4A6256',
+  sky:         '#06A77D',
+  white:       '#FDFAF2',
+  off:         '#FDFAF2',
+  light:       '#F0EDE4',
 };
 
-export const KID_COLORS = [C.coral, C.sky, C.lav, C.orange, C.mint, C.yellow];
+export const KID_COLORS = [C.red, C.orange, C.green, C.yellow, C.brand, C.muted];
 
 export const CAT_META = {
-  home:      { label: "Home",      emoji: "🏠", color: C.coral  },
-  car:       { label: "Car",       emoji: "🚗", color: C.sky    },
-  health:    { label: "Health",    emoji: "💊", color: C.mint   },
-  school:    { label: "School",    emoji: "🎒", color: C.lav    },
+  home:      { label: "Home",      emoji: "🏠", color: C.red    },
+  car:       { label: "Car",       emoji: "🚗", color: C.brand  },
+  health:    { label: "Health",    emoji: "💊", color: C.green  },
+  school:    { label: "School",    emoji: "🎒", color: C.orange },
   finance:   { label: "Finance",   emoji: "💰", color: C.orange },
-  emergency: { label: "Emergency", emoji: "⚡", color: C.coral  },
+  emergency: { label: "Emergency", emoji: "⚡", color: C.red    },
+  pet:       { label: "Pet",       emoji: "🐾", color: C.yellow },
 };
 
 export const RAD_WORDS = [

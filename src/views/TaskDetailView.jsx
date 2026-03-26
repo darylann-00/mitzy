@@ -1,104 +1,242 @@
-import { C, CAT_META } from "../data/constants";
+import { CAT_META } from "../data/constants";
+import { CAT_ICON_CONFIG } from "../components/CategoryIcons";
 
-function intervalLabel(days) {
-  if (days >= 730) return `${Math.round(days / 365)} years`;
-  if (days >= 365) return "1 year";
-  if (days >= 60)  return `${Math.round(days / 30)} months`;
-  return `${days} days`;
+function formatDueDate(days) {
+  if (days === null || days === undefined) return 'due soon';
+  if (days < 0) {
+    const n = Math.abs(days);
+    return `due ${n} day${n !== 1 ? 's' : ''} ago`;
+  }
+  if (days === 0) return 'due today';
+  if (days <= 7)  return 'due this week';
+  if (days <= 14) return `due in ${days} days`;
+  if (days <= 30) return `due in ${Math.round(days / 7)} week${Math.round(days / 7) !== 1 ? 's' : ''}`;
+  return `good for ${Math.round(days / 30)} month${Math.round(days / 30) !== 1 ? 's' : ''}`;
 }
 
-const ASSIST_LABELS = {
-  providers: "find local providers →",
-  script:    "draft a message →",
-  deadline:  "look up dates & links →",
-  guidance:  "how to handle this →",
+const ASSIST_SUBTITLES = {
+  providers: (task) => {
+    const meta = CAT_META[task.cat];
+    return `Find a local ${meta?.label?.toLowerCase() || 'service'} near you`;
+  },
+  script:   () => 'Help me make the call',
+  deadline: () => 'Show me the key dates and links',
+  guidance: () => null,
 };
 
-const ASSIST_DESCRIPTIONS = {
-  providers: "I'll find 3-4 local, highly-rated providers for you.",
-  script:    "I'll draft a ready-to-send message or call script.",
-  deadline:  "I'll look up exact dates, official links, and phone numbers.",
-  guidance:  "I'll give you practical guidance on what to do and what to watch for.",
-};
+// ─── Calendar SVG ──────────────────────────────────────────────────────────────
+function CalSVG() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+      <rect x="2" y="3" width="14" height="12" rx="2" fill="#4A6256" />
+      <line x1="2" y1="7" x2="16" y2="7" stroke="#FDFAF2" strokeWidth="1.5" />
+      <line x1="6" y1="3" x2="6" y2="7" stroke="#FDFAF2" strokeWidth="1.5" />
+      <line x1="12" y1="3" x2="12" y2="7" stroke="#FDFAF2" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+// ─── Four dot mark ─────────────────────────────────────────────────────────────
+function FourDots({ size = 7 }) {
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:3, flexShrink:0 }}>
+      <div style={{ width:size, height:size, borderRadius:'50%', background:'#D62828' }} />
+      <div style={{ width:size, height:size, borderRadius:'50%', background:'#F77F00' }} />
+      <div style={{ width:size, height:size, borderRadius:'50%', background:'#06A77D' }} />
+      <div style={{ width:size, height:size, borderRadius:'50%', background:'#F4C430' }} />
+    </div>
+  );
+}
 
 export function TaskDetailView({ task, status, taskState, savedProvider, getNext, onAssist, onSchedule, onDone, onBack }) {
-  const entry       = taskState[task.id];
-  const meta        = CAT_META[task.cat] || CAT_META.home;
-  const isUrgent    = status === "due" || status === "confirm";
-  const isScheduled = status === "scheduled";
-  const isComingUp  = status === "coming-up";
+  const entry    = taskState[task.id];
+  const meta     = CAT_META[task.cat] || CAT_META.home;
+  const iconCfg  = CAT_ICON_CONFIG[task.cat] || CAT_ICON_CONFIG.home;
+  const isOverdue = status === 'due' || status === 'confirm';
 
-  const statusLabel = {
-    due:        "ready to do",
-    confirm:    "did this happen?",
-    scheduled:  `scheduled for ${new Date(entry?.scheduledDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
-    "coming-up": `coming up · due ${getNext(task)}`,
-  }[status] || "on track";
+  // Days calculation
+  const days = entry?.lastDone
+    ? task.intervalDays - Math.floor((Date.now() - new Date(entry.lastDone)) / 86400000)
+    : 0;
+  const dueDateStr = formatDueDate(days);
 
-  const headerBg    = isUrgent ? C.coral : isScheduled ? C.lav : isComingUp ? C.yellow : C.light;
-  const headerColor = isUrgent || isScheduled ? C.white : C.ink;
+  // Assist subtitle
+  const getSubtitle = ASSIST_SUBTITLES[task.assistType];
+  const assistSubtitle = getSubtitle ? getSubtitle(task) : null;
+
+  // Parse guidance into steps
+  const steps = task.guidance
+    ? task.guidance.split(/\d+\.\s+/).filter(Boolean)
+    : null;
 
   return (
-    <div className="mr">
-      {/* Back bar */}
-      <div style={{ background: C.white, borderBottom: "2px solid #F0E8E0", padding: "14px 20px", display: "flex", alignItems: "center", gap: 14, position: "sticky", top: 0, zIndex: 100 }}>
-        <button className="pb" onClick={onBack} style={{ background: C.off, border: "none", borderRadius: 12, padding: "8px 12px", fontSize: 14, color: C.ink }}>← back</button>
-        <div className="mf" style={{ fontSize: 20, color: C.ink }}>{meta.emoji} {meta.label}</div>
-      </div>
+    <div style={{ background:'#FDFAF2', minHeight:'100vh' }}>
 
-      <div style={{ maxWidth: 580, margin: "0 auto", padding: "20px 16px 40px" }}>
+      {/* Green header */}
+      <div style={{
+        background: '#1A5C3A',
+        padding: '16px 18px 20px',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        {/* Scatter shapes */}
+        <div style={{ position:'absolute', width:50, height:50, borderRadius:'50%', background:'#0F3D27', top:-14, right:-12 }} />
+        <div style={{ position:'absolute', width:24, height:24, borderRadius:'50%', background:'#06A77D', top:8, right:24 }} />
+        <div style={{ position:'absolute', width:10, height:10, background:'#F77F00', transform:'rotate(45deg)', bottom:8, right:18 }} />
+        <div style={{ position:'absolute', width:8, height:8, borderRadius:'50%', background:'#F4C430', top:5, right:58 }} />
+        <div style={{ position:'absolute', width:18, height:18, borderRadius:'50%', border:'2px solid #06A77D', opacity:0.5, bottom:-4, right:72 }} />
 
-        {/* Status header */}
-        <div style={{ background: headerBg, borderRadius: 20, padding: "20px", marginBottom: 16 }}>
-          <div style={{ fontSize: 12, color: isUrgent || isScheduled ? C.white : C.muted, fontWeight: 600, marginBottom: 8 }}>
-            {statusLabel}
-          </div>
-          <div style={{ fontSize: 19, color: headerColor, fontWeight: 700, lineHeight: 1.4 }}>
-            {task.label}
+        {/* Back button + category */}
+        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14, position:'relative' }}>
+          <button
+            onClick={onBack}
+            style={{
+              width:32, height:32, borderRadius:8, background:'#0F3D27',
+              border:'none', cursor:'pointer', flexShrink:0,
+              display:'flex', alignItems:'center', justifyContent:'center',
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M9 3L5 7l4 4" stroke="#B8DCC8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+            <div style={{ width:22, height:22, borderRadius:6, background:'rgba(255,255,255,0.12)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <iconCfg.Icon color="#E8F5EE" bg="transparent" size={13} />
+            </div>
+            <span style={{ fontSize:11, fontWeight:700, color:'#B8DCC8', letterSpacing:'0.1em', textTransform:'uppercase', fontFamily:'DM Sans, sans-serif' }}>
+              {meta.label}
+            </span>
           </div>
         </div>
 
-        {/* Saved provider */}
+        {/* Task name */}
+        <div style={{ fontFamily:"'Righteous', 'Trebuchet MS', cursive", fontSize:24, color:'#E8F5EE', lineHeight:1.2, marginBottom:12, position:'relative' }}>
+          {task.label}
+        </div>
+
+        {/* Meta pills */}
+        <div style={{ display:'flex', gap:7, flexWrap:'wrap', position:'relative' }}>
+          <div style={{ background:'#0F3D27', borderRadius:20, padding:'4px 11px' }}>
+            <span style={{ fontSize:11, fontWeight:700, color: isOverdue ? '#F77F00' : '#B8DCC8', fontFamily:'DM Sans, sans-serif' }}>
+              {dueDateStr}
+            </span>
+          </div>
+          {task.timeToComplete && (
+            <div style={{ background:'#0F3D27', borderRadius:20, padding:'4px 11px' }}>
+              <span style={{ fontSize:11, fontWeight:700, color:'#B8DCC8', fontFamily:'DM Sans, sans-serif' }}>{task.timeToComplete}</span>
+            </div>
+          )}
+          {task.diyable && (
+            <div style={{ background:'#0F3D27', borderRadius:20, padding:'4px 11px' }}>
+              <span style={{ fontSize:11, fontWeight:700, color:'#B8DCC8', fontFamily:'DM Sans, sans-serif' }}>DIY</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div style={{ padding:'16px 18px 32px', maxWidth:680, margin:'0 auto' }}>
+
+        {/* Saved provider callout */}
         {savedProvider && (
-          <div style={{ background: `${C.mint}15`, border: `1.5px solid ${C.mint}`, borderRadius: 16, padding: "12px 16px", marginBottom: 14 }}>
-            <div className="mf" style={{ fontSize: 13, color: C.mint, marginBottom: 4 }}>last time you used</div>
-            <div style={{ fontWeight: 600, color: C.ink }}>{savedProvider.name}</div>
+          <div style={{ background:'#E8F5EE', border:'1.5px solid #1A5C3A', borderRadius:14, padding:'11px 14px', marginBottom:10, display:'flex', alignItems:'center', gap:10 }}>
+            <div style={{ width:24, height:24, borderRadius:'50%', background:'#1A5C3A', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <polyline points="2,6 5,9 10,3" stroke="#E8F5EE" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <div>
+              <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'#4A6256', fontFamily:'DM Sans, sans-serif' }}>Last used</div>
+              <div style={{ fontSize:13, fontWeight:700, color:'#1C2B22', fontFamily:'DM Sans, sans-serif' }}>{savedProvider.name}</div>
+              {savedProvider.notes && <div style={{ fontSize:12, color:'#4A6256', fontStyle:'italic', fontFamily:'DM Sans, sans-serif' }}>{savedProvider.notes}</div>}
+            </div>
           </div>
         )}
 
-        {/* Task info */}
-        <div style={{ background: C.white, borderRadius: 16, padding: "16px", marginBottom: 14, border: "1.5px solid #F0E8E0" }}>
-          <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.7 }}>{task.note}</div>
-          <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 12, background: `${meta.color}15`, color: meta.color, padding: "3px 10px", borderRadius: 20, fontWeight: 600 }}>
-              every {intervalLabel(task.intervalDays)}
-            </span>
-            <span style={{ fontSize: 12, background: task.stakes === "high" ? `${C.coral}15` : task.stakes === "medium" ? `${C.yellow}15` : `${C.mint}15`, color: task.stakes === "high" ? C.coral : task.stakes === "medium" ? "#A07800" : C.mint, padding: "3px 10px", borderRadius: 20, fontWeight: 600 }}>
-              {task.stakes} stakes
-            </span>
+        {/* Why it matters */}
+        <div style={{ background:'#fff', borderRadius:14, padding:'13px 15px', border:'1px solid #EAE4DA', marginBottom:10 }}>
+          <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:'#4A6256', marginBottom:7, fontFamily:"'Righteous', cursive" }}>
+            Why it matters
+          </div>
+          <div style={{ fontSize:13, color:'#1C2B22', lineHeight:1.6, fontFamily:'DM Sans, sans-serif' }}>
+            {task.why || task.note || 'This keeps your home running smoothly and helps avoid bigger problems down the line.'}
           </div>
         </div>
 
-        {/* Assist */}
-        <div style={{ background: `${C.lav}15`, border: `1.5px solid ${C.lav}`, borderRadius: 16, padding: "16px", marginBottom: 14 }}>
-          <div className="mf" style={{ fontSize: 15, color: C.lav, marginBottom: 6 }}>mitzy can help ✦</div>
-          <div style={{ fontSize: 13, color: C.muted, marginBottom: 12, lineHeight: 1.6 }}>
-            {ASSIST_DESCRIPTIONS[task.assistType] || ASSIST_DESCRIPTIONS.guidance}
+        {/* How to do it */}
+        <div style={{ background:'#fff', borderRadius:14, padding:'13px 15px', border:'1px solid #EAE4DA', marginBottom:10 }}>
+          <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:'#4A6256', marginBottom:8, fontFamily:"'Righteous', cursive" }}>
+            How to do it
           </div>
-          <button className="pb" onClick={() => onAssist(task)} style={{ width: "100%", padding: "12px", fontSize: 15, background: C.lav, color: C.white, border: "none", borderRadius: 12, fontWeight: 700, boxShadow: "0 4px 12px rgba(199,125,255,0.3)" }}>
-            {ASSIST_LABELS[task.assistType] || ASSIST_LABELS.guidance}
+          {steps ? (
+            steps.map((step, i) => (
+              <div key={i} style={{ display:'flex', gap:10, alignItems:'flex-start', marginBottom: i < steps.length - 1 ? 10 : 0 }}>
+                <div style={{ width:22, height:22, borderRadius:'50%', background:'#E8F0EC', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:11, fontWeight:700, color:'#1A5C3A', fontFamily:'DM Sans, sans-serif' }}>
+                  {i + 1}
+                </div>
+                <div style={{ fontSize:13, color:'#1C2B22', lineHeight:1.5, flex:1, fontFamily:'DM Sans, sans-serif' }}>{step.trim()}</div>
+              </div>
+            ))
+          ) : (
+            <div style={{ fontSize:13, color:'#4A6256', lineHeight:1.6, fontFamily:'DM Sans, sans-serif' }}>
+              {task.note
+                ? 'Follow standard procedures or tap below to let Mitzy walk you through it.'
+                : 'Tap "Want Mitzy to help?" below and get step-by-step guidance.'}
+            </div>
+          )}
+        </div>
+
+        {/* Assist button */}
+        {task.assistType && (
+          <button
+            onClick={() => onAssist(task)}
+            style={{
+              width:'100%', background:'#1A5C3A', border:'none', borderRadius:14,
+              padding:'15px 16px', display:'flex', alignItems:'center', gap:12,
+              cursor:'pointer', marginBottom:8, boxSizing:'border-box',
+            }}
+          >
+            <FourDots size={7} />
+            <div style={{ flex:1, textAlign:'left' }}>
+              <div style={{ fontSize:14, fontWeight:700, color:'#E8F5EE', fontFamily:'DM Sans, sans-serif' }}>Want Mitzy to help?</div>
+              {assistSubtitle && <div style={{ fontSize:11, color:'#7DD8B0', marginTop:2, fontFamily:'DM Sans, sans-serif' }}>{assistSubtitle}</div>}
+            </div>
+            <div style={{ width:30, height:30, borderRadius:8, background:'#0F3D27', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M3 7h8M7 3l4 4-4 4" stroke="#B8DCC8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+          </button>
+        )}
+
+        {/* Bottom row */}
+        <div style={{ display:'flex', gap:8 }}>
+          <button
+            onClick={() => onSchedule(task)}
+            style={{
+              background:'#fff', border:'1.5px solid #EAE4DA', borderRadius:14,
+              padding:'0 16px', height:52, display:'flex', alignItems:'center', gap:7,
+              cursor:'pointer', flexShrink:0,
+            }}
+          >
+            <CalSVG />
+            <span style={{ fontSize:12, fontWeight:700, color:'#4A6256', fontFamily:'DM Sans, sans-serif' }}>Add to calendar</span>
+          </button>
+
+          <button
+            onClick={() => onDone(task)}
+            style={{
+              flex:1, background:'#06A77D', border:'none', borderRadius:14,
+              height:52, display:'flex', alignItems:'center', justifyContent:'center', gap:8, cursor:'pointer',
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <polyline points="3,9 7,13 15,4" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span style={{ fontSize:15, fontWeight:700, color:'#fff', fontFamily:'DM Sans, sans-serif' }}>Mark as done</span>
           </button>
         </div>
 
-        {/* Actions */}
-        <div style={{ display: "flex", gap: 10 }}>
-          <button className="pb" onClick={() => onSchedule(task)} style={{ flex: 1, padding: "13px", fontSize: 15, background: C.white, color: C.ink, border: "1.5px solid #E8E0D8", borderRadius: 14, fontWeight: 600 }}>
-            📅 schedule
-          </button>
-          <button className="pb" onClick={() => onDone(task)} style={{ flex: 2, padding: "13px", fontSize: 15, background: C.mint, color: C.white, border: "none", borderRadius: 14, fontWeight: 700, boxShadow: "0 4px 12px rgba(107,203,119,0.3)" }}>
-            ✓ mark done
-          </button>
-        </div>
       </div>
     </div>
   );
