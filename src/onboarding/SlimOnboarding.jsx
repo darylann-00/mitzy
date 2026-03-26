@@ -258,7 +258,7 @@ export function SlimOnboarding({ onComplete }) {
       ...(profile.hasPets  ? ['Pets'] : []),
     ];
     return (
-      <div style={{ minHeight:'100vh', background:'#1A5C3A', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'28px 24px', position:'relative', overflow:'hidden' }}>
+      <div style={{ minHeight:'100vh', background:'#1A5C3A', display:'flex', flexDirection:'column', position:'relative', overflow:'hidden' }}>
         <div style={{ position:'absolute', width:120, height:120, borderRadius:'50%', background:'#0F3D27', top:-40, right:-40 }} />
         <div style={{ position:'absolute', width:60, height:60, borderRadius:'50%', background:'#06A77D', top:20, right:60, opacity:0.7 }} />
         <div style={{ position:'absolute', width:20, height:20, background:'#F77F00', transform:'rotate(45deg)', bottom:60, right:30 }} />
@@ -266,6 +266,7 @@ export function SlimOnboarding({ onComplete }) {
         <div style={{ position:'absolute', width:80, height:80, borderRadius:'50%', background:'#0F3D27', bottom:-30, left:-20 }} />
         <div style={{ position:'absolute', width:14, height:14, background:'#F4C430', transform:'rotate(45deg)', top:80, left:30, opacity:0.7 }} />
 
+        <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:'28px 24px' }}>
         <div style={{ width:'100%', maxWidth:400, position:'relative' }}>
           {/* Card 1 — completed */}
           <div style={{ background:'#0F3D27', borderRadius:16, padding:'18px 20px', marginBottom:10 }}>
@@ -301,6 +302,16 @@ export function SlimOnboarding({ onComplete }) {
             style={{ width:'100%', padding:'16px', fontSize:15, fontWeight:700, background:'#F4C430', color:'#7a5900', border:'none', borderRadius:14, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
           >
             I'm ready
+          </button>
+        </div>
+        </div>
+
+        <div style={{ padding:'14px 20px', display:'flex', alignItems:'center', position:'relative', zIndex:1 }}>
+          <button
+            onClick={() => setShowTransition(false)}
+            style={{ background:'none', border:'none', color:'#A8C9B5', fontSize:14, fontFamily:'DM Sans, sans-serif', cursor:'pointer', padding:'4px 0' }}
+          >
+            ← Back
           </button>
         </div>
       </div>
@@ -392,7 +403,7 @@ export function SlimOnboarding({ onComplete }) {
               {profile.hasCar === null ? (
                 <>
                   <OptionBtn label="Yes" selected={false} onClick={() => { setProfile(p => ({ ...p, hasCar: true })); setCarInputOpen(true); }} />
-                  <OptionBtn label="No"  selected={false} onClick={() => { setProfile(p => ({ ...p, hasCar: false })); go(3); }} />
+                  <OptionBtn label="No"  selected={false} onClick={() => { setProfile(p => ({ ...p, hasCar: false })); setStep(3); setErr(''); }} />
                 </>
               ) : (
                 <>
@@ -441,6 +452,16 @@ export function SlimOnboarding({ onComplete }) {
                           {CAR_DATA[carInput.make].map(m => <option key={m} value={m}>{m}</option>)}
                         </select>
                       )}
+                    </>
+                  ) : profile.cars.length === 0 ? (
+                    <>
+                      <OptionBtn label="No cars added" selected={true} onClick={() => {}} />
+                      <button
+                        onClick={() => { setProfile(p => ({ ...p, hasCar: true })); setCarInput({ year: '', make: '', model: '' }); setCarInputOpen(true); }}
+                        style={{ background:'none', border:'1.5px solid rgba(255,255,255,0.25)', borderRadius:10, color:'rgba(232,245,238,0.8)', fontSize:13, fontWeight:600, padding:'10px 16px', cursor:'pointer', fontFamily:'DM Sans, sans-serif', width:'100%', marginBottom:12 }}
+                      >
+                        + Add a vehicle
+                      </button>
                     </>
                   ) : (
                     <button
@@ -491,7 +512,7 @@ export function SlimOnboarding({ onComplete }) {
               {profile.hasKids === null ? (
                 <>
                   <OptionBtn label="Yes" selected={false} onClick={() => { setProfile(p => ({ ...p, hasKids: true })); setKidInputOpen(true); }} />
-                  <OptionBtn label="No"  selected={false} onClick={() => { setProfile(p => ({ ...p, hasKids: false })); go(5); }} />
+                  <OptionBtn label="No"  selected={false} onClick={() => { setProfile(p => ({ ...p, hasKids: false })); setStep(5); setErr(''); }} />
                 </>
               ) : (
                 <>
@@ -524,6 +545,16 @@ export function SlimOnboarding({ onComplete }) {
                     </div>
                     {kidInput.age && Number(kidInput.age) > 20 && <div style={{ fontSize:12, color:'rgba(244,196,48,0.85)', marginBottom:6, fontFamily:'DM Sans, sans-serif' }}>Just want to make sure — does that age look right?</div>}
                     {err && <div style={{ fontSize:12, color:'#F4C430', marginBottom:8, fontFamily:'DM Sans, sans-serif' }}>{err}</div>}
+                    </>
+                  ) : profile.kids.length === 0 ? (
+                    <>
+                      <OptionBtn label="No kids added" selected={true} onClick={() => {}} />
+                      <button
+                        onClick={() => { setProfile(p => ({ ...p, hasKids: true })); setKidInput({ name: '', age: '' }); setKidInputOpen(true); }}
+                        style={{ background:'none', border:'1.5px solid rgba(255,255,255,0.25)', borderRadius:10, color:'rgba(232,245,238,0.8)', fontSize:13, fontWeight:600, padding:'10px 16px', cursor:'pointer', fontFamily:'DM Sans, sans-serif', width:'100%', marginBottom:12 }}
+                      >
+                        + Add a kid
+                      </button>
                     </>
                   ) : (
                     <button
@@ -559,11 +590,11 @@ export function SlimOnboarding({ onComplete }) {
               {profile.hasPets === null ? (
                 <>
                   <OptionBtn label="Yes" selected={false} onClick={() => { setProfile(p => ({ ...p, hasPets: true })); setPetInputOpen(true); }} />
-                  <OptionBtn label="No"  selected={false} onClick={() => setProfile(p => ({ ...p, hasPets: false }))} />
+                  <OptionBtn label="No"  selected={false} onClick={() => { setProfile(p => ({ ...p, hasPets: false })); setShowTransition(true); }} />
                 </>
               ) : (
                 <>
-                  {profile.hasPets === true && profile.pets.length > 0 && (
+                  {profile.pets.length > 0 && (
                     <div style={{ marginBottom:14 }}>
                       {profile.pets.map((a, i) => (
                         <div key={i} style={{ background:'rgba(255,255,255,0.12)', borderRadius:10, padding:'8px 12px', marginBottom:6, display:'flex', justifyContent:'space-between', alignItems:'center', cursor:'pointer' }} onClick={() => editPet(i)}>
@@ -573,7 +604,7 @@ export function SlimOnboarding({ onComplete }) {
                       ))}
                     </div>
                   )}
-                  {profile.hasPets === true && petInputOpen ? (
+                  {petInputOpen ? (
                     <>
                       {/* Step 1: Name + age */}
                       <div style={{ display:'flex', gap:8, marginBottom:err ? 6 : 10 }}>
@@ -615,14 +646,24 @@ export function SlimOnboarding({ onComplete }) {
                         </div>
                       )}
                     </>
-                  ) : profile.hasPets === true ? (
+                  ) : profile.pets.length === 0 ? (
+                    <>
+                      <OptionBtn label="No pets added" selected={true} onClick={() => {}} />
+                      <button
+                        onClick={() => { setProfile(p => ({ ...p, hasPets: true })); setPetInput({ name: '', type: '', age: '', longCoat: false }); setPetInputOpen(true); }}
+                        style={{ background:'none', border:'1.5px solid rgba(255,255,255,0.25)', borderRadius:10, color:'rgba(232,245,238,0.8)', fontSize:13, fontWeight:600, padding:'10px 16px', cursor:'pointer', fontFamily:'DM Sans, sans-serif', width:'100%', marginBottom:12 }}
+                      >
+                        + Add a pet
+                      </button>
+                    </>
+                  ) : (
                     <button
                       onClick={() => { setPetInput({ name: '', type: '', age: '', longCoat: false }); setPetInputOpen(true); }}
                       style={{ background:'none', border:'1.5px solid rgba(255,255,255,0.25)', borderRadius:10, color:'rgba(232,245,238,0.8)', fontSize:13, fontWeight:600, padding:'10px 16px', cursor:'pointer', fontFamily:'DM Sans, sans-serif', width:'100%', marginBottom:12 }}
                     >
                       + Add another pet
                     </button>
-                  ) : null}
+                  )}
                   <NextBtn onClick={() => {
                     if (petInputOpen && (petInput.name.trim() || petInput.age || petInput.type)) {
                       setErr(petInput.name.trim() ? `Finish adding ${petInput.name.trim()} or clear the fields to continue.` : 'Finish adding this entry or clear the fields to continue.');

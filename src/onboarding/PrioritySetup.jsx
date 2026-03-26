@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { CAT_META } from "../data/constants";
 import { CAT_ICON_CONFIG } from "../components/CategoryIcons";
 import { isPriority } from "../data/taskFactory";
@@ -24,7 +24,6 @@ export function PrioritySetup({ taskLib, onComplete }) {
   const [index,      setIndex]      = useState(0);
   const [selections, setSelections] = useState({});
   const [done,       setDone]       = useState(false);
-  const dateTimerRef = useRef(null);
 
   const current = priorityTasks[index];
   const sel     = selections[current?.id];
@@ -54,7 +53,6 @@ export function PrioritySetup({ taskLib, onComplete }) {
   };
 
   const advance = (updatedSelections) => {
-    if (dateTimerRef.current) clearTimeout(dateTimerRef.current);
     if (!isLast) {
       setIndex(i => i + 1);
     } else {
@@ -191,11 +189,12 @@ export function PrioritySetup({ taskLib, onComplete }) {
               value={sel?.type === 'exact' ? sel.date : ''}
               onChange={e => {
                 if (!e.target.value) return;
-                const val = e.target.value;
-                const newSelections = { ...selections, [current.id]: { type:'exact', date: val, days: null } };
-                setSelections(newSelections);
-                if (dateTimerRef.current) clearTimeout(dateTimerRef.current);
-                dateTimerRef.current = setTimeout(() => advance(newSelections), 700);
+                setSelections(s => ({ ...s, [current.id]: { type:'exact', date: e.target.value, days: null } }));
+              }}
+              onBlur={e => {
+                if (!e.target.value) return;
+                const newSelections = { ...selections, [current.id]: { type:'exact', date: e.target.value, days: null } };
+                advance(newSelections);
               }}
               style={{ flex:'0 0 auto', width:'auto', padding:'4px 8px', fontSize:12, height:28, boxSizing:'border-box', borderRadius:4, border:'1.5px solid #EAE4DA', outline:'none' }}
             />
