@@ -2,6 +2,7 @@ import { CategoryTile } from "./CategoryIcons";
 
 export function formatDueDate(days) {
   if (days === null || days === undefined) return '';
+  if (days < -14) return "Hasn't been done in a while";
   if (days < 0) {
     const n = Math.abs(days);
     return `due ${n} day${n !== 1 ? 's' : ''} ago`;
@@ -21,10 +22,10 @@ const BAR_COLOR = {
   'confirm':    '#06A77D',
 };
 
-export function TaskCard({ task, status, days, onSelect, onDone, showCategoryIcon = false }) {
+export function TaskCard({ task, status, days, onSelect, onDone, showCategoryIcon = false, subtitle }) {
   const barColor = BAR_COLOR[status] ?? '#EAE4DA';
   const isActive = status === 'due' || status === 'coming-up';
-  const dueText  = formatDueDate(days);
+  const dueText  = subtitle !== undefined ? subtitle : formatDueDate(days);
 
   return (
     <div style={{

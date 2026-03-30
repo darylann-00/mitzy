@@ -47,7 +47,7 @@ function ProvidersIcon({ size = 16 }) {
   );
 }
 
-export function ProfileView({ profile, providerHistory, onReset }) {
+export function ProfileView({ profile, providerHistory, onReset, user, onSignOut }) {
   const [confirmReset, setConfirmReset] = useState(false);
 
   // Home section rows
@@ -68,10 +68,10 @@ export function ProfileView({ profile, providerHistory, onReset }) {
   }));
 
   return (
-    <div style={{ background:'#FDFAF2', minHeight:'100vh' }}>
+    <div style={{ background:'#FDFAF2' }}>
       <AppHeader rightContent={<>Your<br />household</>} />
 
-      <div style={{ padding:'20px 18px 24px', maxWidth:680, margin:'0 auto' }}>
+      <div style={{ padding:'20px 18px 100px', maxWidth:680, margin:'0 auto' }}>
 
         {/* Home */}
         {(profile.hasHome !== null || profile.zip) && (
@@ -149,6 +149,25 @@ export function ProfileView({ profile, providerHistory, onReset }) {
             title="Health"
             rows={[{ label: 'Age', value: profile.age }]}
           />
+        )}
+
+        {/* Account */}
+        {user && (
+          <div style={{ background:'#fff', borderRadius:16, border:'1px solid #EAE4DA', marginBottom:10 }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'13px 16px', borderBottom:'1px solid #F5F0E8' }}>
+              <span style={{ fontSize:12, color:'#4A6256', fontWeight:500, fontFamily:'DM Sans, sans-serif' }}>Signed in as</span>
+              <span style={{ fontSize:13, fontWeight:700, color:'#1C2B22', fontFamily:'DM Sans, sans-serif' }}>{user.email}</span>
+            </div>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'13px 16px' }}>
+              <span style={{ fontSize:13, fontWeight:500, color:'#9B9B9B', fontFamily:'DM Sans, sans-serif' }}>Sign out</span>
+              <button
+                onClick={onSignOut}
+                style={{ fontSize:12, fontWeight:700, color:'#1A5C3A', background:'#E8F5EE', border:'none', borderRadius:20, padding:'5px 12px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+              >
+                Log out
+              </button>
+            </div>
+          </div>
         )}
 
         {/* Reset */}

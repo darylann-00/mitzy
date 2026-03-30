@@ -42,6 +42,13 @@ export function taskScore(task, lastDone) {
   return stakeWeight * Math.min(daysSince / task.intervalDays, 2);
 }
 
+// ─── Dependency check ─────────────────────────────────────────────────────────
+
+export function isDependencySatisfied(task, taskState) {
+  if (!task.dependsOn) return true;
+  return !!taskState[task.dependsOn]?.lastDone;
+}
+
 // ─── Next due date display ────────────────────────────────────────────────────
 
 export function nextDueStr(task, lastDone) {

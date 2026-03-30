@@ -257,7 +257,7 @@ export function AllView({ activeTasks, getStatus, getDays, providerHistory, onSe
   const hasKnown = needsAttention.length > 0 || comingUp.length > 0 || allGood.length > 0;
 
   return (
-    <div style={{ background:'#FDFAF2', minHeight:'100vh' }}>
+    <div style={{ background:'#FDFAF2' }}>
       <AppHeader rightContent={<>Everything<br />you're tracking</>} />
 
       {/* Filter controls */}
@@ -301,7 +301,7 @@ export function AllView({ activeTasks, getStatus, getDays, providerHistory, onSe
       </div>
 
       {/* Task groups */}
-      <div style={{ padding:'0 18px 18px', maxWidth:680, margin:'0 auto' }}>
+      <div style={{ padding:'0 18px 160px', maxWidth:680, margin:'0 auto' }}>
 
         {!hasKnown && unknownFiltered.length === 0 && (
           <div style={{ background:'#FFFFFF', borderRadius:14, padding:'36px 20px', textAlign:'center', border:'1px solid #EAE4DA', marginTop:16 }}>

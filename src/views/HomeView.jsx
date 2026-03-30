@@ -43,6 +43,74 @@ export function AppHeader({ rightContent }) {
   );
 }
 
+// ─── HomeView-only header with greeting ────────────────────────────────────────
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function HomeHeader({ profile, doneThisWeek }) {
+  const name = profile?.name ? `, ${profile.name}` : '';
+  return (
+    <div style={{
+      background: '#1A5C3A',
+      padding: '22px 22px 20px',
+      position: 'relative',
+      overflow: 'hidden',
+    }}>
+      {/* Scatter shapes */}
+      <div style={{ position:'absolute', width:60, height:60, borderRadius:'50%', background:'#0F3D27', top:-18, right:-16 }} />
+      <div style={{ position:'absolute', width:30, height:30, borderRadius:'50%', background:'#06A77D', top:10, right:30 }} />
+      <div style={{ position:'absolute', width:12, height:12, background:'#F77F00', transform:'rotate(45deg)', bottom:10, right:22 }} />
+      <div style={{ position:'absolute', width:10, height:10, borderRadius:'50%', background:'#F4C430', top:6, right:72 }} />
+      <div style={{ position:'absolute', width:8, height:8, borderRadius:'50%', background:'#D62828', bottom:14, right:58 }} />
+      <div style={{ position:'absolute', width:22, height:22, borderRadius:'50%', border:'2.5px solid #06A77D', opacity:0.5, bottom:-6, right:90 }} />
+
+      {/* Wordmark row */}
+      <div style={{ display:'flex', alignItems:'center', gap:11, position:'relative', marginBottom:10 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:4, flexShrink:0 }}>
+          <div style={{ width:10, height:10, borderRadius:'50%', background:'#D62828' }} />
+          <div style={{ width:10, height:10, borderRadius:'50%', background:'#F77F00' }} />
+          <div style={{ width:10, height:10, borderRadius:'50%', background:'#06A77D' }} />
+          <div style={{ width:10, height:10, borderRadius:'50%', background:'#F4C430' }} />
+        </div>
+        <span style={{ fontFamily:"'Righteous', 'Trebuchet MS', cursive", fontSize:36, color:'#E8F5EE', lineHeight:1 }}>
+          mitzy
+        </span>
+      </div>
+
+      {/* Greeting row — greeting left, pill bottom-right */}
+      <div style={{ position:'relative', display:'flex', alignItems:'flex-end', justifyContent:'space-between' }}>
+        <div style={{ fontFamily:"'Righteous', 'Trebuchet MS', cursive", fontSize:22, color:'#E8F5EE', lineHeight:1.2 }}>
+          {getGreeting()}{name}
+        </div>
+        {doneThisWeek > 0 && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 5,
+            background: '#0F3D27',
+            border: '1px solid #2A7A50',
+            borderRadius: 20,
+            padding: '4px 10px',
+            flexShrink: 0,
+            marginLeft: 12,
+          }}>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <polyline points="2,6 5,9 10,3" stroke="#06A77D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span style={{ fontFamily:'DM Sans, sans-serif', fontSize:11, fontWeight:600, color:'#B8DCC8' }}>
+              {doneThisWeek} done this week
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Divider() {
   return (
     <div style={{ display:'flex', alignItems:'center', gap:8, margin:'16px 0' }}>
@@ -65,12 +133,13 @@ function SectionLabel({ label, color }) {
   );
 }
 
+
 export function HomeView({
   trickleQ,
   profile,
   pendingHazards,
-  urgentTasks,
-  upcomingTasks,
+  focusTasks,
+  doneThisWeek,
   providerHistory,
   getStatus,
   getDays,
@@ -81,15 +150,11 @@ export function HomeView({
   onHazardAccept,
   onHazardDismiss,
 }) {
-  const now = new Date();
-  const dayOfWeek    = now.toLocaleDateString('en-US', { weekday: 'long' });
-  const monthAndDate = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
-
   return (
-    <div style={{ background:'#FDFAF2', minHeight:'100vh' }}>
-      <AppHeader rightContent={<>{dayOfWeek}<br />{monthAndDate}</>} />
+    <div style={{ background:'#FDFAF2' }}>
+      <HomeHeader profile={profile} doneThisWeek={doneThisWeek} />
 
-      <div style={{ padding:'20px 18px 18px', maxWidth:680, margin:'0 auto' }}>
+      <div style={{ padding:'20px 18px 160px', maxWidth:680, margin:'0 auto' }}>
 
         {/* Trickle question */}
         {trickleQ && (
@@ -104,31 +169,11 @@ export function HomeView({
           </>
         )}
 
-        {/* Due now */}
-        {urgentTasks.length > 0 && (
+        {/* Focus for today */}
+        {focusTasks.length > 0 && (
           <div style={{ marginBottom:4 }}>
-            <SectionLabel label="Do these now" color="#D62828" />
-            {urgentTasks.map(task => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                status={getStatus(task)}
-                days={getDays(task)}
-                hasSavedProvider={!!providerHistory[task.id]}
-                onSelect={onSelectTask}
-                onDone={onDoneTask}
-              />
-            ))}
-          </div>
-        )}
-
-        {urgentTasks.length > 0 && upcomingTasks.length > 0 && <Divider />}
-
-        {/* Coming up */}
-        {upcomingTasks.length > 0 && (
-          <div>
-            <SectionLabel label="Coming up" color="#F77F00" />
-            {upcomingTasks.map(task => (
+            <SectionLabel label="Focus for today" color="#1A5C3A" />
+            {focusTasks.map(task => (
               <TaskCard
                 key={task.id}
                 task={task}
@@ -145,7 +190,7 @@ export function HomeView({
         {/* Hazard card */}
         {pendingHazards && (
           <>
-            <Divider />
+            {focusTasks.length > 0 && <Divider />}
             <HazardCard
               hazards={pendingHazards}
               onAccept={onHazardAccept}
@@ -155,7 +200,7 @@ export function HomeView({
         )}
 
         {/* All clear */}
-        {urgentTasks.length === 0 && upcomingTasks.length === 0 && !pendingHazards && (
+        {focusTasks.length === 0 && !pendingHazards && (
           <div style={{ background:'#FFFFFF', borderRadius:14, padding:'36px 20px', textAlign:'center', border:'1px solid #EAE4DA' }}>
             <div style={{ width:36, height:36, borderRadius:'50%', background:'#E8F5EE', margin:'0 auto 12px', display:'flex', alignItems:'center', justifyContent:'center' }}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">

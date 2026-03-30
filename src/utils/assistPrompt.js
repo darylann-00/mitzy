@@ -1,7 +1,10 @@
 export function buildAssistPrompt(task, profile) {
   const loc  = profile.zip       ? `near zip code ${profile.zip}` : "in my area";
   const ins  = profile.insurance ? `Insurance: ${profile.insurance}. ` : "";
-  const car  = profile.car       ? `Vehicle: ${profile.car}. ` : "";
+  const carStr = task.vehicle
+    ? task.vehicle
+    : profile.cars?.length ? profile.cars.join(", ") : profile.car;
+  const car  = carStr ? `Vehicle: ${carStr}. ` : "";
   const kids = profile.kids?.length
     ? `Kids: ${profile.kids.map(k => `${k.name} age ${k.age}`).join(", ")}. `
     : "";
