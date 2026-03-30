@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { TaskCard } from "../components/TaskCard";
 import { HouseIcon, CarIcon, PersonIcon, CalendarIcon, StarIcon, PetIcon, CategoryTile } from "../components/CategoryIcons";
+import { TaskAnswerChips } from "../components/TaskAnswerChips";
 import { AppHeader } from "./HomeView";
 
 // ─── Group divider (Memphis dots) ──────────────────────────────────────────────
@@ -67,39 +68,21 @@ function Toggle({ on, onToggle, label }) {
   );
 }
 
-// ─── Explore chip definitions ──────────────────────────────────────────────────
-const EXPLORE_CHIPS = [
-  { key: 'recently', label: 'Just recently',    daysAgo: ()     => 7   },
-  { key: 'months',   label: 'A few months ago', daysAgo: ()     => 90  },
-  { key: 'year',     label: 'About a year ago', daysAgo: ()     => 365 },
-  { key: 'unsure',   label: 'Not sure',         daysAgo: (task) => Math.round(task.intervalDays * 0.8) },
-];
-
 // ─── Explore section ───────────────────────────────────────────────────────────
-function ExploreSection({ tasks, markDone }) {
-  const [open,      setOpen]      = useState(false);
-  const [expanded,  setExpanded]  = useState(null);
-  const [exactDate, setExactDate] = useState('');
+function ExploreSection({ tasks, markDone, markNeeded }) {
+  const [open,     setOpen]     = useState(false);
+  const [expanded, setExpanded] = useState(null);
 
   if (tasks.length === 0) return null;
 
-  const handleChip = (task, chip) => {
-    const daysAgo = chip.daysAgo(task);
-    const date    = new Date(Date.now() - daysAgo * 86400000);
-    markDone(task.id, date.toISOString().split('T')[0]);
+  const handleDone = (task, iso) => {
+    markDone(task.id, iso.split('T')[0]);
     setExpanded(null);
   };
 
-  const handleExactDate = (task, dateStr) => {
-    if (!dateStr) return;
-    markDone(task.id, dateStr);
+  const handleNeeded = (task) => {
+    markNeeded(task.id);
     setExpanded(null);
-    setExactDate('');
-  };
-
-  const toggleRow = (id) => {
-    setExpanded(prev => prev === id ? null : id);
-    setExactDate('');
   };
 
   return (
@@ -139,7 +122,7 @@ function ExploreSection({ tasks, markDone }) {
 
               {/* Row header */}
               <div
-                onClick={() => toggleRow(task.id)}
+                onClick={() => setExpanded(prev => prev === task.id ? null : task.id)}
                 style={{
                   display:'flex', alignItems:'center', gap:10,
                   padding:'10px 12px',
@@ -151,10 +134,7 @@ function ExploreSection({ tasks, markDone }) {
                 }}
               >
                 <CategoryTile cat={task.cat} size={24} />
-                <span style={{
-                  flex:1, fontSize:13, fontWeight:600, color:'#1C2B22',
-                  fontFamily:'DM Sans, sans-serif',
-                }}>
+                <span style={{ flex:1, fontSize:13, fontWeight:600, color:'#1C2B22', fontFamily:'DM Sans, sans-serif' }}>
                   {task.label}
                 </span>
                 <svg
@@ -165,46 +145,16 @@ function ExploreSection({ tasks, markDone }) {
                 </svg>
               </div>
 
-              {/* Expanded chip picker */}
+              {/* Expanded picker */}
               {isExp && (
-                <div style={{
-                  background:'#F8F5EC',
-                  border:'1.5px solid #EAE4DA',
-                  borderTop:'none',
-                  borderRadius:'0 0 10px 10px',
-                  padding:'12px 12px 14px',
-                }}>
-                  <div style={{ fontSize:12, fontWeight:700, color:'#4A6256', marginBottom:10, fontFamily:'DM Sans, sans-serif' }}>
-                    When did you last do this?
-                  </div>
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:7, marginBottom:10 }}>
-                    {EXPLORE_CHIPS.map(chip => (
-                      <button
-                        key={chip.key}
-                        onClick={() => handleChip(task, chip)}
-                        style={{
-                          padding:'10px 8px', fontSize:12, fontWeight:700, textAlign:'left',
-                          borderRadius:10, cursor:'pointer', fontFamily:'DM Sans, sans-serif',
-                          border:'1.5px solid #EAE4DA',
-                          background:'#fff', color:'#1C2B22',
-                        }}
-                      >
-                        {chip.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div style={{ fontSize:11, color:'#4A6256', marginBottom:5, fontFamily:'DM Sans, sans-serif' }}>
-                    Or pick an exact date:
-                  </div>
-                  <input
-                    type="date"
-                    max={new Date().toISOString().split('T')[0]}
-                    value={exactDate}
-                    onChange={e => {
-                      setExactDate(e.target.value);
-                      if (e.target.value) handleExactDate(task, e.target.value);
-                    }}
-                    style={{ fontSize:12 }}
+                <div style={{ background:'#F8F5EC', border:'1.5px solid #EAE4DA', borderTop:'none', borderRadius:'0 0 10px 10px', padding:'12px 12px 14px' }}>
+                  <TaskAnswerChips
+                    task={task}
+                    onDone={(iso) => handleDone(task, iso)}
+                    onNeeded={() => handleNeeded(task)}
+                    showDatePicker={!task.oneTime}
+                    labelStyle={{ fontSize:12, fontWeight:700, color:'#4A6256', marginBottom:10 }}
+                    chipGridStyle={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:7, marginBottom:10 }}
                   />
                 </div>
               )}
@@ -219,7 +169,7 @@ function ExploreSection({ tasks, markDone }) {
 }
 
 // ─── AllView ───────────────────────────────────────────────────────────────────
-export function AllView({ activeTasks, getStatus, getDays, providerHistory, onSelectTask, onDoneTask, markDone }) {
+export function AllView({ activeTasks, getStatus, getDays, providerHistory, onSelectTask, onDoneTask, markDone, markNeeded }) {
   const [activeCategory, setActiveCategory] = useState('all');
   const [dueOnly, setDueOnly] = useState(false);
 
@@ -246,7 +196,7 @@ export function AllView({ activeTasks, getStatus, getDays, providerHistory, onSe
   const sorted = [...knownFiltered].sort((a, b) => sortScore(b) - sortScore(a));
 
   // Three groups
-  const needsAttention = sorted.filter(t => ['due', 'confirm'].includes(getStatus(t)));
+  const needsAttention = sorted.filter(t => ['due', 'needed', 'confirm'].includes(getStatus(t)));
   const comingUp       = sorted.filter(t => ['coming-up', 'scheduled'].includes(getStatus(t)));
   const allGood        = sorted.filter(t => getStatus(t) === 'ok');
 
@@ -323,6 +273,7 @@ export function AllView({ activeTasks, getStatus, getDays, providerHistory, onSe
                 onSelect={onSelectTask}
                 onDone={onDoneTask}
                 showCategoryIcon
+                subtitle={getStatus(task) === 'needed' ? '' : undefined}
               />
             ))}
           </>
@@ -366,7 +317,7 @@ export function AllView({ activeTasks, getStatus, getDays, providerHistory, onSe
           </>
         )}
 
-        <ExploreSection tasks={unknownFiltered} markDone={markDone} />
+        <ExploreSection tasks={unknownFiltered} markDone={markDone} markNeeded={markNeeded} />
 
       </div>
     </div>

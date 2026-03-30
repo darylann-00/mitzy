@@ -141,7 +141,7 @@ export default function Mitzy() {
 
   // ─── Domain state ────────────────────────────────────────────────────────────
   const { profile, taskLibrary, setTaskLibrary, updateProfile, addCustomTask } = useProfile(user);
-  const { taskState, setTaskState, disabledTasks, setDisabledTasks, markDone, markScheduled, markNotApplicable } = useTasks(user);
+  const { taskState, setTaskState, disabledTasks, setDisabledTasks, markDone, markScheduled, markNotApplicable, markNeeded } = useTasks(user);
   const { providerHistory, saveProvider } = useProviders();
 
   // ─── UI state ────────────────────────────────────────────────────────────────
@@ -288,7 +288,9 @@ export default function Mitzy() {
           onSelectTask={setSelectedTask}
           onDoneTask={setMarkDoneModal}
           onTrickleAnswer={(answer) => {
-            if (answer.notApplicable) {
+            if (answer.needed) {
+              markNeeded(answer.taskId);
+            } else if (answer.notApplicable) {
               markNotApplicable(answer.taskId);
             } else {
               markDone(answer.taskId, answer.lastDone);
@@ -310,6 +312,7 @@ export default function Mitzy() {
           onSelectTask={setSelectedTask}
           onDoneTask={setMarkDoneModal}
           markDone={markDone}
+          markNeeded={markNeeded}
         />
       )}
 

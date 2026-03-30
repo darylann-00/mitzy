@@ -21,16 +21,20 @@ export function MarkDoneModal({ task, onDone, onClose }) {
         <div style={{ fontFamily:"'Righteous', cursive", fontSize:20, color:'#06A77D', marginBottom:5 }}>Mark as done</div>
         <div style={{ fontSize:14, color:'#1C2B22', marginBottom:20, lineHeight:1.4, fontFamily:'DM Sans, sans-serif' }}>{task.label}</div>
 
-        <div style={{ fontSize:12, color:'#4A6256', marginBottom:6, fontWeight:600, fontFamily:'DM Sans, sans-serif' }}>
-          Date completed
-        </div>
-        <input
-          type="date"
-          max={new Date().toISOString().split('T')[0]}
-          value={dateStr}
-          onChange={e => setDateStr(e.target.value)}
-          style={{ marginBottom:16 }}
-        />
+        {!task.oneTime && (
+          <>
+            <div style={{ fontSize:12, color:'#4A6256', marginBottom:6, fontWeight:600, fontFamily:'DM Sans, sans-serif' }}>
+              Date completed
+            </div>
+            <input
+              type="date"
+              max={new Date().toISOString().split('T')[0]}
+              value={dateStr}
+              onChange={e => setDateStr(e.target.value)}
+              style={{ marginBottom:16 }}
+            />
+          </>
+        )}
 
         <div style={{ display:'flex', gap:10 }}>
           <button

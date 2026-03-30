@@ -22,6 +22,12 @@ export function taskStatus(task, taskState) {
 
   if (entry?.scheduledDate && new Date(entry.scheduledDate) > new Date()) return "scheduled";
   if (entry?.scheduledDate && new Date(entry.scheduledDate) <= new Date()) return "confirm";
+  if (task.oneTime) {
+    if (entry?.lastDone) return "ok";
+    if (entry?.needed)   return "needed";
+    return "unknown";
+  }
+
   if (!entry?.lastDone) return "unknown";
 
   const daysSinceDone = Math.floor((Date.now() - new Date(entry.lastDone)) / 86400000);
@@ -36,6 +42,7 @@ export function taskStatus(task, taskState) {
 
 export function taskScore(task, lastDone) {
   const stakeWeight = { high: 3, medium: 2, low: 1 }[task.stakes] || 1;
+  if (task.oneTime) return lastDone ? 0 : stakeWeight * 3;
   const daysSince   = lastDone
     ? Math.floor((Date.now() - new Date(lastDone)) / 86400000)
     : task.intervalDays * 2;
@@ -52,6 +59,7 @@ export function isDependencySatisfied(task, taskState) {
 // ─── Next due date display ────────────────────────────────────────────────────
 
 export function nextDueStr(task, lastDone) {
+  if (task.oneTime) return "once";
   if (!lastDone) return "anytime";
   const due = new Date(new Date(lastDone).getTime() + task.intervalDays * 86400000);
   return due.toLocaleDateString("en-US", { month: "short", day: "numeric" });

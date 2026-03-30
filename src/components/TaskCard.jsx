@@ -16,6 +16,7 @@ export function formatDueDate(days) {
 
 const BAR_COLOR = {
   'due':        '#D62828',
+  'needed':     '#F77F00',
   'coming-up':  '#F77F00',
   'scheduled':  '#F4C430',
   'ok':         '#06A77D',
@@ -24,7 +25,7 @@ const BAR_COLOR = {
 
 export function TaskCard({ task, status, days, onSelect, onDone, showCategoryIcon = false, subtitle }) {
   const barColor = BAR_COLOR[status] ?? '#EAE4DA';
-  const isActive = status === 'due' || status === 'coming-up';
+  const isActive = status === 'due' || status === 'needed' || status === 'coming-up';
   const dueText  = subtitle !== undefined ? subtitle : formatDueDate(days);
 
   return (

@@ -88,5 +88,9 @@ export function useTasks(user) {
     }
   };
 
-  return { taskState, setTaskState, disabledTasks, setDisabledTasks, markDone, markScheduled, markNotApplicable };
+  const markNeeded = (id) => {
+    setTaskState(prev => ({ ...prev, [id]: { ...prev[id], needed: true } }));
+  };
+
+  return { taskState, setTaskState, disabledTasks, setDisabledTasks, markDone, markScheduled, markNotApplicable, markNeeded };
 }

@@ -1,3 +1,5 @@
+import { TaskAnswerChips } from "./TaskAnswerChips";
+
 const CARD = {
   background:   '#FFFBEE',
   border:       '2px solid #F4C430',
@@ -6,7 +8,7 @@ const CARD = {
   marginBottom: 4,
 };
 
-const chipStyle = {
+const CHIP_STYLE = {
   background: '#fff',
   border: '1.5px solid #F4C430',
   borderRadius: 20,
@@ -18,28 +20,9 @@ const chipStyle = {
   fontFamily: 'DM Sans, sans-serif',
 };
 
-const CHIPS_GENERAL = [
-  { key: 'recently',   label: 'Recently',          days: 30  },
-  { key: 'few-months', label: 'A few months ago',   days: 90  },
-  { key: 'over-year',  label: 'Over a year ago',    days: 400 },
-  { key: 'never',      label: 'Never / not sure',   days: 730 },
-];
-
-const CHIPS_HEALTH = [
-  { key: 'this-year',  label: 'This year',          days: 180 },
-  { key: 'last-year',  label: 'Last year',           days: 400 },
-  { key: 'two-plus',   label: '2+ years ago',        days: 800 },
-  { key: 'never',      label: 'Never / not sure',    days: 730 },
-];
+const LABEL_STYLE = { fontSize: 11, color: '#8A6A00', marginBottom: 8, fontWeight: 400 };
 
 export function TrickleCard({ task, onAnswer, onDismiss }) {
-  const chips = task.cat === 'health' ? CHIPS_HEALTH : CHIPS_GENERAL;
-
-  const handleChip = (days) => {
-    const lastDone = new Date(Date.now() - days * 86400000).toISOString();
-    onAnswer({ taskId: task.id, lastDone });
-  };
-
   return (
     <div style={CARD}>
       {/* Header */}
@@ -60,27 +43,15 @@ export function TrickleCard({ task, onAnswer, onDismiss }) {
         </button>
       </div>
 
-      {/* When did you last? */}
-      <div style={{ fontSize:11, color:'#8A6A00', marginBottom:8, fontFamily:'DM Sans, sans-serif' }}>
-        When did you last do this?
-      </div>
-
-      {/* Chips */}
-      <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:10 }}>
-        {chips.map(chip => (
-          <button key={chip.key} onClick={() => handleChip(chip.days)} style={chipStyle}>
-            {chip.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Doesn't apply */}
-      <button
-        onClick={() => onAnswer({ taskId: task.id, notApplicable: true })}
-        style={{ background:'none', border:'none', fontSize:11, color:'#B08A10', cursor:'pointer', fontFamily:'DM Sans, sans-serif', padding:0, textDecoration:'underline', opacity:0.7 }}
-      >
-        Doesn't apply to me
-      </button>
+      <TaskAnswerChips
+        task={task}
+        onDone={(iso) => onAnswer({ taskId: task.id, lastDone: iso })}
+        onNeeded={() => onAnswer({ taskId: task.id, needed: true })}
+        onSkip={() => onAnswer({ taskId: task.id, notApplicable: true })}
+        labelStyle={LABEL_STYLE}
+        chipStyle={CHIP_STYLE}
+        chipGridStyle={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:10 }}
+      />
     </div>
   );
 }

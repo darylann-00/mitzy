@@ -181,6 +181,7 @@ export function HomeView({
                 hasSavedProvider={!!providerHistory[task.id]}
                 onSelect={onSelectTask}
                 onDone={onDoneTask}
+                subtitle={getStatus(task) === 'needed' ? '' : undefined}
               />
             ))}
           </div>

@@ -1,22 +1,9 @@
 import { useState } from "react";
 import { CAT_META } from "../data/constants";
 import { CAT_ICON_CONFIG } from "../components/CategoryIcons";
+import { TaskAnswerChips } from "../components/TaskAnswerChips";
 import { isPriority } from "../data/taskFactory";
 import { isDependencySatisfied } from "../utils/taskLogic";
-
-const CHIPS_GENERAL = [
-  { key: 'recently',   label: 'Recently',         days: 30  },
-  { key: 'few-months', label: 'A few months ago',  days: 90  },
-  { key: 'over-year',  label: 'Over a year ago',   days: 400 },
-  { key: 'never',      label: 'Never / not sure',  days: 730 },
-];
-
-const CHIPS_HEALTH = [
-  { key: 'this-year',  label: 'This year',         days: 180 },
-  { key: 'last-year',  label: 'Last year',          days: 400 },
-  { key: 'two-plus',   label: '2+ years ago',       days: 800 },
-  { key: 'never',      label: 'Never / not sure',   days: 730 },
-];
 
 const SLIDE_MS = 320;
 
@@ -44,12 +31,15 @@ function ScatterShapes() {
   );
 }
 
+const DARK_LABEL  = { fontSize:13, fontWeight:700, color:'#E8F5EE', marginBottom:14 };
+const DARK_CHIP   = { padding:'14px 12px', fontSize:13, fontWeight:700, textAlign:'center', borderRadius:12, border:'1.5px solid #2A7A50', background:'#0F3D27', color:'#E8F5EE' };
+const DARK_GRID   = { display:'grid', gridTemplateColumns:'1fr 1fr', gap:9, marginBottom:14 };
+const DARK_INPUT  = { flex:'0 0 auto', width:'auto', padding:'4px 8px', fontSize:12, height:28, boxSizing:'border-box', borderRadius:4, outline:'none', border:'1.5px solid #2A7A50', background:'#0F3D27', color:'#E8F5EE' };
+
 // Single task screen — renders entirely on the green background
-function TaskSlide({ task, selections, onChipSelect, onDateChange, onDateBlur }) {
+function TaskSlide({ task, onAnswer, onNeeded }) {
   const meta    = CAT_META[task.cat]      || CAT_META.home;
   const iconCfg = CAT_ICON_CONFIG[task.cat] || CAT_ICON_CONFIG.home;
-  const chips   = task.cat === 'health' ? CHIPS_HEALTH : CHIPS_GENERAL;
-  const sel     = selections[task.id];
 
   return (
     <div style={{ padding:'16px 20px 24px', maxWidth:480, margin:'0 auto', width:'100%', boxSizing:'border-box' }}>
@@ -75,51 +65,16 @@ function TaskSlide({ task, selections, onChipSelect, onDateChange, onDateBlur })
         </div>
       )}
 
-      {/* "When did you last do this?" */}
-      <div style={{ fontSize:13, fontWeight:700, color:'#E8F5EE', marginBottom:14, fontFamily:'DM Sans, sans-serif' }}>
-        When did you last do this?
-      </div>
-
-      {/* 2×2 chip grid */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:9, marginBottom:14 }}>
-        {chips.map(chip => {
-          const selected = sel?.type === 'fuzzy' && sel?.key === chip.key;
-          return (
-            <button
-              key={chip.key}
-              onClick={() => onChipSelect(task.id, chip)}
-              style={{
-                padding:'14px 12px', fontSize:13, fontWeight:700, textAlign:'center',
-                borderRadius:12, cursor:'pointer', fontFamily:'DM Sans, sans-serif',
-                border: selected ? '2px solid #06A77D' : '1.5px solid #2A7A50',
-                background: selected ? '#1A5C3A' : '#0F3D27',
-                color:'#E8F5EE',
-              }}
-            >
-              {chip.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Exact date row */}
-      <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-        <span style={{ fontSize:11, color:'#B8DCC8', fontFamily:'DM Sans, sans-serif', whiteSpace:'nowrap' }}>
-          Or pick an exact date:
-        </span>
-        <input
-          type="date"
-          max={new Date().toISOString().split('T')[0]}
-          value={sel?.type === 'exact' ? sel.date : ''}
-          onChange={e => onDateChange(task.id, e.target.value)}
-          onBlur={e => onDateBlur(task.id, e.target.value)}
-          style={{
-            flex:'0 0 auto', width:'auto', padding:'4px 8px', fontSize:12, height:28,
-            boxSizing:'border-box', borderRadius:4, outline:'none',
-            border:'1.5px solid #2A7A50', background:'#0F3D27', color:'#E8F5EE',
-          }}
-        />
-      </div>
+      <TaskAnswerChips
+        task={task}
+        onDone={onAnswer}
+        onNeeded={onNeeded}
+        showDatePicker
+        labelStyle={DARK_LABEL}
+        chipStyle={DARK_CHIP}
+        chipGridStyle={DARK_GRID}
+        dateInputStyle={DARK_INPUT}
+      />
     </div>
   );
 }
@@ -141,13 +96,12 @@ export function PrioritySetup({ taskLib, onComplete }) {
     const disabled  = {};
     priorityTasks.forEach(t => {
       const entry = sels[t.id];
-      if (entry) {
-        const date = entry.type === 'exact'
-          ? new Date(entry.date)
-          : new Date(Date.now() - entry.days * 86400000);
-        taskState[t.id] = { lastDone: date.toISOString(), scheduledDate: null };
-      } else {
+      if (!entry) {
         disabled[t.id] = true;
+      } else if (entry.needed) {
+        taskState[t.id] = { needed: true, scheduledDate: null };
+      } else if (entry.iso) {
+        taskState[t.id] = { lastDone: new Date(entry.iso).toISOString(), scheduledDate: null };
       }
     });
     setDone(true);
@@ -182,26 +136,19 @@ export function PrioritySetup({ taskLib, onComplete }) {
     if (!slide) advance();
   };
 
-  const handleChipSelect = (taskId, chip) => {
+  const handleAnswer = (iso) => {
     if (slide) return;
-    const newSel = { type:'fuzzy', key: chip.key, days: chip.days };
-    const newSelections = { ...selections, [taskId]: newSel };
-    advance(newSelections);
+    const newSels = { ...selections, [current.id]: { iso } };
+    advance(newSels);
   };
 
-  const handleDateChange = (taskId, value) => {
-    if (!value) return;
-    setSelections(s => ({ ...s, [taskId]: { type:'exact', date: value, days: null } }));
-  };
-
-  const handleDateBlur = (taskId, value) => {
-    if (!value || slide) return;
-    const newSelections = { ...selections, [taskId]: { type:'exact', date: value, days: null } };
-    advance(newSelections);
+  const handleNeeded = () => {
+    if (slide) return;
+    const newSels = { ...selections, [current.id]: { needed: true } };
+    advance(newSels);
   };
 
   const progress    = (index + 1) / priorityTasks.length;
-  // During a slide, the arriving task index
   const arrivingIdx = slide ? slide.nextIdx : index;
 
   // Completion screen
@@ -260,17 +207,11 @@ export function PrioritySetup({ taskLib, onComplete }) {
               className={slide.dir === 'forward' ? 'ps-out-fwd' : 'ps-out-bk'}
               style={{ position:'absolute', top:0, left:0, right:0, bottom:0 }}
             >
-              <TaskSlide
-                task={current}
-                selections={selections}
-                onChipSelect={() => {}}
-                onDateChange={() => {}}
-                onDateBlur={() => {}}
-              />
+              <TaskSlide task={current} onAnswer={() => {}} onNeeded={() => {}} />
             </div>
           )}
 
-          {/* Arriving / settled screen — key stays stable across slide→settle transition */}
+          {/* Arriving / settled screen */}
           <div
             key={arrivingIdx}
             className={slide ? (slide.dir === 'forward' ? 'ps-in-fwd' : 'ps-in-bk') : ''}
@@ -278,10 +219,8 @@ export function PrioritySetup({ taskLib, onComplete }) {
           >
             <TaskSlide
               task={priorityTasks[arrivingIdx]}
-              selections={selections}
-              onChipSelect={handleChipSelect}
-              onDateChange={handleDateChange}
-              onDateBlur={handleDateBlur}
+              onAnswer={handleAnswer}
+              onNeeded={handleNeeded}
             />
           </div>
         </div>
