@@ -47,8 +47,15 @@ function ProvidersIcon({ size = 16 }) {
   );
 }
 
-export function ProfileView({ profile, providerHistory, onReset, user, onSignOut }) {
-  const [confirmReset, setConfirmReset] = useState(false);
+export function ProfileView({ profile, providerHistory, onReset, onUpdateProfile, user, onSignOut }) {
+  const [confirmReset,     setConfirmReset]     = useState(false);
+  const [editInsurance,    setEditInsurance]    = useState(false);
+  const [insuranceVal,     setInsuranceVal]     = useState('');
+
+  const saveInsurance = () => {
+    onUpdateProfile({ ...profile, insurance: insuranceVal.trim() || null });
+    setEditInsurance(false);
+  };
 
   // Home section rows
   const homeRows = [
@@ -57,9 +64,9 @@ export function ProfileView({ profile, providerHistory, onReset, user, onSignOut
   ].filter(Boolean);
 
   // Car section rows
+  const vehicleLabel = profile.cars?.length ? profile.cars.join(', ') : (profile.car || null);
   const carRows = [
-    { label: 'Vehicle', value: profile.car || 'On file' },
-    profile.insurance && { label: 'Insurance', value: profile.insurance },
+    vehicleLabel && { label: profile.cars?.length > 1 ? 'Vehicles' : 'Vehicle', value: vehicleLabel },
   ].filter(Boolean);
 
   // All saved providers (across all tasks)
@@ -85,12 +92,51 @@ export function ProfileView({ profile, providerHistory, onReset, user, onSignOut
 
         {/* Car */}
         {profile.hasCar && (
-          <ProfileSection
-            icon={<CarIcon color="#F77F00" bg="#FFF3E0" size={16} />}
-            iconBg="#FFF3E0"
-            title="Car"
-            rows={carRows}
-          />
+          <>
+            <ProfileSection
+              icon={<CarIcon color="#F77F00" bg="#FFF3E0" size={16} />}
+              iconBg="#FFF3E0"
+              title="Car"
+              rows={carRows}
+            />
+            {/* Insurance — inline editable */}
+            <div style={{ background:'#fff', borderRadius:16, border:'1px solid #EAE4DA', marginBottom:10, overflow:'hidden' }}>
+              {editInsurance ? (
+                <div style={{ padding:'12px 16px', display:'flex', gap:8, alignItems:'center' }}>
+                  <input
+                    autoFocus
+                    type="text"
+                    value={insuranceVal}
+                    onChange={e => setInsuranceVal(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && saveInsurance()}
+                    placeholder="e.g. State Farm, Aetna..."
+                    style={{ flex:1, marginBottom:0 }}
+                  />
+                  <button onClick={saveInsurance} style={{ fontSize:12, fontWeight:700, color:'#fff', background:'#1A5C3A', border:'none', borderRadius:20, padding:'5px 12px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
+                    Save
+                  </button>
+                  <button onClick={() => setEditInsurance(false)} style={{ fontSize:12, fontWeight:600, color:'#4A6256', background:'#F0EDE4', border:'none', borderRadius:20, padding:'5px 10px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'11px 16px' }}>
+                  <div>
+                    <div style={{ fontSize:12, color:'#4A6256', fontWeight:500, fontFamily:'DM Sans, sans-serif' }}>Insurance</div>
+                    <div style={{ fontSize:13, fontWeight:700, color: profile.insurance ? '#1C2B22' : '#9B9B9B', fontFamily:'DM Sans, sans-serif' }}>
+                      {profile.insurance || 'Not set'}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setInsuranceVal(profile.insurance || ''); setEditInsurance(true); }}
+                    style={{ fontSize:11, fontWeight:700, color:'#1A5C3A', background:'#E8F5EE', border:'none', borderRadius:20, padding:'3px 10px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                  >
+                    {profile.insurance ? 'Edit' : 'Add'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
         )}
 
         {/* Kids */}

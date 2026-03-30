@@ -2,19 +2,16 @@ import { useState, useEffect } from "react";
 import {
   loadS, saveS,
   VISIT_COUNT_KEY, HAZARD_DONE_KEY,
-  KNOWLEDGE_REFRESH_KEY, KNOWLEDGE_REFRESH_TTL, PROFILE_QUESTIONS_KEY,
+  KNOWLEDGE_REFRESH_KEY, KNOWLEDGE_REFRESH_TTL, TRICKLE_DATE_KEY,
 } from "../utils/storage";
-import { TRICKLE_QUESTIONS } from "../data/constants";
 import { detectHazards } from "../utils/hazards";
 
-export function useSession({ onboarded, profile }) {
-  const [visitCount,       setVisitCount]       = useState(() => loadS(VISIT_COUNT_KEY, 0));
-  const [trickleQ,         setTrickleQ]          = useState(null);
-  const [knowledgeUpdates, setKnowledgeUpdates]  = useState(null); // eslint-disable-line no-unused-vars
-  const [pendingHazards,   setPendingHazards]    = useState(null);
-  const [hazardDone,       setHazardDone]        = useState(() => loadS(HAZARD_DONE_KEY, false));
+export function useSession({ onboarded, profile, activeTasks, taskState }) {
+  const [visitCount,     setVisitCount]   = useState(() => loadS(VISIT_COUNT_KEY, 0));
+  const [trickleTask,    setTrickleTask]  = useState(null);
+  const [pendingHazards, setPendingHazards] = useState(null);
+  const [hazardDone,     setHazardDone]  = useState(() => loadS(HAZARD_DONE_KEY, false));
 
-  // Increment visit count and kick off session checks on first onboarded load
   useEffect(() => {
     if (!onboarded) return;
 
@@ -22,14 +19,16 @@ export function useSession({ onboarded, profile }) {
     setVisitCount(next);
     saveS(VISIT_COUNT_KEY, next);
 
-    // Trickle question
-    const answered = loadS(PROFILE_QUESTIONS_KEY, []);
-    const q = TRICKLE_QUESTIONS.find(q =>
-      next >= q.visit &&
-      !answered.includes(q.id) &&
-      !(q.id === "enrollment" && !profile.hasKids)
-    );
-    if (q) setTrickleQ(q);
+    // Trickle: one unknown task per calendar day
+    const today    = new Date().toISOString().slice(0, 10);
+    const lastDate = loadS(TRICKLE_DATE_KEY, null);
+    if (lastDate !== today && activeTasks?.length > 0) {
+      const stakeWeight = { high: 3, medium: 2, low: 1 };
+      const unknown = activeTasks
+        .filter(t => !taskState[t.id]?.lastDone)
+        .sort((a, b) => (stakeWeight[b.stakes] || 1) - (stakeWeight[a.stakes] || 1));
+      if (unknown.length > 0) setTrickleTask(unknown[0]);
+    }
 
     // Hazard check
     if (next >= 2 && !hazardDone && profile.zip) {
@@ -40,33 +39,28 @@ export function useSession({ onboarded, profile }) {
       });
     }
 
-    // Knowledge refresh
+    // Knowledge refresh (mocked)
     const lastRefresh = loadS(KNOWLEDGE_REFRESH_KEY, 0);
     if (next >= 3 && Date.now() - lastRefresh > KNOWLEDGE_REFRESH_TTL) {
-      // Mocked — real implementation checks for guidance updates
       setTimeout(() => saveS(KNOWLEDGE_REFRESH_KEY, Date.now()), 1000);
     }
   }, [onboarded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const dismissTrickle = () => {
-    const answered = loadS(PROFILE_QUESTIONS_KEY, []);
-    saveS(PROFILE_QUESTIONS_KEY, [...answered, trickleQ.id]);
-    setTrickleQ(null);
+    saveS(TRICKLE_DATE_KEY, new Date().toISOString().slice(0, 10));
+    setTrickleTask(null);
   };
 
-  const answerTrickle = (updates, onUpdateProfile) => {
-    onUpdateProfile(updates);
-    const answered = loadS(PROFILE_QUESTIONS_KEY, []);
-    saveS(PROFILE_QUESTIONS_KEY, [...answered, trickleQ.id]);
-    setTrickleQ(null);
+  const answerTrickle = () => {
+    saveS(TRICKLE_DATE_KEY, new Date().toISOString().slice(0, 10));
+    setTrickleTask(null);
   };
 
   return {
     visitCount,
-    trickleQ,
+    trickleTask,
     dismissTrickle,
     answerTrickle,
-    knowledgeUpdates,
     pendingHazards,
     setPendingHazards,
   };

@@ -135,7 +135,7 @@ function SectionLabel({ label, color }) {
 
 
 export function HomeView({
-  trickleQ,
+  trickleTask,
   profile,
   pendingHazards,
   focusTasks,
@@ -157,11 +157,10 @@ export function HomeView({
       <div style={{ padding:'20px 18px 160px', maxWidth:680, margin:'0 auto' }}>
 
         {/* Trickle question */}
-        {trickleQ && (
+        {trickleTask && (
           <>
             <TrickleCard
-              question={trickleQ}
-              profile={profile}
+              task={trickleTask}
               onAnswer={onTrickleAnswer}
               onDismiss={onTrickleDismiss}
             />

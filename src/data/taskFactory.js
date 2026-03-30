@@ -207,7 +207,7 @@ export function carTasks(carString) {
 // ─── Per-kid Task Generator ───────────────────────────────────────────────────
 
 export function kidTasks(kid) {
-  const { name, age: ageStr, needsEnrollment } = kid;
+  const { name, age: ageStr } = kid;
   const age  = parseInt(ageStr, 10);
   const slug = name.toLowerCase().replace(/\s+/g, "-");
   const tasks = [];
@@ -215,10 +215,6 @@ export function kidTasks(kid) {
   tasks.push(T(`k-health-${slug}`, "health", `${name}: annual health visit`, 365, 30, "high",   null,         [], "script",   "Annual well-child visit."));
   tasks.push(T(`k-dent-${slug}`,   "health", `${name}: dental cleaning`,     180, 21, "medium", null,         [], "script",   "Every 6 months."));
   tasks.push(T(`k-eye-${slug}`,    "health", `${name}: eye exam`,            365, 30, "medium", null,         [], "script",   "Annually."));
-
-  if (age < 18 && needsEnrollment) {
-    tasks.push(T(`k-enroll-${slug}`, "school", `${name}: school re-enrollment`, 365, 60, "high", [1,2,3], [], "deadline", "Check your school district's enrollment window."));
-  }
 
   if (age < 18) {
     tasks.push(T(`k-emerg-${slug}`,  "school", `${name}: update emergency contacts`, 365, 14, "high",   [7,8,9],   [], "script",    "Update at school start."));
@@ -297,7 +293,7 @@ export function buildTaskLibrary(profile) {
   }
 
   if (profile.hasKids && profile.kids?.length > 0) {
-    profile.kids.forEach(k => lib.push(...kidTasks({ ...k, needsEnrollment: profile.needsEnrollment })));
+    profile.kids.forEach(k => lib.push(...kidTasks(k)));
   }
 
   if (profile.hasPets && profile.pets?.length > 0) {
@@ -322,7 +318,7 @@ export const PRIORITY_IDS = [
   "fin-will", "fin-life", "fin-benef", "h-ins", "h-phys",
   "h-mammo", "hm-smoke", "hm-fire", "hm-dryer", "car-brakes", "car-batt", "car-reg",
 ];
-const PRIORITY_KID_PREFIXES = ["k-health-", "k-camp-", "k-winter-", "k-enroll-"];
+const PRIORITY_KID_PREFIXES = ["k-health-", "k-camp-", "k-winter-"];
 const PRIORITY_PET_PREFIXES = ["p-vet-", "p-hw-", "p-vax-"];
 const PRIORITY_CAR_PREFIXES = ["car-brakes-", "car-batt-", "car-reg-"];
 

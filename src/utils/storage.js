@@ -9,7 +9,7 @@ export const PROVIDER_HISTORY_KEY   = "mitzy-ph-v6";
 export const VISIT_COUNT_KEY        = "mitzy-visits-v6";
 export const HAZARD_DONE_KEY        = "mitzy-hz-v6";
 export const KNOWLEDGE_REFRESH_KEY  = "mitzy-kr-v6";
-export const PROFILE_QUESTIONS_KEY  = "mitzy-pq-v6";
+export const TRICKLE_DATE_KEY       = "mitzy-td-v6";
 
 export const ASSIST_CACHE_TTL      = 7  * 24 * 60 * 60 * 1000; // 7 days
 export const KNOWLEDGE_REFRESH_TTL = 90 * 24 * 60 * 60 * 1000; // 90 days

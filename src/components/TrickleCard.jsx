@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 const CARD = {
   background:   '#FFFBEE',
   border:       '2px solid #F4C430',
@@ -20,99 +18,69 @@ const chipStyle = {
   fontFamily: 'DM Sans, sans-serif',
 };
 
-function Header({ label, onDismiss }) {
-  return (
-    <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:8, marginBottom:9 }}>
-      <div style={{ fontSize:13, fontWeight:700, color:'#1C2B22', lineHeight:1.3, flex:1, fontFamily:'DM Sans, sans-serif' }}>
-        {label}
-      </div>
-      <button
-        onClick={onDismiss}
-        style={{ fontSize:11, fontWeight:700, color:'#B08A10', background:'#F4C430', border:'none', borderRadius:20, padding:'3px 10px', cursor:'pointer', fontFamily:'DM Sans, sans-serif', flexShrink:0, whiteSpace:'nowrap' }}
-      >
-        maybe later
-      </button>
-    </div>
-  );
-}
+const CHIPS_GENERAL = [
+  { key: 'recently',   label: 'Recently',          days: 30  },
+  { key: 'few-months', label: 'A few months ago',   days: 90  },
+  { key: 'over-year',  label: 'Over a year ago',    days: 400 },
+  { key: 'never',      label: 'Never / not sure',   days: 730 },
+];
 
-export function TrickleCard({ question, profile, onAnswer, onDismiss }) {
-  const [val, setVal] = useState('');
+const CHIPS_HEALTH = [
+  { key: 'this-year',  label: 'This year',          days: 180 },
+  { key: 'last-year',  label: 'Last year',           days: 400 },
+  { key: 'two-plus',   label: '2+ years ago',        days: 800 },
+  { key: 'never',      label: 'Never / not sure',    days: 730 },
+];
 
-  // Spec-compliant: questions with options array → chip UI
-  if (question.options?.length > 0) {
-    return (
-      <div style={CARD}>
-        <Header label={question.label} onDismiss={onDismiss} />
-        <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
-          {question.options.map(opt => (
-            <button
-              key={opt.value ?? opt.label}
-              onClick={() => onAnswer({ _trickleValue: opt.value })}
-              style={chipStyle}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  }
+export function TrickleCard({ task, onAnswer, onDismiss }) {
+  const chips = task.cat === 'health' ? CHIPS_HEALTH : CHIPS_GENERAL;
 
-  // Yes/no question (enrollment)
-  if (question.id === 'enrollment' && profile.hasKids) {
-    return (
-      <div style={CARD}>
-        <Header label={question.label} onDismiss={onDismiss} />
-        <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
-          <button style={chipStyle} onClick={() => onAnswer({ needsEnrollment: true  })}>Yes</button>
-          <button style={chipStyle} onClick={() => onAnswer({ needsEnrollment: false })}>No</button>
-          <button style={chipStyle} onClick={onDismiss}>Not sure</button>
-        </div>
-      </div>
-    );
-  }
-
-  // Text input questions
-  const INPUT_MAP = {
-    car_details: { placeholder: 'e.g. 2019 Honda CR-V',      key: 'car',       type: 'text'   },
-    insurance:   { placeholder: 'e.g. Blue Cross, Aetna...', key: 'insurance', type: 'text'   },
-    age_health:  { placeholder: 'e.g. 34',                   key: 'age',       type: 'number' },
+  const handleChip = (days) => {
+    const lastDone = new Date(Date.now() - days * 86400000).toISOString();
+    onAnswer({ taskId: task.id, lastDone });
   };
-
-  const input = INPUT_MAP[question.id];
-  if (!input) return null;
-
-  const canSave = val.trim().length > 0;
 
   return (
     <div style={CARD}>
-      <Header label={question.label} onDismiss={onDismiss} />
-      <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-        <input
-          type={input.type}
-          placeholder={input.placeholder}
-          value={val}
-          onChange={e => setVal(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && canSave && onAnswer({ [input.key]: val })}
-          style={{ flex:1, marginBottom:0 }}
-          min={input.type === 'number' ? '18' : undefined}
-          max={input.type === 'number' ? '99' : undefined}
-        />
+      {/* Header */}
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:8, marginBottom:6 }}>
+        <div>
+          <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'#B08A10', marginBottom:3, fontFamily:'DM Sans, sans-serif' }}>
+            Quick check
+          </div>
+          <div style={{ fontSize:13, fontWeight:700, color:'#1C2B22', lineHeight:1.3, fontFamily:'DM Sans, sans-serif' }}>
+            {task.label}
+          </div>
+        </div>
         <button
-          onClick={() => onAnswer({ [input.key]: val })}
-          disabled={!canSave}
-          style={{
-            padding:'10px 16px', fontSize:13, fontWeight:700, flexShrink:0,
-            border:'none', borderRadius:10, cursor: canSave ? 'pointer' : 'default',
-            fontFamily:'DM Sans, sans-serif',
-            background: canSave ? '#F4C430' : '#E0D8D0',
-            color: canSave ? '#7a5900' : '#4A6256',
-          }}
+          onClick={onDismiss}
+          style={{ fontSize:11, fontWeight:700, color:'#B08A10', background:'#F4C430', border:'none', borderRadius:20, padding:'3px 10px', cursor:'pointer', fontFamily:'DM Sans, sans-serif', flexShrink:0, whiteSpace:'nowrap' }}
         >
-          save
+          maybe later
         </button>
       </div>
+
+      {/* When did you last? */}
+      <div style={{ fontSize:11, color:'#8A6A00', marginBottom:8, fontFamily:'DM Sans, sans-serif' }}>
+        When did you last do this?
+      </div>
+
+      {/* Chips */}
+      <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:10 }}>
+        {chips.map(chip => (
+          <button key={chip.key} onClick={() => handleChip(chip.days)} style={chipStyle}>
+            {chip.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Doesn't apply */}
+      <button
+        onClick={() => onAnswer({ taskId: task.id, notApplicable: true })}
+        style={{ background:'none', border:'none', fontSize:11, color:'#B08A10', cursor:'pointer', fontFamily:'DM Sans, sans-serif', padding:0, textDecoration:'underline', opacity:0.7 }}
+      >
+        Doesn't apply to me
+      </button>
     </div>
   );
 }

@@ -46,29 +46,3 @@ export const RAD_WORDS = [
   "COWABUNGA", "STELLAR", "FAR OUT", "RIGHTEOUS", "TRIUMPHANT",
 ];
 
-export const TRICKLE_QUESTIONS = [
-  {
-    id: "car_details",
-    visit: 2,
-    label: "What do you drive?",
-    description: "Helps Mitzy give you accurate service intervals.",
-  },
-  {
-    id: "insurance",
-    visit: 3,
-    label: "What's your insurance?",
-    description: "Mitzy uses this when finding in-network providers.",
-  },
-  {
-    id: "age_health",
-    visit: 4,
-    label: "How old are you?",
-    description: "Surfaces age-appropriate health reminders.",
-  },
-  {
-    id: "enrollment",
-    visit: 5,
-    label: "Does your school require annual re-enrollment?",
-    description: "Some districts do, some don't.",
-  },
-];

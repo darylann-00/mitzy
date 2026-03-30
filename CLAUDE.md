@@ -1,6 +1,6 @@
 ## Session management
 Before starting any work, always read context.md before making any changes or responding to tasks.
-Always update context.md when asked, and at natural stopping points
+When I say 'wrap it up', push all changes to prod and update context.md
 Before ending a session, summarize what changed and any decisions made
 
 ## Stack

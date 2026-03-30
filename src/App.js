@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "./styles/app.css";
 
-import { loadS, saveS, ONBOARDED_KEY, VISIT_COUNT_KEY, TASK_STATE_KEY, DISABLED_KEY, PROFILE_KEY, PROVIDER_HISTORY_KEY, ASSIST_CACHE_PREFIX, HAZARD_DONE_KEY, KNOWLEDGE_REFRESH_KEY, PROFILE_QUESTIONS_KEY } from "./utils/storage";
+import { loadS, saveS, ONBOARDED_KEY, VISIT_COUNT_KEY } from "./utils/storage";
 import { taskStatus, taskScore, nextDueStr, isActiveMonth, isDependencySatisfied } from "./utils/taskLogic";
 import { buildTaskLibrary } from "./data/taskFactory";
 
@@ -141,9 +141,8 @@ export default function Mitzy() {
 
   // ─── Domain state ────────────────────────────────────────────────────────────
   const { profile, taskLibrary, setTaskLibrary, updateProfile, addCustomTask } = useProfile(user);
-  const { taskState, setTaskState, disabledTasks, setDisabledTasks, markDone, markScheduled } = useTasks(user);
+  const { taskState, setTaskState, disabledTasks, setDisabledTasks, markDone, markScheduled, markNotApplicable } = useTasks(user);
   const { providerHistory, saveProvider } = useProviders();
-  const { trickleQ, dismissTrickle, answerTrickle, pendingHazards, setPendingHazards } = useSession({ onboarded, profile });
 
   // ─── UI state ────────────────────────────────────────────────────────────────
   const [view,          setView]          = useState("home");
@@ -172,6 +171,8 @@ export default function Mitzy() {
 
   // ─── Task helpers ─────────────────────────────────────────────────────────────
   const activeTasks = taskLibrary.filter(t => !disabledTasks[t.id] && isDependencySatisfied(t, taskState));
+
+  const { trickleTask, dismissTrickle, answerTrickle, pendingHazards, setPendingHazards } = useSession({ onboarded, profile, activeTasks, taskState });
 
   const isVisible = (t) => {
     if (!isActiveMonth(t)) return false;
@@ -223,8 +224,6 @@ export default function Mitzy() {
   // ─── Derived task lists ───────────────────────────────────────────────────────
   const visibleTasks  = activeTasks.filter(isVisible);
   const scoredDue     = [...visibleTasks].filter(t => getStatus(t) !== "ok").sort((a, b) => getScore(b) - getScore(a));
-  const urgentTasks   = scoredDue.filter(t => getStatus(t) === "due" || getStatus(t) === "confirm").slice(0, 3);
-  const upcomingTasks = scoredDue.filter(t => getStatus(t) === "coming-up" || getStatus(t) === "scheduled").slice(0, 3);
   const focusTasks    = scoredDue.filter(t => getStatus(t) !== "unknown").slice(0, 3);
   const doneThisWeek  = Object.values(taskState).filter(entry => {
     if (!entry?.lastDone) return false;
@@ -278,7 +277,7 @@ export default function Mitzy() {
 
       {view === "home" && (
         <HomeView
-          trickleQ={trickleQ}
+          trickleTask={trickleTask}
           profile={profile}
           pendingHazards={pendingHazards}
           focusTasks={focusTasks}
@@ -288,7 +287,14 @@ export default function Mitzy() {
           getDays={getDays}
           onSelectTask={setSelectedTask}
           onDoneTask={setMarkDoneModal}
-          onTrickleAnswer={(updates) => answerTrickle(updates, updateProfile)}
+          onTrickleAnswer={(answer) => {
+            if (answer.notApplicable) {
+              markNotApplicable(answer.taskId);
+            } else {
+              markDone(answer.taskId, answer.lastDone);
+            }
+            answerTrickle();
+          }}
           onTrickleDismiss={dismissTrickle}
           onHazardAccept={handleHazardAccept}
           onHazardDismiss={() => setPendingHazards(null)}
@@ -312,6 +318,7 @@ export default function Mitzy() {
           profile={profile}
           providerHistory={providerHistory}
           onReset={handleReset}
+          onUpdateProfile={updateProfile}
           user={user}
           onSignOut={signOut}
         />

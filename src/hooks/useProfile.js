@@ -37,7 +37,7 @@ export function useProfile(user) {
     }
 
     load();
-  }, [user?.id]);
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep localStorage in sync so onboarding and offline still work
   useEffect(() => {

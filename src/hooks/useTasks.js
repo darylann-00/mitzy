@@ -55,7 +55,7 @@ export function useTasks(user) {
     }
 
     load();
-  }, [user?.id]);
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { saveS(TASK_STATE_KEY, taskState); },    [taskState]);
   useEffect(() => { saveS(DISABLED_KEY, disabledTasks); }, [disabledTasks]);
@@ -79,5 +79,14 @@ export function useTasks(user) {
     }
   };
 
-  return { taskState, setTaskState, disabledTasks, setDisabledTasks, markDone, markScheduled };
+  const markNotApplicable = async (id) => {
+    setDisabledTasks(prev => ({ ...prev, [id]: true }));
+    if (user) {
+      await supabase.from("task_records").upsert({
+        user_id: user.id, task_id: id, disabled: true,
+      });
+    }
+  };
+
+  return { taskState, setTaskState, disabledTasks, setDisabledTasks, markDone, markScheduled, markNotApplicable };
 }
