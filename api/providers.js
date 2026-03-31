@@ -11,6 +11,7 @@ function getRelevantSignals(taskCat) {
   const signals = {
     car:       "appointment availability, wait time, specializations, certifications, loaner vehicles, warranty on work",
     health:    "new patient availability, wait times, kid-friendly, telehealth options, bedside manner, languages spoken",
+    pet:       "new patient availability, wait times, experience with dogs/cats, fear-free or low-stress handling, pricing transparency",
     home:      "licensed and insured, response time, warranty on work, local vs. chain, scheduling ease",
     finance:   "fee structure, free consultations, local vs. national firm, specializations",
     emergency: "24/7 availability, response time, local service area",
@@ -38,9 +39,9 @@ export default async function handler(req) {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  let taskLabel, taskCat, taskNote, zip;
+  let taskLabel, taskCat, taskNote, zip, searchQuery;
   try {
-    ({ taskLabel, taskCat, taskNote, zip } = await req.json());
+    ({ taskLabel, taskCat, taskNote, zip, searchQuery } = await req.json());
   } catch {
     return new Response("Invalid JSON", { status: 400 });
   }
@@ -48,6 +49,8 @@ export default async function handler(req) {
   if (!taskLabel || !zip) {
     return new Response("Missing taskLabel or zip", { status: 400 });
   }
+
+  const placesQuery = searchQuery || taskLabel;
 
   const placesKey   = process.env.GOOGLE_PLACES_API_KEY;
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
@@ -75,7 +78,7 @@ export default async function handler(req) {
       ].join(","),
     },
     body: JSON.stringify({
-      textQuery: `${taskLabel} near ${zip}`,
+      textQuery: `${placesQuery} near ${zip}`,
       maxResultCount: 6,
       languageCode: "en",
     }),

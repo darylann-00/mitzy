@@ -195,10 +195,11 @@ export function AssistPanel({ task, profile, providerHistory, onSaveProvider, on
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
-            taskLabel: task.label,
-            taskCat:   task.cat,
-            taskNote:  task.note,
-            zip:       profile.zip,
+            taskLabel:   task.label,
+            taskCat:     task.cat,
+            taskNote:    task.note,
+            zip:         profile.zip,
+            searchQuery: task.searchQuery,
           }),
         });
         if (!res.ok) throw new Error(`${res.status}`);

@@ -1,3 +1,5 @@
+import { REGION_TASK_ADJUSTMENTS } from "./climateRegion";
+
 // ─── Deterministic card tilt ──────────────────────────────────────────────────
 
 export function stableTiltDeg(id, max = 1.8) {
@@ -12,17 +14,34 @@ export function stableTiltDeg(id, max = 1.8) {
 
 // seasonStart: task wakes up at this month and stays visible until done (taxes, etc.)
 // activeMonths: hard window — task is only visible during these months (health insurance, etc.)
-export function isWindowActive(task) {
+// region: optional climate region string from getClimateRegion(zip) — adjusts windows per locale.
+//   Regional adjustment of seasonStart: false → task never active in this region.
+//   Regional adjustment of activeMonths: [] → task never active in this region.
+export function isWindowActive(task, region) {
   const month = new Date().getMonth() + 1;
-  if (task.seasonStart) {
+
+  // Apply regional adjustment if available
+  const adj = region ? REGION_TASK_ADJUSTMENTS[region]?.[task.id] : null;
+  const seasonStart  = adj && "seasonStart"  in adj ? adj.seasonStart  : task.seasonStart;
+  const activeMonths = adj && "activeMonths" in adj ? adj.activeMonths : task.activeMonths;
+
+  // false means "never active in this region"
+  if (seasonStart === false) return false;
+
+  if (seasonStart) {
     // Spring/summer start (e.g. Feb) → show from that month onward.
     // Fall start (e.g. Oct) → show from that month through end of Q1 next year.
-    return task.seasonStart <= 6
-      ? month >= task.seasonStart
-      : month >= task.seasonStart || month <= 3;
+    return seasonStart <= 6
+      ? month >= seasonStart
+      : month >= seasonStart || month <= 3;
   }
-  if (!task.activeMonths) return true;
-  return task.activeMonths.includes(month);
+
+  // [] means "never active in this region"
+  if (activeMonths !== null && activeMonths !== undefined) {
+    return activeMonths.length > 0 && activeMonths.includes(month);
+  }
+
+  return true;
 }
 
 // ─── Task status ──────────────────────────────────────────────────────────────

@@ -33,6 +33,7 @@ export function carTasks(carString) {
       intervalDays: 90, windowDays: 14, reminderLeadDays: 21,
       stakes: "high", hardDeadline: false, activeMonths: null, seasonalLabel: null,
       assistType: "providers", diyable: false, timeToComplete: "Tech visit",
+      searchQuery: "oil change",
       minAge: null, maxAge: null, oneTime: false,
       note: "Every 3 months or per your vehicle manual.",
       why: "Engine oil breaks down over time and loses its ability to lubricate engine components. Running an engine on degraded oil causes accelerated wear.",
@@ -44,6 +45,7 @@ export function carTasks(carString) {
       intervalDays: 1095, windowDays: 30, reminderLeadDays: 45,
       stakes: "high", hardDeadline: false, activeMonths: null, seasonalLabel: null,
       assistType: "providers", diyable: false, timeToComplete: "Tech visit",
+      searchQuery: "transmission service auto repair",
       minAge: null, maxAge: null, oneTime: false,
       note: "Every 2-3 years. Most people don't know to ask for this.",
       why: "Transmission fluid degrades over time and loses its ability to protect transmission components. Transmission repairs are among the most expensive automotive repairs.",
@@ -70,6 +72,7 @@ export function carTasks(carString) {
       intervalDays: 365, windowDays: 30, reminderLeadDays: 45,
       stakes: "high", hardDeadline: false, activeMonths: null, seasonalLabel: null,
       assistType: "providers", diyable: false, timeToComplete: "Tech visit",
+      searchQuery: "EV electric vehicle service center",
       minAge: null, maxAge: null, oneTime: false,
       note: "Annually. Catches early degradation before range is noticeably affected.",
       why: "EV battery packs degrade gradually. Annual health checks catch cells performing significantly below spec before they affect daily range.",
@@ -84,6 +87,7 @@ export function carTasks(carString) {
     intervalDays: 180, windowDays: 14, reminderLeadDays: 21,
     stakes: "medium", hardDeadline: false, activeMonths: null, seasonalLabel: null,
     assistType: "providers", diyable: false, timeToComplete: "Tech visit",
+    searchQuery: "tire rotation auto shop",
     minAge: null, maxAge: null, oneTime: false,
     note: "Every 5-7k miles. Extends tire life significantly.",
     why: "Tires wear unevenly depending on their position on the vehicle. Rotation evens out the wear and extends overall tire life.",
@@ -139,6 +143,7 @@ export function carTasks(carString) {
     intervalDays: 365, windowDays: 21, reminderLeadDays: 30,
     stakes: "high", hardDeadline: false, activeMonths: null, seasonalLabel: null,
     assistType: "providers", diyable: false, timeToComplete: "15 minutes",
+    searchQuery: "auto parts store battery test",
     minAge: null, maxAge: null, oneTime: false,
     note: ev ? "EVs have a 12V auxiliary battery separate from the main pack. Most auto parts stores test for free." : "Annually. Most auto parts stores test for free.",
     why: "Car batteries have a typical lifespan of 3-5 years. A battery that tests weak is likely to fail — often in cold weather.",
@@ -150,6 +155,7 @@ export function carTasks(carString) {
     intervalDays: ev ? 730 : 365, windowDays: 21, reminderLeadDays: 30,
     stakes: "high", hardDeadline: false, activeMonths: null, seasonalLabel: null,
     assistType: "providers", diyable: false, timeToComplete: "Tech visit",
+    searchQuery: "brake inspection auto repair",
     minAge: null, maxAge: null, oneTime: false,
     note: ev ? "Every 2 years. Regen braking reduces pad wear significantly — but calipers can still seize from infrequent use." : "Annually or immediately if you hear squealing.",
     why: "Brake pad thickness determines stopping distance. Worn pads damage rotors which turns a pad replacement into a more expensive repair.",
@@ -248,17 +254,17 @@ export function petTasks(pet) {
   const senior = age >= 7;
   const tasks  = [];
 
-  tasks.push(T(`p-vet-${slug}`,     "pet", `${name}: vet wellness visit`,         senior ? 180 : 365, 21, "high",   null, [], "providers", senior ? `${name} is a senior pet — twice-yearly visits recommended.` : "Annual wellness exam."));
+  tasks.push({ ...T(`p-vet-${slug}`,     "pet", `${name}: vet wellness visit`,         senior ? 180 : 365, 21, "high",   null, [], "providers", senior ? `${name} is a senior pet — twice-yearly visits recommended.` : "Annual wellness exam."),    searchQuery: `${type} veterinary clinic` });
   tasks.push(T(`p-flea-${slug}`,    "pet", `${name}: flea/tick prevention refill`, 90,  14, "medium", null, [], "guidance",  "Every 3 months. Don't let this lapse."));
   tasks.push(T(`p-license-${slug}`, "pet", `${name}: pet license renewal`,         365, 30, "medium", null, [], "deadline",  "Most municipalities require annual pet licensing."));
-  tasks.push(T(`p-dental-${slug}`,  "pet", `${name}: dental cleaning`,             365, 30, "medium", null, [], "providers", "Annual dental cleaning."));
+  tasks.push({ ...T(`p-dental-${slug}`,  "pet", `${name}: dental cleaning`,             365, 30, "medium", null, [], "providers", "Annual dental cleaning."),                                                                                                                                                                                                              searchQuery: `${type} dental cleaning veterinarian` });
 
   if (type === "dog") {
     tasks.push(T(`p-hw-${slug}`,    "pet", `${name}: heartworm prevention refill`, 90, 14, "high",   null, [], "guidance",  "Monthly or quarterly. Missing doses creates real risk."));
-    tasks.push(T(`p-vax-${slug}`,   "pet", `${name}: rabies/booster vaccines`,    365, 30, "high",   null, [], "providers", "Rabies legally required in most states."));
-    tasks.push(T(`p-nails-${slug}`, "pet", `${name}: nail trim`,                   60, 10, "low",    null, [], "providers", "Every 6-8 weeks."));
+    tasks.push({ ...T(`p-vax-${slug}`,   "pet", `${name}: rabies/booster vaccines`,    365, 30, "high",   null, [], "providers", "Rabies legally required in most states."),  searchQuery: "dog veterinary clinic vaccines" });
+    tasks.push({ ...T(`p-nails-${slug}`, "pet", `${name}: nail trim`,                   60, 10, "low",    null, [], "providers", "Every 6-8 weeks."),                           searchQuery: "dog groomer nail trim" });
     if (longCoat) {
-      tasks.push(T(`p-groom-${slug}`, "pet", `${name}: grooming appointment`, 60, 14, "low", null, [], "providers", "Every 6-8 weeks for long-coat breeds."));
+      tasks.push({ ...T(`p-groom-${slug}`, "pet", `${name}: grooming appointment`, 60, 14, "low", null, [], "providers", "Every 6-8 weeks for long-coat breeds."),              searchQuery: "dog groomer" });
     }
   }
 

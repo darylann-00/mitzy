@@ -3,6 +3,7 @@ import "./styles/app.css";
 
 import { loadS, saveS, ONBOARDED_KEY, VISIT_COUNT_KEY } from "./utils/storage";
 import { taskStatus, taskScore, nextDueStr, isWindowActive, isDependencySatisfied } from "./utils/taskLogic";
+import { getClimateRegion } from "./utils/climateRegion";
 import { buildTaskLibrary } from "./data/taskFactory";
 
 import { supabase } from "./lib/supabase";
@@ -174,8 +175,10 @@ export default function Mitzy() {
 
   const { trickleTask, dismissTrickle, answerTrickle, pendingHazards, setPendingHazards } = useSession({ onboarded, profile, activeTasks, taskState });
 
+  const region = getClimateRegion(profile?.zip);
+
   const isVisible = (t) => {
-    if (!isWindowActive(t)) return false;
+    if (!isWindowActive(t, region)) return false;
     const entry = taskState[t.id];
     if (!entry?.lastDone) return true;
     const daysSince = Math.floor((Date.now() - new Date(entry.lastDone)) / 86400000);

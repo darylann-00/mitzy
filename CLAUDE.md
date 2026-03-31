@@ -1,6 +1,6 @@
 ## Session management
 Before starting any work, always read context.md before making any changes or responding to tasks.
-When I say 'wrap it up', push all changes to prod and update context.md
+When I say 'wrap it up', push changes from this session to prod and update context.md. In context.md, just update the relevant sections and/or add new ones. Do not add a summary with date+what was done that day.
 Before ending a session, summarize what changed and any decisions made
 
 ## Stack
