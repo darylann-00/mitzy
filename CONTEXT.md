@@ -49,11 +49,11 @@ User data is persisted in Supabase (`profiles` + `task_records` tables). localSt
 
 ## What's Built and Working
 
-- **Onboarding** — `SlimOnboarding`: full-screen green, 3 phases: welcome → 6 question screens (name/age/gender, own/rent, cars, zip, kids, pets) → transition summary. `PrioritySetup`: 12 key tasks, fuzzy chip grid for last-done, slide transitions, full green screen.
+- **Onboarding** — `SlimOnboarding`: full-screen green, 3 phases: welcome → 6 question screens (name/age/gender, own/rent, cars, zip, kids, pets) → transition summary. `PrioritySetup`: 12 key tasks, slide transitions, full green screen. Recurring tasks show fuzzy time chips + date picker; one-time tasks show "Have you done this? Yes / Not yet".
 
 - **Task library** — 60+ base tasks across 6 categories (home, car, health, finance, emergency, seasonal). Dynamically extended with per-car, per-kid, per-pet, and per-hazard tasks based on profile.
 
-- **Task status + scoring** — Each task gets status `due | coming-up | scheduled | confirm | ok | unknown` based on last-done date, interval, and window. Scored by stakes × days overdue. `unknown` = no `lastDone` set yet; excluded from scoring.
+- **Task status + scoring** — Each task gets status `due | needed | coming-up | scheduled | confirm | ok | unknown` based on last-done date, interval, and window. Scored by stakes × days overdue. `unknown` = no `lastDone` set yet; excluded from scoring. `needed` = one-time task confirmed not done; orange bar, no date text, high priority score.
 
 - **HomeView** — Personal greeting header (`HomeHeader`), "Focus for today" section (top 3 scored tasks), trickle card, hazard card, all-clear state. `paddingBottom: 160px` to clear FABs + nav.
 
@@ -65,11 +65,11 @@ User data is persisted in Supabase (`profiles` + `task_records` tables). localSt
 
 - **AssistPanel** — Full-screen overlay. Provider/script/deadline/guidance modes. Caches 7 days.
 
-- **MarkDoneModal** — Date picker pre-filled today. Closes immediately on done; confetti fires via `Celebration` separately.
+- **MarkDoneModal** — Date picker pre-filled today (hidden for one-time tasks). Closes immediately on done; confetti fires via `Celebration` separately.
 
 - **AI Assist** — End-to-end: prompt → `/api/assist` → Claude → cached response.
 
-- **Trickle questions** — Yellow card, chip/text UI, answers unlock new tasks.
+- **Trickle questions** — Yellow card, chip/text UI, answers unlock new tasks. One-time tasks show "Have you done this? / Yes / Not yet"; "Not yet" marks `needed` (task surfaces as orange in list, no date).
 
 - **Hazard detection** — Zip → hazard type → prep tasks. Runs on visit 2+.
 
@@ -168,7 +168,8 @@ Three tabs in `BottomDock` (fixed, `#E8F0EC` pill). Sparkle AI FAB sits to the r
 - `task.label` is the display name field (not `task.name`).
 - `getDays(task)` returns positive = days until due, negative = days overdue. Returns `0` for unknown tasks.
 - `formatDueDate(days)` in TaskCard.jsx: `days < -14` → "Hasn't been done in a while"; `-14 ≤ days < 0` → "due X days ago". `subtitle` prop on TaskCard overrides this if provided.
-- `markDone` is passed to `AllView` directly so the explore section can write `lastDone` without going through `MarkDoneModal`.
+- `markDone` and `markNeeded` are passed to `AllView` so the explore section can write state without going through `MarkDoneModal`. One-time tasks in the explore section show "Have you done this?" instead of time chips.
+- `TaskAnswerChips` (`src/components/TaskAnswerChips.jsx`) is a shared component used by TrickleCard, PrioritySetup, and AllView's ExploreSection. It handles recurring vs one-time branching, chip constants, and date conversion internally.
 - `handleMarkDone` in App.js calls `markDone`, fires `setCelebration(true)`, immediately calls `setMarkDoneModal(null)` — modal closes on done, confetti fires separately.
 - `focusTasks` and `doneThisWeek` are computed in App.js and passed to HomeView. `focusTasks` = top 3 scored non-ok/unknown tasks.
 - Task dependencies: `dependsOn: "parent-id"` hides a task until the parent has `lastDone` set. Enforced via `isDependencySatisfied()` in `activeTasks` filter. Dependency-gated tasks are also hidden during PrioritySetup.
@@ -179,4 +180,10 @@ Three tabs in `BottomDock` (fixed, `#E8F0EC` pill). Sparkle AI FAB sits to the r
 
 ## Where We Are
 
-All screens built and working as of 2026-03-29. Auth switched to Google OAuth (primary) + magic link (fallback). Reset now clears Supabase data. ProfileView shows account email + logout. Next meaningful work: fill in `task.why`/`task.guidance` content, build `/api/schedule` Edge Function, wire up the AI FAB, replace hardcoded hazard zip ranges. Google OAuth requires Supabase dashboard setup (Authentication → Providers → Google).
+All screens built and working as of 2026-03-30. Next meaningful work: add `GOOGLE_PLACES_API_KEY` to Vercel env vars (Places API New must be enabled in Google Cloud), fill in `task.why`/`task.guidance` content, build `/api/schedule` Edge Function, wire up the AI FAB, replace hardcoded hazard zip ranges.
+
+**2026-03-30:** Built real provider lookup. New `/api/providers.js` Edge Function: calls Google Places Text Search (New API) for real businesses, passes results to Claude Haiku for task-relevant synthesis (blurb per provider grounded in actual reviews). `AssistPanel` now calls `/api/providers` for `assistType === "providers"` instead of `/api/assist`. Provider cards updated to show `reviewCount`, `openNow` status, and `address`. Requires `GOOGLE_PLACES_API_KEY` env var in Vercel.
+
+**2026-03-30:** `TaskDetailView` now shows a "Relevant dates" card (last done / frequency / due next) with inline date editing — tapping "Last done" reveals a date input that calls `onMarkDone` on blur. `isActiveMonth` renamed to `isWindowActive` with new `seasonStart` support for tasks that wake up at a month and stay visible until done (e.g. taxes use `seasonStart: 2` instead of `activeMonths`). Fixed `markDone` date parsing in `useTasks.js` to avoid timezone shift on date strings.
+
+**2026-03-29:** Fixed "Never / not sure" chip behavior. Previously it set `lastDone` to 730 days ago; now it calls `onNeeded()` instead. `taskLogic.js` updated to return `"due"` for recurring tasks with `entry.needed === true` and no `lastDone`. This ensures "I don't know when I last did this" always surfaces the task as due, not OK.

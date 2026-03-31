@@ -16,9 +16,6 @@ export function buildAssistPrompt(task, profile) {
   const base = `Task: "${task.label}". Note: ${task.note}. ${ctx}`;
 
   switch (task.assistType) {
-    case "providers":
-      return `${base}\n\nFind 3-4 real highly-rated local providers for this ${loc}. Return ONLY a JSON array:\n[{"name":"","rating":"","phone":"","website":"","bookingUrl":"","hasOnlineBooking":true,"priceRange":"","insuranceNote":"","blurb":""}]\nReturn ONLY the JSON array.`;
-
     case "script":
       return `${base}\n\nWrite a short ready-to-send message to schedule this. ${ins ? `Mention ${profile.insurance}.` : ""}Include subject line if email. Then 2-3 bullet points on what to ask. Under 150 words.`;
 

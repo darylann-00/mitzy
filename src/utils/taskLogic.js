@@ -10,9 +10,19 @@ export function stableTiltDeg(id, max = 1.8) {
 
 // ─── Seasonal visibility ──────────────────────────────────────────────────────
 
-export function isActiveMonth(task) {
+// seasonStart: task wakes up at this month and stays visible until done (taxes, etc.)
+// activeMonths: hard window — task is only visible during these months (health insurance, etc.)
+export function isWindowActive(task) {
+  const month = new Date().getMonth() + 1;
+  if (task.seasonStart) {
+    // Spring/summer start (e.g. Feb) → show from that month onward.
+    // Fall start (e.g. Oct) → show from that month through end of Q1 next year.
+    return task.seasonStart <= 6
+      ? month >= task.seasonStart
+      : month >= task.seasonStart || month <= 3;
+  }
   if (!task.activeMonths) return true;
-  return task.activeMonths.includes(new Date().getMonth() + 1);
+  return task.activeMonths.includes(month);
 }
 
 // ─── Task status ──────────────────────────────────────────────────────────────
@@ -28,6 +38,7 @@ export function taskStatus(task, taskState) {
     return "unknown";
   }
 
+  if (entry?.needed && !entry?.lastDone) return "due";
   if (!entry?.lastDone) return "unknown";
 
   const daysSinceDone = Math.floor((Date.now() - new Date(entry.lastDone)) / 86400000);

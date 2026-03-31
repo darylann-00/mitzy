@@ -4,14 +4,14 @@ export const CHIPS_GENERAL = [
   { key: 'recently',   label: 'Recently',         days: 30  },
   { key: 'few-months', label: 'A few months ago',  days: 90  },
   { key: 'over-year',  label: 'Over a year ago',   days: 400 },
-  { key: 'never',      label: 'Never / not sure',  days: 730 },
+  { key: 'never',      label: 'Never / not sure',  needed: true },
 ];
 
 export const CHIPS_HEALTH = [
   { key: 'this-year',  label: 'This year',         days: 180 },
   { key: 'last-year',  label: 'Last year',          days: 400 },
   { key: 'two-plus',   label: '2+ years ago',       days: 800 },
-  { key: 'never',      label: 'Never / not sure',   days: 730 },
+  { key: 'never',      label: 'Never / not sure',   needed: true },
 ];
 
 // Shared answer UI for both recurring and one-time tasks.
@@ -72,7 +72,10 @@ export function TaskAnswerChips({
           <button
             key={chip.key}
             style={{ ...baseChip, ...chipStyle }}
-            onClick={() => onDone(new Date(Date.now() - chip.days * 86400000).toISOString())}
+            onClick={() => chip.needed
+              ? (onNeeded && onNeeded())
+              : onDone(new Date(Date.now() - chip.days * 86400000).toISOString())
+            }
           >
             {chip.label}
           </button>

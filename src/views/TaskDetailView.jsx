@@ -1,5 +1,15 @@
+import { useState } from "react";
 import { CAT_META } from "../data/constants";
 import { CAT_ICON_CONFIG } from "../components/CategoryIcons";
+
+function formatIntervalDays(days) {
+  if (!days) return null;
+  if (days < 14) return `every ${days} day${days !== 1 ? 's' : ''}`;
+  if (days < 60) return `every ${Math.round(days / 7)} week${Math.round(days / 7) !== 1 ? 's' : ''}`;
+  if (days < 365) return `every ${Math.round(days / 30)} month${Math.round(days / 30) !== 1 ? 's' : ''}`;
+  const years = Math.round(days / 365);
+  return `every ${years} year${years !== 1 ? 's' : ''}`;
+}
 
 function formatDueDate(days) {
   if (days === null || days === undefined) return 'due soon';
@@ -48,17 +58,34 @@ function FourDots({ size = 7 }) {
   );
 }
 
-export function TaskDetailView({ task, status, taskState, savedProvider, getNext, onAssist, onSchedule, onDone, onBack }) {
+export function TaskDetailView({ task, status, taskState, savedProvider, getNext, onAssist, onSchedule, onDone, onBack, onMarkDone }) {
   const entry    = taskState[task.id];
   const meta     = CAT_META[task.cat] || CAT_META.home;
   const iconCfg  = CAT_ICON_CONFIG[task.cat] || CAT_ICON_CONFIG.home;
   const isOverdue = status === 'due' || status === 'confirm';
+  const [editingLastDone, setEditingLastDone] = useState(false);
 
   // Days calculation
   const days = entry?.lastDone
     ? task.intervalDays - Math.floor((Date.now() - new Date(entry.lastDone)) / 86400000)
     : 0;
   const dueDateStr = formatDueDate(days);
+
+  // Last done / frequency / due next
+  const lastDoneDate = entry?.lastDone ? new Date(entry.lastDone) : null;
+  const lastDoneStr = lastDoneDate
+    ? lastDoneDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : 'Not recorded';
+  const lastDoneValue = lastDoneDate
+    ? lastDoneDate.toISOString().slice(0, 10)
+    : '';
+  const frequencyStr = formatIntervalDays(task.intervalDays);
+  const dueNextDate = lastDoneDate && task.intervalDays
+    ? new Date(lastDoneDate.getTime() + task.intervalDays * 86400000)
+    : null;
+  const dueNextStr = dueNextDate
+    ? dueNextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : null;
 
   // Assist subtitle
   const getSubtitle = ASSIST_SUBTITLES[task.assistType];
@@ -115,24 +142,6 @@ export function TaskDetailView({ task, status, taskState, savedProvider, getNext
           {task.label}
         </div>
 
-        {/* Meta pills */}
-        <div style={{ display:'flex', gap:7, flexWrap:'wrap', position:'relative' }}>
-          <div style={{ background:'#0F3D27', borderRadius:20, padding:'4px 11px' }}>
-            <span style={{ fontSize:11, fontWeight:700, color: isOverdue ? '#F77F00' : '#B8DCC8', fontFamily:'DM Sans, sans-serif' }}>
-              {dueDateStr}
-            </span>
-          </div>
-          {task.timeToComplete && (
-            <div style={{ background:'#0F3D27', borderRadius:20, padding:'4px 11px' }}>
-              <span style={{ fontSize:11, fontWeight:700, color:'#B8DCC8', fontFamily:'DM Sans, sans-serif' }}>{task.timeToComplete}</span>
-            </div>
-          )}
-          {task.diyable && (
-            <div style={{ background:'#0F3D27', borderRadius:20, padding:'4px 11px' }}>
-              <span style={{ fontSize:11, fontWeight:700, color:'#B8DCC8', fontFamily:'DM Sans, sans-serif' }}>DIY</span>
-            </div>
-          )}
-        </div>
       </div>
 
       <div style={{ padding:'16px 18px 32px', maxWidth:680, margin:'0 auto' }}>
@@ -150,6 +159,67 @@ export function TaskDetailView({ task, status, taskState, savedProvider, getNext
               <div style={{ fontSize:13, fontWeight:700, color:'#1C2B22', fontFamily:'DM Sans, sans-serif' }}>{savedProvider.name}</div>
               {savedProvider.notes && <div style={{ fontSize:12, color:'#4A6256', fontStyle:'italic', fontFamily:'DM Sans, sans-serif' }}>{savedProvider.notes}</div>}
             </div>
+          </div>
+        )}
+
+        {/* Relevant dates */}
+        {!task.oneTime && (
+          <div style={{ background:'#fff', borderRadius:14, border:'1px solid #EAE4DA', marginBottom:10, padding:'11px 15px' }}>
+            <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:'#4A6256', marginBottom:9, fontFamily:"'Righteous', cursive" }}>
+              Relevant dates
+            </div>
+            <div style={{ display:'flex', gap:6 }}>
+              {/* Last done */}
+              <div
+                onClick={() => setEditingLastDone(v => !v)}
+                style={{ flex:'1 1 0', minWidth:0, background:'#FDFAF2', borderRadius:10, padding:'7px 9px', cursor:'pointer', border:`1.5px solid ${editingLastDone ? '#1A5C3A' : '#EAE4DA'}` }}
+              >
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                  <div style={{ fontSize:9, color:'#4A6256', fontWeight:600, marginBottom:3, fontFamily:'DM Sans, sans-serif', whiteSpace:'nowrap' }}>Last done</div>
+                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none" style={{ marginBottom:3, flexShrink:0 }}>
+                    <path d="M8.5 1.5l2 2L3 11H1V9L8.5 1.5z" stroke="#4A6256" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                  </svg>
+                </div>
+                <div style={{ fontSize:11, fontWeight:700, color:'#1C2B22', fontFamily:'DM Sans, sans-serif', lineHeight:1.3, whiteSpace:'nowrap' }}>
+                  {lastDoneDate ? lastDoneDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Not set'}
+                </div>
+              </div>
+              {/* Frequency */}
+              {frequencyStr && (
+                <div style={{ flex:'1 1 0', minWidth:0, background:'#FDFAF2', borderRadius:10, padding:'7px 9px', border:'1px solid #EAE4DA' }}>
+                  <div style={{ fontSize:9, color:'#4A6256', fontWeight:600, marginBottom:3, fontFamily:'DM Sans, sans-serif', whiteSpace:'nowrap' }}>Frequency</div>
+                  <div style={{ fontSize:11, fontWeight:700, color:'#1C2B22', fontFamily:'DM Sans, sans-serif', lineHeight:1.3, whiteSpace:'nowrap' }}>{frequencyStr}</div>
+                </div>
+              )}
+              {/* Due next */}
+              {dueNextStr && (
+                <div style={{ flex:'1 1 0', minWidth:0, background:'#FDFAF2', borderRadius:10, padding:'7px 9px', border:'1px solid #EAE4DA' }}>
+                  <div style={{ fontSize:9, color:'#4A6256', fontWeight:600, marginBottom:3, fontFamily:'DM Sans, sans-serif', whiteSpace:'nowrap' }}>Due next</div>
+                  <div style={{ fontSize:11, fontWeight:700, color: isOverdue ? '#D62828' : '#1C2B22', fontFamily:'DM Sans, sans-serif', lineHeight:1.3, whiteSpace:'nowrap' }}>{dueNextStr}</div>
+                </div>
+              )}
+            </div>
+            {editingLastDone && (
+              <div style={{ marginTop:8 }}>
+                <input
+                  type="date"
+                  defaultValue={lastDoneValue}
+                  max={new Date().toISOString().slice(0, 10)}
+                  style={{
+                    width:'100%', padding:'8px 10px', fontSize:13, fontFamily:'DM Sans, sans-serif',
+                    border:'1.5px solid #1A5C3A', borderRadius:8, background:'#fff',
+                    color:'#1C2B22', boxSizing:'border-box',
+                  }}
+                  onChange={() => {}}
+                  onBlur={e => {
+                    if (e.target.value && onMarkDone) {
+                      onMarkDone(task, e.target.value);
+                    }
+                    setEditingLastDone(false);
+                  }}
+                />
+              </div>
+            )}
           </div>
         )}
 

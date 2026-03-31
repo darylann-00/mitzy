@@ -66,7 +66,13 @@ function ProviderCard({ provider: p, isSaved, onSave }) {
       </div>
       {p.blurb && <div style={{ fontSize:13, color:'#4A6256', marginBottom:8, lineHeight:1.5, fontFamily:'DM Sans, sans-serif' }}>{p.blurb}</div>}
       {isSaved && p.notes && <div style={{ fontSize:12, color:'#4A6256', fontStyle:'italic', marginBottom:8, fontFamily:'DM Sans, sans-serif' }}>{p.notes}</div>}
-      {p.priceRange && <div style={{ fontSize:12, color:'#4A6256', marginBottom:10, fontFamily:'DM Sans, sans-serif' }}>Price range: {p.priceRange}</div>}
+      <div style={{ display:'flex', gap:12, flexWrap:'wrap', marginBottom:8 }}>
+        {p.priceRange && <span style={{ fontSize:12, color:'#4A6256', fontFamily:'DM Sans, sans-serif' }}>{p.priceRange}</span>}
+        {p.reviewCount > 0 && <span style={{ fontSize:12, color:'#4A6256', fontFamily:'DM Sans, sans-serif' }}>{p.reviewCount.toLocaleString()} reviews</span>}
+        {p.openNow === true  && <span style={{ fontSize:12, color:'#06A77D', fontWeight:700, fontFamily:'DM Sans, sans-serif' }}>Open now</span>}
+        {p.openNow === false && <span style={{ fontSize:12, color:'#D62828', fontFamily:'DM Sans, sans-serif' }}>Closed</span>}
+      </div>
+      {p.address && <div style={{ fontSize:11, color:'#7A9490', marginBottom:8, fontFamily:'DM Sans, sans-serif' }}>{p.address}</div>}
 
       <div style={{ display:'flex', gap:7, flexWrap:'wrap' }}>
         {p.phone && (
@@ -183,14 +189,30 @@ export function AssistPanel({ task, profile, providerHistory, onSaveProvider, on
     }
     setStatus('loading');
     try {
-      const prompt = buildAssistPrompt(task, profile);
-      const res = await fetch('/api/assist', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ prompt }),
-      });
-      if (!res.ok) throw new Error(`${res.status}`);
-      const { text } = await res.json();
+      let text;
+      if (task.assistType === 'providers') {
+        const res = await fetch('/api/providers', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            taskLabel: task.label,
+            taskCat:   task.cat,
+            taskNote:  task.note,
+            zip:       profile.zip,
+          }),
+        });
+        if (!res.ok) throw new Error(`${res.status}`);
+        ({ text } = await res.json());
+      } else {
+        const prompt = buildAssistPrompt(task, profile);
+        const res = await fetch('/api/assist', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ prompt }),
+        });
+        if (!res.ok) throw new Error(`${res.status}`);
+        ({ text } = await res.json());
+      }
       saveCache(text);
       setResult(text);
       setStatus('done');

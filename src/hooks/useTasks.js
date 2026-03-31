@@ -61,7 +61,9 @@ export function useTasks(user) {
   useEffect(() => { saveS(DISABLED_KEY, disabledTasks); }, [disabledTasks]);
 
   const markDone = async (id, dateStr) => {
-    const iso = dateStr ? new Date(dateStr).toISOString() : new Date().toISOString();
+    const iso = dateStr
+      ? (() => { const [y,m,d] = dateStr.split('-').map(Number); return new Date(y, m-1, d).toISOString(); })()
+      : new Date().toISOString();
     setTaskState(prev => ({ ...prev, [id]: { lastDone: iso, scheduledDate: null } }));
     if (user) {
       await supabase.from("task_records").upsert({

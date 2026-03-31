@@ -2,7 +2,7 @@ import { useState } from "react";
 import "./styles/app.css";
 
 import { loadS, saveS, ONBOARDED_KEY, VISIT_COUNT_KEY } from "./utils/storage";
-import { taskStatus, taskScore, nextDueStr, isActiveMonth, isDependencySatisfied } from "./utils/taskLogic";
+import { taskStatus, taskScore, nextDueStr, isWindowActive, isDependencySatisfied } from "./utils/taskLogic";
 import { buildTaskLibrary } from "./data/taskFactory";
 
 import { supabase } from "./lib/supabase";
@@ -175,7 +175,7 @@ export default function Mitzy() {
   const { trickleTask, dismissTrickle, answerTrickle, pendingHazards, setPendingHazards } = useSession({ onboarded, profile, activeTasks, taskState });
 
   const isVisible = (t) => {
-    if (!isActiveMonth(t)) return false;
+    if (!isWindowActive(t)) return false;
     const entry = taskState[t.id];
     if (!entry?.lastDone) return true;
     const daysSince = Math.floor((Date.now() - new Date(entry.lastDone)) / 86400000);
@@ -257,6 +257,7 @@ export default function Mitzy() {
           onAssist={setAssistTask}
           onSchedule={setScheduleTask}
           onDone={setMarkDoneModal}
+          onMarkDone={(task, dateStr) => markDone(task.id, dateStr)}
           onBack={() => setSelectedTask(null)}
         />
       </>
