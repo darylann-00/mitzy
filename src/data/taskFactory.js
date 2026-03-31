@@ -126,7 +126,7 @@ export function carTasks(carString) {
   tasks.push(t({
     id: id("car-wipers"), cat: "car", label: n("replace wiper blades"),
     intervalDays: 365, windowDays: 21, reminderLeadDays: 30,
-    stakes: "medium", hardDeadline: false, activeMonths: [8,9,10], seasonalLabel: "Before rainy season",
+    stakes: "medium", hardDeadline: false, activeMonths: null, seasonStart: 8, seasonalLabel: "Before rainy season",
     assistType: "guidance", diyable: true, timeToComplete: "15 minutes",
     minAge: null, maxAge: null, oneTime: false,
     note: "Before rainy season. Streaky wipers are a real safety issue.",
