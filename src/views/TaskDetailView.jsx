@@ -66,16 +66,8 @@ export function TaskDetailView({ task, status, taskState, savedProvider, getNext
   const [editingLastDone, setEditingLastDone] = useState(false);
 
   // Days calculation
-  const days = entry?.lastDone
-    ? task.intervalDays - Math.floor((Date.now() - new Date(entry.lastDone)) / 86400000)
-    : 0;
-  const dueDateStr = formatDueDate(days);
-
   // Last done / frequency / due next
   const lastDoneDate = entry?.lastDone ? new Date(entry.lastDone) : null;
-  const lastDoneStr = lastDoneDate
-    ? lastDoneDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    : 'Not recorded';
   const lastDoneValue = lastDoneDate
     ? lastDoneDate.toISOString().slice(0, 10)
     : '';
