@@ -124,18 +124,21 @@ export default async function handler(req) {
 
   // ── 3. Claude synthesis ─────────────────────────────────────────────────────
   const signals = getRelevantSignals(taskCat);
-  const petFilter = taskCat === "pet"
-    ? "\nIMPORTANT: Exclude any emergency-only, specialty-only, or urgent care facilities from your response — only include general practice clinics that offer routine wellness visits. If a place is clearly not a fit (wrong species, emergency-only, specialty-only), omit it entirely from the JSON array."
+  const suitableField = taskCat === "pet"
+    ? `,"suitable":true`
     : "";
-  const prompt = `You are helping a household manager find the best local provider for: "${taskLabel}".${taskNote ? ` Context: ${taskNote}.` : ""}${petFilter}
+  const suitableInstruction = taskCat === "pet"
+    ? ` Set "suitable": false for any emergency-only, specialty-only, urgent care, or wrong-species facility; true for general practice clinics that offer routine wellness visits.`
+    : "";
+  const prompt = `You are helping a household manager find the best local provider for: "${taskLabel}".${taskNote ? ` Context: ${taskNote}.` : ""}
 
 Here are real Google Places results near zip code ${zip}:
 ${JSON.stringify(placesSummary, null, 2)}
 
-For each place, write a 1–2 sentence blurb that highlights what matters most for this specific task. Focus on: ${signals}. Ground everything in the actual reviews and data — do not invent details. Do not mention whether a place is currently open or closed — that is shown separately.
+For each place, write a 1–2 sentence blurb that highlights what matters most for this specific task. Focus on: ${signals}. Ground everything in the actual reviews and data — do not invent details. Do not mention whether a place is currently open or closed — that is shown separately.${suitableInstruction}
 
 Return ONLY a JSON array (no markdown, no explanation), one object per place, in the same order:
-[{"name":"","rating":0,"reviewCount":0,"phone":"","website":"","priceRange":"","openNow":true,"address":"","blurb":""}]`;
+[{"name":"","rating":0,"reviewCount":0,"phone":"","website":"","priceRange":"","openNow":true,"address":"","blurb":""${suitableField}}]`;
 
   const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -159,13 +162,11 @@ Return ONLY a JSON array (no markdown, no explanation), one object per place, in
   const anthropicData = await anthropicRes.json();
   let text = anthropicData.content?.[0]?.text ?? "[]";
 
-  // Strip providers Claude flagged as unsuitable (it correctly identifies them
-  // but includes them anyway). Filter any entry whose blurb contains rejection phrases.
+  // For pet tasks, strip any provider Claude marked suitable: false.
   if (taskCat === "pet") {
     try {
       const parsed = JSON.parse(text);
-      const REJECT = /not suitable|not appropriate|emergency.only|specialty.only|not recommended|rather than (routine|wellness)|not a (fit|match)|avoid/i;
-      const filtered = parsed.filter(p => !REJECT.test(p.blurb || ""));
+      const filtered = parsed.filter(p => p.suitable !== false);
       text = JSON.stringify(filtered);
     } catch { /* leave text as-is if parse fails */ }
   }
