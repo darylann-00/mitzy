@@ -99,7 +99,18 @@ export default async function handler(req) {
   }
 
   // ── 2. Shape Places data for Claude ────────────────────────────────────────
-  const placesSummary = places.map(p => ({
+  // For pet tasks, strip emergency/specialty-only clinics — they rank high on
+  // review count but are wrong for routine wellness visits.
+  const filteredPlaces = taskCat === "pet"
+    ? places.filter(p => {
+        const name = (p.displayName?.text || "").toLowerCase();
+        return !/(emergency|urgent care|\bpet er\b|\bvet er\b|specialist|specialty center|specialty hospital)/i.test(name);
+      })
+    : places;
+
+  const usePlaces = filteredPlaces.length > 0 ? filteredPlaces : places;
+
+  const placesSummary = usePlaces.map(p => ({
     name:        p.displayName?.text,
     rating:      p.rating,
     reviewCount: p.userRatingCount,
