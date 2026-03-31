@@ -157,7 +157,18 @@ Return ONLY a JSON array (no markdown, no explanation), one object per place, in
   }
 
   const anthropicData = await anthropicRes.json();
-  const text = anthropicData.content?.[0]?.text ?? "[]";
+  let text = anthropicData.content?.[0]?.text ?? "[]";
+
+  // Strip providers Claude flagged as unsuitable (it correctly identifies them
+  // but includes them anyway). Filter any entry whose blurb contains rejection phrases.
+  if (taskCat === "pet") {
+    try {
+      const parsed = JSON.parse(text);
+      const REJECT = /not suitable|not appropriate|emergency.only|specialty.only|not recommended|rather than (routine|wellness)|not a (fit|match)|avoid/i;
+      const filtered = parsed.filter(p => !REJECT.test(p.blurb || ""));
+      text = JSON.stringify(filtered);
+    } catch { /* leave text as-is if parse fails */ }
+  }
 
   return new Response(JSON.stringify({ text }), {
     headers: { "content-type": "application/json", ...CORS_HEADERS },
