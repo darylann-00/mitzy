@@ -124,12 +124,15 @@ export default async function handler(req) {
 
   // ── 3. Claude synthesis ─────────────────────────────────────────────────────
   const signals = getRelevantSignals(taskCat);
-  const prompt = `You are helping a household manager find the best local provider for: "${taskLabel}".${taskNote ? ` Context: ${taskNote}.` : ""}
+  const petFilter = taskCat === "pet"
+    ? "\nIMPORTANT: Exclude any emergency-only, specialty-only, or urgent care facilities from your response — only include general practice clinics that offer routine wellness visits. If a place is clearly not a fit (wrong species, emergency-only, specialty-only), omit it entirely from the JSON array."
+    : "";
+  const prompt = `You are helping a household manager find the best local provider for: "${taskLabel}".${taskNote ? ` Context: ${taskNote}.` : ""}${petFilter}
 
 Here are real Google Places results near zip code ${zip}:
 ${JSON.stringify(placesSummary, null, 2)}
 
-For each place, write a 1–2 sentence blurb that highlights what matters most for this specific task. Focus on: ${signals}. Ground everything in the actual reviews and data — do not invent details.
+For each place, write a 1–2 sentence blurb that highlights what matters most for this specific task. Focus on: ${signals}. Ground everything in the actual reviews and data — do not invent details. Do not mention whether a place is currently open or closed — that is shown separately.
 
 Return ONLY a JSON array (no markdown, no explanation), one object per place, in the same order:
 [{"name":"","rating":0,"reviewCount":0,"phone":"","website":"","priceRange":"","openNow":true,"address":"","blurb":""}]`;
