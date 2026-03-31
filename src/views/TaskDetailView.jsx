@@ -11,18 +11,6 @@ function formatIntervalDays(days) {
   return `every ${years} year${years !== 1 ? 's' : ''}`;
 }
 
-function formatDueDate(days) {
-  if (days === null || days === undefined) return 'due soon';
-  if (days < 0) {
-    const n = Math.abs(days);
-    return `due ${n} day${n !== 1 ? 's' : ''} ago`;
-  }
-  if (days === 0) return 'due today';
-  if (days <= 7)  return 'due this week';
-  if (days <= 14) return `due in ${days} days`;
-  if (days <= 30) return `due in ${Math.round(days / 7)} week${Math.round(days / 7) !== 1 ? 's' : ''}`;
-  return `good for ${Math.round(days / 30)} month${Math.round(days / 30) !== 1 ? 's' : ''}`;
-}
 
 const ASSIST_SUBTITLES = {
   providers: (task) => {
