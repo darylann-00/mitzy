@@ -60,8 +60,9 @@ export function taskStatus(task, taskState) {
   if (entry?.needed && !entry?.lastDone) return "due";
   if (!entry?.lastDone) return "unknown";
 
+  const intervalDays  = entry?.intervalDays ?? task.intervalDays;
   const daysSinceDone = Math.floor((Date.now() - new Date(entry.lastDone)) / 86400000);
-  const daysRemaining = task.intervalDays - daysSinceDone;
+  const daysRemaining = intervalDays - daysSinceDone;
 
   if (daysRemaining <= 0)                return "due";
   if (daysRemaining <= task.windowDays)  return "coming-up";
@@ -70,13 +71,14 @@ export function taskStatus(task, taskState) {
 
 // ─── Task scoring (higher = more urgent) ─────────────────────────────────────
 
-export function taskScore(task, lastDone) {
-  const stakeWeight = { high: 3, medium: 2, low: 1 }[task.stakes] || 1;
+export function taskScore(task, lastDone, intervalDaysOverride) {
+  const stakeWeight  = { high: 3, medium: 2, low: 1 }[task.stakes] || 1;
+  const intervalDays = intervalDaysOverride ?? task.intervalDays;
   if (task.oneTime) return lastDone ? 0 : stakeWeight * 3;
-  const daysSince   = lastDone
+  const daysSince = lastDone
     ? Math.floor((Date.now() - new Date(lastDone)) / 86400000)
-    : task.intervalDays * 2;
-  return stakeWeight * Math.min(daysSince / task.intervalDays, 2);
+    : intervalDays * 2;
+  return stakeWeight * Math.min(daysSince / intervalDays, 2);
 }
 
 // ─── Dependency check ─────────────────────────────────────────────────────────
@@ -88,9 +90,10 @@ export function isDependencySatisfied(task, taskState) {
 
 // ─── Next due date display ────────────────────────────────────────────────────
 
-export function nextDueStr(task, lastDone) {
+export function nextDueStr(task, lastDone, intervalDaysOverride) {
   if (task.oneTime) return "once";
   if (!lastDone) return "anytime";
-  const due = new Date(new Date(lastDone).getTime() + task.intervalDays * 86400000);
+  const intervalDays = intervalDaysOverride ?? task.intervalDays;
+  const due = new Date(new Date(lastDone).getTime() + intervalDays * 86400000);
   return due.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }

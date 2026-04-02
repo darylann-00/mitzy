@@ -60,11 +60,13 @@ export function useTasks(user) {
   useEffect(() => { saveS(TASK_STATE_KEY, taskState); },    [taskState]);
   useEffect(() => { saveS(DISABLED_KEY, disabledTasks); }, [disabledTasks]);
 
-  const markDone = async (id, dateStr) => {
+  const markDone = async (id, dateStr, intervalDays) => {
     const iso = dateStr
       ? (() => { const [y,m,d] = dateStr.split('-').map(Number); return new Date(y, m-1, d).toISOString(); })()
       : new Date().toISOString();
-    setTaskState(prev => ({ ...prev, [id]: { lastDone: iso, scheduledDate: null } }));
+    const entry = { lastDone: iso, scheduledDate: null };
+    if (intervalDays) entry.intervalDays = intervalDays;
+    setTaskState(prev => ({ ...prev, [id]: entry }));
     if (user) {
       await supabase.from("task_records").upsert({
         user_id: user.id, task_id: id, last_done: iso, scheduled_date: null,
