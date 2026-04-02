@@ -111,15 +111,15 @@ export default async function handler(req) {
   const usePlaces = filteredPlaces.length > 0 ? filteredPlaces : places;
 
   const placesSummary = usePlaces.map(p => ({
-    name:        p.displayName?.text,
-    rating:      p.rating,
-    reviewCount: p.userRatingCount,
-    phone:       p.nationalPhoneNumber,
-    website:     p.websiteUri,
-    priceRange:  priceLevelToString(p.priceLevel),
-    address:     p.formattedAddress,
-    openNow:     p.regularOpeningHours?.openNow ?? null,
-    topReviews:  (p.reviews || []).slice(0, 3).map(r => r.text?.text).filter(Boolean),
+    name:          p.displayName?.text,
+    rating:        p.rating,
+    reviewCount:   p.userRatingCount,
+    phone:         p.nationalPhoneNumber,
+    website:       p.websiteUri,
+    priceRange:    priceLevelToString(p.priceLevel),
+    address:       p.formattedAddress,
+    weekdayHours:  p.regularOpeningHours?.weekdayDescriptions ?? null,
+    topReviews:    (p.reviews || []).slice(0, 3).map(r => r.text?.text).filter(Boolean),
   }));
 
   // ── 3. Claude synthesis ─────────────────────────────────────────────────────
@@ -135,10 +135,12 @@ export default async function handler(req) {
 Here are real Google Places results near zip code ${zip}:
 ${JSON.stringify(placesSummary, null, 2)}
 
-For each place, write a 1–2 sentence blurb that highlights what matters most for this specific task. Focus on: ${signals}. Ground everything in the actual reviews and data — do not invent details. Do not mention whether a place is currently open or closed — that is shown separately.${suitableInstruction}
+For each place, write a 1–2 sentence blurb that highlights what matters most for this specific task. Focus on: ${signals}. Ground everything in the actual reviews and data — do not invent details. Bold 2–3 key phrases per blurb by wrapping them in **double asterisks**.${suitableInstruction}
+
+For the "hours" field: condense the weekdayHours array into a compact schedule string. Group consecutive days with the same hours using abbreviations (M, T, W, Th, F, Sat, Sun). Use lowercase am/pm and a dash between times. Examples: "M–F 8am–5pm · Sat 9am–2pm · Sun closed" or "M–Sat 8am–6pm · Sun closed". If weekdayHours is null, use "".
 
 Return ONLY a JSON array (no markdown, no explanation), one object per place, in the same order:
-[{"name":"","rating":0,"reviewCount":0,"phone":"","website":"","priceRange":"","openNow":true,"address":"","blurb":""${suitableField}}]`;
+[{"name":"","rating":0,"reviewCount":0,"phone":"","website":"","priceRange":"","hours":"","address":"","blurb":""${suitableField}}]`;
 
   const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",

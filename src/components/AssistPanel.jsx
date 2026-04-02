@@ -26,6 +26,171 @@ function PulseLoader({ label }) {
   );
 }
 
+// ─── Render inline markdown (bold + auto-linked URLs) ─────────────────────────
+function inlineMarkdown(text) {
+  if (!text) return '';
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/(https?:\/\/[^\s<>"]+)/g, (url) =>
+      `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:#1A5C3A;text-decoration:underline">${url}</a>`
+    );
+}
+
+// Keep old name as alias so blurb rendering still works
+const boldMarkdown = inlineMarkdown;
+
+// ─── Render markdown blocks (headers, bullets, numbered lists, tables, hr) ────
+function MarkdownBlock({ text }) {
+  if (!text) return null;
+  const lines = text.split('\n');
+  const elements = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Blank line
+    if (!line.trim()) { i++; continue; }
+
+    // Horizontal rule --- or ===
+    if (/^[-=]{3,}\s*$/.test(line)) {
+      elements.push(<hr key={i} style={{ border:'none', borderTop:'1px solid #EAE4DA', margin:'12px 0' }} />);
+      i++; continue;
+    }
+
+    // ## Heading
+    if (/^#{1,3}\s/.test(line)) {
+      const content = line.replace(/^#{1,3}\s+/, '');
+      elements.push(
+        <div key={i} style={{ fontWeight:700, color:'#1C2B22', fontSize:14, fontFamily:'DM Sans, sans-serif', marginTop:14, marginBottom:4 }}
+          dangerouslySetInnerHTML={{ __html: boldMarkdown(content) }} />
+      );
+      i++; continue;
+    }
+
+    // Table — collect header + separator + rows
+    if (/^\|.+\|/.test(line) && i + 1 < lines.length && /^\|[-| :]+\|/.test(lines[i + 1])) {
+      const headers = line.split('|').filter((_, idx, arr) => idx > 0 && idx < arr.length - 1).map(h => h.trim());
+      i += 2; // skip header + separator
+      const rows = [];
+      while (i < lines.length && /^\|.+\|/.test(lines[i])) {
+        rows.push(lines[i].split('|').filter((_, idx, arr) => idx > 0 && idx < arr.length - 1).map(c => c.trim()));
+        i++;
+      }
+      elements.push(
+        <div key={`table-${i}`} style={{ overflowX:'auto', marginBottom:10 }}>
+          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12, fontFamily:'DM Sans, sans-serif' }}>
+            <thead>
+              <tr>
+                {headers.map((h, j) => (
+                  <th key={j} style={{ textAlign:'left', padding:'6px 8px', borderBottom:'2px solid #EAE4DA', color:'#1C2B22', fontWeight:700, whiteSpace:'nowrap' }}
+                    dangerouslySetInnerHTML={{ __html: boldMarkdown(h) }} />
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, ri) => (
+                <tr key={ri} style={{ borderBottom:'1px solid #F0EDE4' }}>
+                  {row.map((cell, ci) => (
+                    <td key={ci} style={{ padding:'6px 8px', color:'#4A6256', verticalAlign:'top' }}
+                      dangerouslySetInnerHTML={{ __html: boldMarkdown(cell) }} />
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      continue;
+    }
+
+    // Bullet list — collect consecutive bullet lines (hyphen, em-dash, en-dash, asterisk)
+    if (/^[\s]*[-–—*]\s/.test(line)) {
+      const items = [];
+      while (i < lines.length && /^[\s]*[-–—*]\s/.test(lines[i])) {
+        items.push(lines[i].replace(/^[\s]*[-–—*]\s+/, ''));
+        i++;
+      }
+      elements.push(
+        <ul key={`ul-${i}`} style={{ margin:'4px 0 8px 0', paddingLeft:18 }}>
+          {items.map((item, j) => (
+            <li key={j} style={{ fontSize:13, color:'#1C2B22', lineHeight:1.7, fontFamily:'DM Sans, sans-serif', marginBottom:2 }}
+              dangerouslySetInnerHTML={{ __html: boldMarkdown(item) }} />
+          ))}
+        </ul>
+      );
+      continue;
+    }
+
+    // Numbered list — collect items and any dash sub-bullets that follow each
+    if (/^\s*\d+\.\s/.test(line)) {
+      const items = [];
+      while (i < lines.length && /^\s*\d+\.\s/.test(lines[i])) {
+        const itemText = lines[i].replace(/^\s*\d+\.\s+/, '');
+        i++;
+        const subItems = [];
+        while (i < lines.length && (lines[i].trim() === '' || /^\s*[-–—*]\s/.test(lines[i]))) {
+          if (lines[i].trim() !== '') subItems.push(lines[i].replace(/^\s*[-–—*]\s+/, ''));
+          i++;
+        }
+        items.push({ text: itemText, subItems });
+      }
+      elements.push(
+        <ol key={`ol-${i}`} style={{ margin:'4px 0 8px 0', paddingLeft:20 }}>
+          {items.map((item, j) => (
+            <li key={j} style={{ fontSize:13, color:'#1C2B22', lineHeight:1.7, fontFamily:'DM Sans, sans-serif', marginBottom: item.subItems.length ? 6 : 2 }}>
+              <span dangerouslySetInnerHTML={{ __html: boldMarkdown(item.text) }} />
+              {item.subItems.length > 0 && (
+                <ul style={{ margin:'2px 0 0 0', paddingLeft:16 }}>
+                  {item.subItems.map((sub, k) => (
+                    <li key={k} style={{ fontSize:12, color:'#4A6256', lineHeight:1.6, fontFamily:'DM Sans, sans-serif', marginBottom:1 }}
+                      dangerouslySetInnerHTML={{ __html: boldMarkdown(sub) }} />
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))}
+        </ol>
+      );
+      continue;
+    }
+
+    // Regular paragraph
+    elements.push(
+      <p key={i} style={{ fontSize:13, color:'#1C2B22', lineHeight:1.7, fontFamily:'DM Sans, sans-serif', margin:'0 0 14px 0' }}
+        dangerouslySetInnerHTML={{ __html: boldMarkdown(line) }} />
+    );
+    i++;
+  }
+
+  return <div>{elements}</div>;
+}
+
+// ─── Company card (national services — no address/phone/hours) ────────────────
+function CompanyCard({ company: c }) {
+  return (
+    <div style={{
+      background: '#fff',
+      border: '1.5px solid #EAE4DA',
+      borderRadius: 14,
+      padding: '14px 15px',
+      marginBottom: 10,
+    }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom: c.blurb ? 6 : 0 }}>
+        <div style={{ fontWeight:700, color:'#1C2B22', fontSize:15, fontFamily:'DM Sans, sans-serif' }}>{c.name}</div>
+        {c.website && (
+          <a href={c.website} target="_blank" rel="noopener noreferrer" style={{ flexShrink:0, marginLeft:10, color:'#1A5C3A', display:'flex', alignItems:'center' }}>
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10 3h5v5" /><path d="M15 3L8 10" /><path d="M13 11v4H3V5h4" />
+            </svg>
+          </a>
+        )}
+      </div>
+      {c.blurb && <div style={{ fontSize:13, color:'#4A6256', lineHeight:1.5, fontFamily:'DM Sans, sans-serif' }} dangerouslySetInnerHTML={{ __html: boldMarkdown(c.blurb) }} />}
+    </div>
+  );
+}
+
 // ─── Provider card ─────────────────────────────────────────────────────────────
 function ProviderCard({ provider: p, isSaved, onSave }) {
   const [saving, setSaving] = useState(false);
@@ -55,24 +220,28 @@ function ProviderCard({ provider: p, isSaved, onSave }) {
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:6 }}>
         <div style={{ fontWeight:700, color:'#1C2B22', fontSize:15, fontFamily:'DM Sans, sans-serif' }}>{p.name}</div>
         {p.rating && (
-          <div style={{ fontSize:12, color:'#F77F00', fontWeight:700, fontFamily:'DM Sans, sans-serif', flexShrink:0, marginLeft:8 }}>
-            {/* Star SVG */}
-            <svg width="11" height="11" viewBox="0 0 11 11" fill="#F77F00" style={{ verticalAlign:'middle', marginRight:3 }}>
-              <polygon points="5.5,1 7,4.5 11,4.5 8,7 9,10.5 5.5,8.5 2,10.5 3,7 0,4.5 4,4.5" />
-            </svg>
-            {p.rating}
+          <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', flexShrink:0, marginLeft:8 }}>
+            <div style={{ fontSize:12, color:'#F77F00', fontWeight:700, fontFamily:'DM Sans, sans-serif' }}>
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="#F77F00" style={{ verticalAlign:'middle', marginRight:3 }}>
+                <polygon points="5.5,1 7,4.5 11,4.5 8,7 9,10.5 5.5,8.5 2,10.5 3,7 0,4.5 4,4.5" />
+              </svg>
+              {p.rating}
+            </div>
+            {p.reviewCount > 0 && <div style={{ fontSize:11, color:'#7A9490', fontFamily:'DM Sans, sans-serif', marginTop:2 }}>{p.reviewCount.toLocaleString()} reviews</div>}
           </div>
         )}
       </div>
-      {p.blurb && <div style={{ fontSize:13, color:'#4A6256', marginBottom:8, lineHeight:1.5, fontFamily:'DM Sans, sans-serif' }}>{p.blurb}</div>}
+      {p.blurb && <div style={{ fontSize:13, color:'#4A6256', marginBottom:8, lineHeight:1.5, fontFamily:'DM Sans, sans-serif' }} dangerouslySetInnerHTML={{ __html: boldMarkdown(p.blurb) }} />}
       {isSaved && p.notes && <div style={{ fontSize:12, color:'#4A6256', fontStyle:'italic', marginBottom:8, fontFamily:'DM Sans, sans-serif' }}>{p.notes}</div>}
       <div style={{ display:'flex', gap:12, flexWrap:'wrap', marginBottom:8 }}>
         {p.priceRange && <span style={{ fontSize:12, color:'#4A6256', fontFamily:'DM Sans, sans-serif' }}>{p.priceRange}</span>}
-        {p.reviewCount > 0 && <span style={{ fontSize:12, color:'#4A6256', fontFamily:'DM Sans, sans-serif' }}>{p.reviewCount.toLocaleString()} reviews</span>}
-        {p.openNow === true  && <span style={{ fontSize:12, color:'#06A77D', fontWeight:700, fontFamily:'DM Sans, sans-serif' }}>Open now</span>}
-        {p.openNow === false && <span style={{ fontSize:12, color:'#D62828', fontFamily:'DM Sans, sans-serif' }}>Closed</span>}
+        {p.hours && <span style={{ fontSize:12, color:'#4A6256', fontFamily:'DM Sans, sans-serif' }}>{p.hours}</span>}
       </div>
-      {p.address && <div style={{ fontSize:11, color:'#7A9490', marginBottom:8, fontFamily:'DM Sans, sans-serif' }}>{p.address}</div>}
+      {p.address && (
+        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.address)}`} target="_blank" rel="noopener noreferrer" style={{ display:'block', fontSize:11, color:'#7A9490', marginBottom:8, fontFamily:'DM Sans, sans-serif', textDecoration:'underline', textDecorationColor:'#C8D8D0' }}>
+          {p.address}
+        </a>
+      )}
 
       <div style={{ display:'flex', gap:7, flexWrap:'wrap' }}>
         {p.phone && (
@@ -349,8 +518,33 @@ export function AssistPanel({ task, profile, providerHistory, onSaveProvider, on
 
           {/* Done — deadline or guidance */}
           {status === 'done' && (task.assistType === 'deadline' || task.assistType === 'guidance' || !task.assistType) && (
-            <div style={{ fontSize:14, lineHeight:1.8, color:'#1C2B22', whiteSpace:'pre-wrap', fontFamily:'DM Sans, sans-serif' }}>{result}</div>
+            <MarkdownBlock text={result} />
           )}
+
+          {/* Done — guidance + companies */}
+          {status === 'done' && task.assistType === 'guidance_companies' && (() => {
+            let guidance = result;
+            let companies = [];
+            try {
+              const match = result.match(/\{[\s\S]*\}/);
+              if (match) {
+                const parsed = JSON.parse(match[0]);
+                guidance = parsed.guidance ?? result;
+                companies = parsed.companies ?? [];
+              }
+            } catch { /* fall back to rendering result as plain guidance */ }
+            return (
+              <>
+                <MarkdownBlock text={guidance} />
+                {companies.length > 0 && (
+                  <>
+                    <SectionLabel label="Top options" />
+                    {companies.map((c, i) => <CompanyCard key={i} company={c} />)}
+                  </>
+                )}
+              </>
+            );
+          })()}
 
         </div>
       </div>
