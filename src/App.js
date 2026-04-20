@@ -189,6 +189,7 @@ export default function Mitzy() {
   const getDays   = (t) => {
     const entry = taskState[t.id];
     if (!entry?.lastDone) return 0;
+    if (t.oneTime) return null;
     const intervalDays = entry?.intervalDays ?? t.intervalDays;
     return intervalDays - Math.floor((Date.now() - new Date(entry.lastDone)) / 86400000);
   };

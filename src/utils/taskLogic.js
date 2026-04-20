@@ -52,8 +52,8 @@ export function taskStatus(task, taskState) {
   if (entry?.scheduledDate && new Date(entry.scheduledDate) > new Date()) return "scheduled";
   if (entry?.scheduledDate && new Date(entry.scheduledDate) <= new Date()) return "confirm";
   if (task.oneTime) {
-    if (entry?.lastDone) return "ok";
     if (entry?.needed)   return "needed";
+    if (entry?.lastDone) return "ok";
     return "unknown";
   }
 
