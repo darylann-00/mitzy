@@ -60,7 +60,7 @@ User data is persisted in Supabase (`profiles` + `task_records` tables). localSt
 
 - **AllView** — Three urgency groups. Category filter chips. Due-only toggle. `GroupDivider` between groups. Category icon tile on each card. "X tasks to explore" accordion section at bottom for `unknown`-status tasks with inline chip picker. `paddingBottom: 160px`.
 
-- **ProfileView** — Sections: Home, Car, Kids, Pets, Saved providers, Health, Account. Single top-level "Edit profile" button reveals inline edit fields within each section (no per-section Edit buttons). Car editing uses structured year/make/model dropdowns from `CAR_DATA` (26 makes, current year − 31). Account section shows signed-in email + logout button. Reset deletes Supabase rows + clears localStorage.
+- **ProfileView** — Sections: Home, Car, Kids, Pets, Saved providers, Age/Health. Account section shows signed-in email + logout button. Reset deletes Supabase rows + clears localStorage.
 
 - **TaskDetailView** — Green header, meta pills, "Why it matters" + "How to do it" cards, Assist button, calendar + mark done.
 
@@ -186,3 +186,5 @@ Three tabs in `BottomDock` (fixed, `#E8F0EC` pill). Sparkle AI FAB sits to the r
 All screens built and working. Next meaningful work: add `GOOGLE_PLACES_API_KEY` to Vercel env vars (Places API New must be enabled in Google Cloud), fill in `task.why`/`task.guidance` content, build `/api/schedule` Edge Function, wire up the AI FAB, replace hardcoded hazard zip ranges.
 
 **2026-04-01:** Two-step trickle flow for `h-scrip` (Refill prescriptions). The task now gates behind "Do you take regular prescriptions?" (yes/no). Yes leads to "How often?" — Monthly (30d) / Every 3 months (90d) / It varies (45d) — which sets a per-user `intervalDays` override stored in `taskState`. No marks the task `notApplicable`. `taskStatus`, `taskScore`, `nextDueStr`, `getDays`, `getNext`, `getScore` all prefer `taskState[id].intervalDays` over the task-level default when present. The `trickleSteps` field on a task definition triggers `SteppedFlow` in `TrickleCard`; other tasks are unaffected. `intervalDays` override lives in localStorage only — Supabase `task_records` doesn't have this column yet.
+
+**2026-04-20:** Per-task frequency override in `TaskDetailView`. The Frequency pill is now tappable — opens an inline picker with preset chips (2 below default, default, 2 above, generated from `FREQ_CANDIDATES`) plus a Custom option (number + days/months/years dropdown). Selecting any option saves to `taskState[id].intervalDays` via `setIntervalOverride` in `useTasks`. A yellow warning banner shows persistently below the dates card when `effectiveInterval > task.intervalDays` (user is going less frequent than default). Frequency pill text turns green when an override is active. `effectiveInterval = entry?.intervalDays ?? task.intervalDays` drives all display (frequency string, due next date). Override is localStorage only — consistent with the prescription trickle flow.
