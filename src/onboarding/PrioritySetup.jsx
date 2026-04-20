@@ -3,7 +3,7 @@ import { CAT_META } from "../data/constants";
 import { CAT_ICON_CONFIG } from "../components/CategoryIcons";
 import { TaskAnswerChips } from "../components/TaskAnswerChips";
 import { isPriority } from "../data/taskFactory";
-import { isDependencySatisfied } from "../utils/taskLogic";
+import { isDependencySatisfied, isWindowActive } from "../utils/taskLogic";
 
 const SLIDE_MS = 320;
 
@@ -79,8 +79,8 @@ function TaskSlide({ task, onAnswer, onNeeded }) {
   );
 }
 
-export function PrioritySetup({ taskLib, onComplete }) {
-  const priorityTasks = taskLib.filter(t => isPriority(t.id) && isDependencySatisfied(t, {})).slice(0, 12);
+export function PrioritySetup({ taskLib, region, onComplete }) {
+  const priorityTasks = taskLib.filter(t => isPriority(t.id) && isDependencySatisfied(t, {}) && isWindowActive(t, region)).slice(0, 12);
   const [index,      setIndex]      = useState(0);
   const [selections, setSelections] = useState({});
   const [done,       setDone]       = useState(false);
