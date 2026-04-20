@@ -60,7 +60,7 @@ User data is persisted in Supabase (`profiles` + `task_records` tables). localSt
 
 - **AllView** — Three urgency groups. Category filter chips. Due-only toggle. `GroupDivider` between groups. Category icon tile on each card. "X tasks to explore" accordion section at bottom for `unknown`-status tasks with inline chip picker. `paddingBottom: 160px`.
 
-- **ProfileView** — Sections: Home, Car, Kids, Pets, Saved providers, Age/Health. Account section shows signed-in email + logout button. Reset deletes Supabase rows + clears localStorage.
+- **ProfileView** — Sections: Home, Car, Kids, Pets, Saved providers, Health, Account. Single top-level "Edit profile" button reveals inline edit fields within each section (no per-section Edit buttons). Car editing uses structured year/make/model dropdowns from `CAR_DATA` (26 makes, current year − 31). Account section shows signed-in email + logout button. Reset deletes Supabase rows + clears localStorage.
 
 - **TaskDetailView** — Green header, meta pills, "Why it matters" + "How to do it" cards, Assist button, calendar + mark done.
 
