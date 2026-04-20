@@ -237,7 +237,7 @@ export default function Mitzy() {
   // ─── Onboarding gates ─────────────────────────────────────────────────────────
   if (authLoading)  return null;
   if (!profileDone) return <SlimOnboarding onComplete={handleSlimOnboardingComplete} />;
-  if (!onboarded)   return <PrioritySetup taskLib={taskLibrary} onComplete={handlePrioritySetupComplete} />;
+  if (!onboarded)   return <PrioritySetup taskLib={taskLibrary} region={region} onComplete={handlePrioritySetupComplete} />;
   if (!user)        return <LoginGate sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} />;
 
   // ─── Task detail screen ───────────────────────────────────────────────────────
