@@ -189,10 +189,11 @@ export default function Mitzy() {
   const getDays   = (t) => {
     const entry = taskState[t.id];
     if (!entry?.lastDone) return 0;
-    return t.intervalDays - Math.floor((Date.now() - new Date(entry.lastDone)) / 86400000);
+    const intervalDays = entry?.intervalDays ?? t.intervalDays;
+    return intervalDays - Math.floor((Date.now() - new Date(entry.lastDone)) / 86400000);
   };
-  const getNext  = (t) => nextDueStr(t, taskState[t.id]?.lastDone);
-  const getScore = (t) => taskScore(t, taskState[t.id]?.lastDone);
+  const getNext  = (t) => nextDueStr(t, taskState[t.id]?.lastDone, taskState[t.id]?.intervalDays);
+  const getScore = (t) => taskScore(t, taskState[t.id]?.lastDone, taskState[t.id]?.intervalDays);
 
   // ─── Action handlers ──────────────────────────────────────────────────────────
   const handleMarkDone = (id, dateStr) => {
@@ -297,11 +298,12 @@ export default function Mitzy() {
             } else if (answer.notApplicable) {
               markNotApplicable(answer.taskId);
             } else {
-              markDone(answer.taskId, answer.lastDone);
+              markDone(answer.taskId, answer.lastDone, answer.intervalDays);
             }
             answerTrickle();
           }}
           onTrickleDismiss={dismissTrickle}
+          onTrickleAssist={setAssistTask}
           onHazardAccept={handleHazardAccept}
           onHazardDismiss={() => setPendingHazards(null)}
         />
