@@ -96,5 +96,9 @@ export function useTasks(user) {
     setTaskState(prev => ({ ...prev, [id]: { ...prev[id], needed: true } }));
   };
 
-  return { taskState, setTaskState, disabledTasks, setDisabledTasks, markDone, markScheduled, markNotApplicable, markNeeded };
+  const setIntervalOverride = (id, intervalDays) => {
+    setTaskState(prev => ({ ...prev, [id]: { ...prev[id], intervalDays } }));
+  };
+
+  return { taskState, setTaskState, disabledTasks, setDisabledTasks, markDone, markScheduled, markNotApplicable, markNeeded, setIntervalOverride };
 }
