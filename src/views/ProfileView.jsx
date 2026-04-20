@@ -2,72 +2,63 @@ import { useState } from "react";
 import { AppHeader } from "./HomeView";
 import { HouseIcon, CarIcon, PersonIcon, PetIcon } from "../components/CategoryIcons";
 
-// ─── Section card ──────────────────────────────────────────────────────────────
-function ProfileSection({ icon, iconBg, title, rows, onEdit }) {
+// ─── Car data (shared with SlimOnboarding) ─────────────────────────────────────
+const CAR_DATA = {
+  Acura:           ['ILX', 'MDX', 'RDX', 'TLX'],
+  Audi:            ['A3', 'A4', 'A6', 'Q3', 'Q5', 'Q7', 'TT'],
+  BMW:             ['2 Series', '3 Series', '4 Series', '5 Series', '7 Series', 'X1', 'X3', 'X5', 'M3', 'M5'],
+  Buick:           ['Enclave', 'Encore', 'Envision', 'LaCrosse'],
+  Cadillac:        ['CT4', 'CT5', 'Escalade', 'XT4', 'XT5'],
+  Chevrolet:       ['Blazer', 'Camaro', 'Colorado', 'Equinox', 'Malibu', 'Silverado 1500', 'Silverado 2500', 'Suburban', 'Tahoe', 'Traverse', 'Trax'],
+  Chrysler:        ['300', 'Pacifica', 'Voyager'],
+  Dodge:           ['Challenger', 'Charger', 'Durango', 'Journey'],
+  Ford:            ['Bronco', 'Edge', 'Escape', 'Expedition', 'Explorer', 'F-150', 'F-250', 'Maverick', 'Mustang', 'Ranger', 'Transit'],
+  GMC:             ['Acadia', 'Canyon', 'Sierra 1500', 'Sierra 2500', 'Terrain', 'Yukon'],
+  Honda:           ['Accord', 'Civic', 'CR-V', 'Fit', 'HR-V', 'Odyssey', 'Passport', 'Pilot', 'Ridgeline'],
+  Hyundai:         ['Elantra', 'Ioniq 5', 'Kona', 'Palisade', 'Santa Fe', 'Sonata', 'Tucson'],
+  Infiniti:        ['Q50', 'QX50', 'QX60', 'QX80'],
+  Jeep:            ['Cherokee', 'Compass', 'Gladiator', 'Grand Cherokee', 'Renegade', 'Wrangler'],
+  Kia:             ['Carnival', 'EV6', 'Forte', 'K5', 'Soul', 'Sorento', 'Sportage', 'Stinger', 'Telluride'],
+  Lexus:           ['ES', 'GX', 'IS', 'LS', 'NX', 'RX', 'UX'],
+  Mazda:           ['CX-30', 'CX-5', 'CX-9', 'Mazda3', 'Mazda6', 'MX-5 Miata'],
+  'Mercedes-Benz': ['A-Class', 'C-Class', 'E-Class', 'GLA', 'GLC', 'GLE', 'S-Class'],
+  Nissan:          ['Altima', 'Frontier', 'Kicks', 'Maxima', 'Murano', 'Pathfinder', 'Rogue', 'Sentra', 'Titan', 'Versa'],
+  Ram:             ['1500', '2500', 'ProMaster'],
+  Subaru:          ['Ascent', 'BRZ', 'Crosstrek', 'Forester', 'Impreza', 'Legacy', 'Outback'],
+  Tesla:           ['Cybertruck', 'Model 3', 'Model S', 'Model X', 'Model Y'],
+  Toyota:          ['4Runner', 'Avalon', 'Camry', 'Corolla', 'Highlander', 'Prius', 'RAV4', 'Sequoia', 'Sienna', 'Tacoma', 'Tundra'],
+  Volkswagen:      ['Atlas', 'Golf', 'ID.4', 'Jetta', 'Passat', 'Tiguan'],
+  Volvo:           ['S60', 'V60', 'XC40', 'XC60', 'XC90'],
+};
+const CUR_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: 32 }, (_, i) => String(CUR_YEAR - i));
+
+// ─── Shared styles ─────────────────────────────────────────────────────────────
+const S = {
+  sectionCard: { background:'#fff', borderRadius:16, border:'1px solid #EAE4DA', marginBottom:10, overflow:'hidden' },
+  sectionHeader: { display:'flex', alignItems:'center', gap:8, padding:'13px 16px', borderBottom:'1px solid #EAE4DA' },
+  iconWrap: (bg) => ({ width:28, height:28, borderRadius:8, background:bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }),
+  sectionTitle: { fontFamily:"'Righteous', 'Trebuchet MS', cursive", fontSize:11, letterSpacing:'0.12em', textTransform:'uppercase', color:'#1C2B22' },
+  row: (last) => ({ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'11px 16px', borderBottom: last ? 'none' : '1px solid #F5F0E8' }),
+  rowLabel: { fontSize:12, color:'#4A6256', fontWeight:500, fontFamily:'DM Sans, sans-serif' },
+  rowValue: (muted) => ({ fontSize:13, fontWeight:700, color: muted ? '#9B9B9B' : '#1C2B22', fontFamily:'DM Sans, sans-serif' }),
+  fieldWrap: { padding:'10px 16px', borderBottom:'1px solid #F5F0E8' },
+  fieldLabel: { fontSize:10, fontWeight:700, color:'#9B9B9B', fontFamily:'DM Sans, sans-serif', textTransform:'uppercase', letterSpacing:'0.09em', marginBottom:4 },
+  input: { width:'100%', boxSizing:'border-box', fontSize:14, fontFamily:'DM Sans, sans-serif', border:'1px solid #D4CFC6', borderRadius:10, padding:'8px 11px', color:'#1C2B22', background:'#FDFAF2', outline:'none' },
+};
+
+// ─── View row ──────────────────────────────────────────────────────────────────
+function Row({ label, value, last }) {
+  const empty = !value;
   return (
-    <div style={{ background:'#fff', borderRadius:16, border:'1px solid #EAE4DA', marginBottom:10, overflow:'hidden' }}>
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'13px 16px', borderBottom:'1px solid #EAE4DA' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          <div style={{ width:28, height:28, borderRadius:8, background:iconBg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-            {icon}
-          </div>
-          <span style={{ fontFamily:"'Righteous', 'Trebuchet MS', cursive", fontSize:11, letterSpacing:'0.12em', textTransform:'uppercase', color:'#1C2B22' }}>
-            {title}
-          </span>
-        </div>
-        {onEdit && (
-          <button
-            onClick={onEdit}
-            style={{ fontSize:11, fontWeight:700, color:'#1A5C3A', background:'#E8F5EE', border:'none', borderRadius:20, padding:'3px 10px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
-          >
-            Edit
-          </button>
-        )}
-      </div>
-      {rows.map((row, i) => (
-        <div
-          key={i}
-          style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'11px 16px', borderBottom: i < rows.length - 1 ? '1px solid #F5F0E8' : 'none' }}
-        >
-          <span style={{ fontSize:12, color:'#4A6256', fontWeight:500, fontFamily:'DM Sans, sans-serif' }}>{row.label}</span>
-          <span style={{ fontSize:13, fontWeight:700, color: row.muted ? '#9B9B9B' : '#1C2B22', fontFamily:'DM Sans, sans-serif' }}>{row.value}</span>
-        </div>
-      ))}
+    <div style={S.row(last)}>
+      <span style={S.rowLabel}>{label}</span>
+      <span style={S.rowValue(empty)}>{empty ? 'Not set' : value}</span>
     </div>
   );
 }
 
-// ─── Edit card shell ───────────────────────────────────────────────────────────
-function EditCard({ icon, iconBg, title, onSave, onCancel, children }) {
-  return (
-    <div style={{ background:'#fff', borderRadius:16, border:'1px solid #EAE4DA', marginBottom:10, overflow:'hidden' }}>
-      <div style={{ display:'flex', alignItems:'center', gap:8, padding:'13px 16px', borderBottom:'1px solid #EAE4DA' }}>
-        <div style={{ width:28, height:28, borderRadius:8, background:iconBg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-          {icon}
-        </div>
-        <span style={{ fontFamily:"'Righteous', 'Trebuchet MS', cursive", fontSize:11, letterSpacing:'0.12em', textTransform:'uppercase', color:'#1C2B22', flex:1 }}>
-          {title}
-        </span>
-      </div>
-      <div style={{ padding:'14px 16px' }}>
-        {children}
-        <div style={{ display:'flex', gap:8, marginTop:14 }}>
-          <button onClick={onSave} style={{ flex:1, fontSize:13, fontWeight:700, color:'#fff', background:'#1A5C3A', border:'none', borderRadius:20, padding:'8px 0', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
-            Save
-          </button>
-          <button onClick={onCancel} style={{ fontSize:13, fontWeight:600, color:'#4A6256', background:'#F0EDE4', border:'none', borderRadius:20, padding:'8px 14px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Field styles ──────────────────────────────────────────────────────────────
-const fieldLabel = { fontSize:11, fontWeight:600, color:'#4A6256', fontFamily:'DM Sans, sans-serif', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4 };
-const fieldInput = { width:'100%', boxSizing:'border-box', fontSize:14, fontFamily:'DM Sans, sans-serif', border:'1px solid #D4CFC6', borderRadius:10, padding:'8px 11px', marginBottom:12, color:'#1C2B22', background:'#FDFAF2', outline:'none' };
-const toggleRow = { display:'flex', gap:8, marginBottom:12 };
+// ─── Toggle button ─────────────────────────────────────────────────────────────
 function ToggleBtn({ active, onClick, children }) {
   return (
     <button onClick={onClick} style={{ flex:1, fontSize:13, fontWeight:700, border:'none', borderRadius:10, padding:'8px 0', cursor:'pointer', fontFamily:'DM Sans, sans-serif', background: active ? '#1A5C3A' : '#F0EDE4', color: active ? '#fff' : '#4A6256' }}>
@@ -76,7 +67,27 @@ function ToggleBtn({ active, onClick, children }) {
   );
 }
 
-// ─── Saved providers heart+star icon ──────────────────────────────────────────
+// ─── Section header ────────────────────────────────────────────────────────────
+function SectionHeader({ icon, iconBg, title }) {
+  return (
+    <div style={S.sectionHeader}>
+      <div style={S.iconWrap(iconBg)}>{icon}</div>
+      <span style={S.sectionTitle}>{title}</span>
+    </div>
+  );
+}
+
+// ─── Edit field ────────────────────────────────────────────────────────────────
+function EditField({ label, last, children }) {
+  return (
+    <div style={{ ...S.fieldWrap, borderBottom: last ? 'none' : '1px solid #F5F0E8' }}>
+      <div style={S.fieldLabel}>{label}</div>
+      {children}
+    </div>
+  );
+}
+
+// ─── Saved providers icon ──────────────────────────────────────────────────────
 function ProvidersIcon({ size = 16 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
@@ -86,91 +97,58 @@ function ProvidersIcon({ size = 16 }) {
   );
 }
 
+// ─── Main view ─────────────────────────────────────────────────────────────────
 export function ProfileView({ profile, providerHistory, onReset, onUpdateProfile, user, onSignOut }) {
   const [confirmReset, setConfirmReset] = useState(false);
-  const [editSection,  setEditSection]  = useState(null); // 'home' | 'car' | 'kids' | 'pets' | 'health'
+  const [isEditing,    setIsEditing]    = useState(false);
 
-  // ── Home edit state ──
-  const [editHasHome, setEditHasHome] = useState(null);
-  const [editZip,     setEditZip]     = useState('');
-
-  // ── Car edit state ──
-  const [editCars, setEditCars] = useState('');
-
-  // ── Kids edit state ──
-  const [editKids, setEditKids] = useState([]);
-
-  // ── Pets edit state ──
-  const [editPets, setEditPets] = useState([]);
-
-  // ── Health edit state ──
+  // Edit state — all sections at once
+  const [editHasHome,   setEditHasHome]   = useState(null);
+  const [editZip,       setEditZip]       = useState('');
+  const [editCars,      setEditCars]      = useState([]);
+  const [carPicker,     setCarPicker]     = useState(null); // null | { year, make, model }
+  const [editKids,      setEditKids]      = useState([]);
+  const [editPets,      setEditPets]      = useState([]);
   const [editAge,       setEditAge]       = useState('');
   const [editInsurance, setEditInsurance] = useState('');
 
-  const openEdit = (section) => {
-    if (section === 'home') {
-      setEditHasHome(profile.hasHome);
-      setEditZip(profile.zip || '');
-    } else if (section === 'car') {
-      const label = profile.cars?.length ? profile.cars.join(', ') : (profile.car || '');
-      setEditCars(label);
-    } else if (section === 'kids') {
-      setEditKids((profile.kids || []).map(k => ({ ...k })));
-    } else if (section === 'pets') {
-      setEditPets((profile.pets || []).map(p => ({ ...p })));
-    } else if (section === 'health') {
-      setEditAge(profile.age ? String(profile.age) : '');
-      setEditInsurance(profile.insurance || '');
-    }
-    setEditSection(section);
+  const startEditing = () => {
+    setEditHasHome(profile.hasHome);
+    setEditZip(profile.zip || '');
+    setEditCars(profile.cars?.length ? [...profile.cars] : (profile.car ? [profile.car] : []));
+    setCarPicker(null);
+    setEditKids((profile.kids || []).map(k => ({ ...k })));
+    setEditPets((profile.pets || []).map(p => ({ ...p })));
+    setEditAge(profile.age ? String(profile.age) : '');
+    setEditInsurance(profile.insurance || '');
+    setIsEditing(true);
   };
 
-  const cancelEdit = () => setEditSection(null);
+  const cancelEdit = () => setIsEditing(false);
 
-  const saveHome = () => {
-    onUpdateProfile({ ...profile, hasHome: editHasHome, zip: editZip.trim() || null });
-    setEditSection(null);
+  const saveAll = () => {
+    onUpdateProfile({
+      ...profile,
+      hasHome:   editHasHome,
+      zip:       editZip.trim() || null,
+      cars:      editCars,
+      car:       editCars[0] || null,
+      kids:      editKids.filter(k => k.name.trim()),
+      pets:      editPets.filter(p => p.name.trim()),
+      age:       editAge.trim() || null,
+      insurance: editInsurance.trim() || null,
+    });
+    setIsEditing(false);
   };
 
-  const saveCar = () => {
-    const cars = editCars.split(',').map(s => s.trim()).filter(Boolean);
-    onUpdateProfile({ ...profile, cars, car: cars[0] || null });
-    setEditSection(null);
+  const commitCar = (picker) => {
+    const label = `${picker.year} ${picker.make} ${picker.model}`;
+    setEditCars(prev => [...prev, label]);
+    setCarPicker(null);
   };
-
-  const saveKids = () => {
-    onUpdateProfile({ ...profile, kids: editKids.filter(k => k.name.trim()) });
-    setEditSection(null);
-  };
-
-  const savePets = () => {
-    onUpdateProfile({ ...profile, pets: editPets.filter(p => p.name.trim()) });
-    setEditSection(null);
-  };
-
-  const saveHealth = () => {
-    onUpdateProfile({ ...profile, age: editAge.trim() || null, insurance: editInsurance.trim() || null });
-    setEditSection(null);
-  };
-
-  // ── Display data ──
-  const homeRows = [
-    profile.hasHome !== null && { label: 'Ownership', value: profile.hasHome ? 'Owner' : 'Renter' },
-    profile.zip               && { label: 'Zip code',  value: profile.zip  },
-  ].filter(Boolean);
-
-  const vehicleLabel = profile.cars?.length ? profile.cars.join(', ') : (profile.car || null);
-  const carRows = [
-    vehicleLabel && { label: profile.cars?.length > 1 ? 'Vehicles' : 'Vehicle', value: vehicleLabel },
-  ].filter(Boolean);
-
-  const healthRows = [
-    profile.age       && { label: 'Age',       value: profile.age },
-    profile.insurance && { label: 'Insurance', value: profile.insurance },
-    !profile.age && !profile.insurance && { label: 'No info yet', value: '', muted: true },
-  ].filter(Boolean);
 
   const allProviders = Object.entries(providerHistory || {}).map(([taskId, p]) => ({ taskId, ...p }));
+  const vehicleLabel = profile.cars?.length ? profile.cars.join(', ') : (profile.car || null);
 
   return (
     <div style={{ background:'#FDFAF2' }}>
@@ -178,171 +156,243 @@ export function ProfileView({ profile, providerHistory, onReset, onUpdateProfile
 
       <div style={{ padding:'20px 18px 100px', maxWidth:680, margin:'0 auto' }}>
 
-        {/* Home */}
-        {(profile.hasHome !== null || profile.zip) && (
-          editSection === 'home' ? (
-            <EditCard
-              icon={<HouseIcon color="#1A5C3A" bg="#E8F5EE" size={16} />}
-              iconBg="#E8F5EE"
-              title="Home"
-              onSave={saveHome}
-              onCancel={cancelEdit}
+        {/* Edit / Save bar */}
+        {!isEditing ? (
+          <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:14 }}>
+            <button
+              onClick={startEditing}
+              style={{ fontSize:13, fontWeight:700, color:'#1A5C3A', background:'#E8F5EE', border:'none', borderRadius:20, padding:'7px 18px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
             >
-              <div style={fieldLabel}>Ownership</div>
-              <div style={toggleRow}>
-                <ToggleBtn active={editHasHome === true}  onClick={() => setEditHasHome(true)}>Owner</ToggleBtn>
-                <ToggleBtn active={editHasHome === false} onClick={() => setEditHasHome(false)}>Renter</ToggleBtn>
-              </div>
-              <div style={fieldLabel}>Zip code</div>
-              <input style={fieldInput} type="text" inputMode="numeric" value={editZip} onChange={e => setEditZip(e.target.value)} placeholder="e.g. 90210" />
-            </EditCard>
-          ) : (
-            <ProfileSection
-              icon={<HouseIcon color="#1A5C3A" bg="#E8F5EE" size={16} />}
-              iconBg="#E8F5EE"
-              title="Home"
-              rows={homeRows}
-              onEdit={() => openEdit('home')}
-            />
-          )
+              Edit profile
+            </button>
+          </div>
+        ) : null}
+
+        {/* ── Home ── */}
+        {(profile.hasHome !== null || profile.zip || isEditing) && (
+          <div style={S.sectionCard}>
+            <SectionHeader icon={<HouseIcon color="#1A5C3A" bg="#E8F5EE" size={16} />} iconBg="#E8F5EE" title="Home" />
+            {isEditing ? (
+              <>
+                <EditField label="Ownership">
+                  <div style={{ display:'flex', gap:8 }}>
+                    <ToggleBtn active={editHasHome === true}  onClick={() => setEditHasHome(true)}>Owner</ToggleBtn>
+                    <ToggleBtn active={editHasHome === false} onClick={() => setEditHasHome(false)}>Renter</ToggleBtn>
+                  </div>
+                </EditField>
+                <EditField label="Zip code" last>
+                  <input style={S.input} type="text" inputMode="numeric" value={editZip} onChange={e => setEditZip(e.target.value)} placeholder="e.g. 90210" />
+                </EditField>
+              </>
+            ) : (
+              <>
+                <Row label="Ownership" value={profile.hasHome === true ? 'Owner' : profile.hasHome === false ? 'Renter' : null} />
+                <Row label="Zip code"  value={profile.zip} last />
+              </>
+            )}
+          </div>
         )}
 
-        {/* Car */}
+        {/* ── Car ── */}
         {profile.hasCar && (
-          editSection === 'car' ? (
-            <EditCard
-              icon={<CarIcon color="#F77F00" bg="#FFF3E0" size={16} />}
-              iconBg="#FFF3E0"
-              title="Car"
-              onSave={saveCar}
-              onCancel={cancelEdit}
-            >
-              <div style={fieldLabel}>Vehicle(s) — separate multiple with commas</div>
-              <input
-                style={{ ...fieldInput, marginBottom:0 }}
-                type="text"
-                value={editCars}
-                onChange={e => setEditCars(e.target.value)}
-                placeholder="e.g. 2019 Honda Civic, 2021 Tesla Model 3"
-                autoFocus
-              />
-            </EditCard>
-          ) : (
-            <ProfileSection
-              icon={<CarIcon color="#F77F00" bg="#FFF3E0" size={16} />}
-              iconBg="#FFF3E0"
-              title="Car"
-              rows={carRows}
-              onEdit={() => openEdit('car')}
-            />
-          )
-        )}
-
-        {/* Kids */}
-        {profile.hasKids && profile.kids?.length > 0 && (
-          editSection === 'kids' ? (
-            <EditCard
-              icon={<PersonIcon color="#06A77D" bg="#E8F5EE" size={16} />}
-              iconBg="#E8F5EE"
-              title="Kids"
-              onSave={saveKids}
-              onCancel={cancelEdit}
-            >
-              {editKids.map((kid, i) => (
-                <div key={i} style={{ display:'flex', gap:8, marginBottom:10, alignItems:'center' }}>
-                  <input
-                    style={{ ...fieldInput, flex:2, marginBottom:0 }}
-                    type="text"
-                    value={kid.name}
-                    onChange={e => { const k=[...editKids]; k[i]={...k[i],name:e.target.value}; setEditKids(k); }}
-                    placeholder="Name"
-                  />
-                  <input
-                    style={{ ...fieldInput, width:64, marginBottom:0 }}
-                    type="number"
-                    value={kid.age}
-                    onChange={e => { const k=[...editKids]; k[i]={...k[i],age:e.target.value}; setEditKids(k); }}
-                    placeholder="Age"
-                    min="0" max="25"
-                  />
-                  <button onClick={() => setEditKids(editKids.filter((_,j)=>j!==i))} style={{ fontSize:18, color:'#D62828', background:'none', border:'none', cursor:'pointer', padding:'0 4px', lineHeight:1 }}>×</button>
-                </div>
-              ))}
-              <button
-                onClick={() => setEditKids([...editKids, { name:'', age:'' }])}
-                style={{ fontSize:12, fontWeight:700, color:'#1A5C3A', background:'#E8F5EE', border:'none', borderRadius:20, padding:'5px 14px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
-              >
-                + Add child
-              </button>
-            </EditCard>
-          ) : (
-            <ProfileSection
-              icon={<PersonIcon color="#06A77D" bg="#E8F5EE" size={16} />}
-              iconBg="#E8F5EE"
-              title="Kids"
-              rows={profile.kids.map(k => ({ label: k.name, value: `age ${k.age}` }))}
-              onEdit={() => openEdit('kids')}
-            />
-          )
-        )}
-
-        {/* Pets */}
-        {profile.hasPets && profile.pets?.length > 0 && (
-          editSection === 'pets' ? (
-            <EditCard
-              icon={<PetIcon color="#F4C430" bg="#FFFBEE" size={16} />}
-              iconBg="#FFFBEE"
-              title="Pets"
-              onSave={savePets}
-              onCancel={cancelEdit}
-            >
-              {editPets.map((pet, i) => (
-                <div key={i} style={{ display:'flex', gap:8, marginBottom:10, alignItems:'center' }}>
-                  <input
-                    style={{ ...fieldInput, flex:2, marginBottom:0 }}
-                    type="text"
-                    value={pet.name}
-                    onChange={e => { const p=[...editPets]; p[i]={...p[i],name:e.target.value}; setEditPets(p); }}
-                    placeholder="Name"
-                  />
-                  <input
-                    style={{ ...fieldInput, flex:1, marginBottom:0 }}
-                    type="text"
-                    value={pet.type || ''}
-                    onChange={e => { const p=[...editPets]; p[i]={...p[i],type:e.target.value}; setEditPets(p); }}
-                    placeholder="Type"
-                  />
-                  <button onClick={() => setEditPets(editPets.filter((_,j)=>j!==i))} style={{ fontSize:18, color:'#D62828', background:'none', border:'none', cursor:'pointer', padding:'0 4px', lineHeight:1 }}>×</button>
-                </div>
-              ))}
-              <button
-                onClick={() => setEditPets([...editPets, { name:'', type:'' }])}
-                style={{ fontSize:12, fontWeight:700, color:'#1A5C3A', background:'#E8F5EE', border:'none', borderRadius:20, padding:'5px 14px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
-              >
-                + Add pet
-              </button>
-            </EditCard>
-          ) : (
-            <ProfileSection
-              icon={<PetIcon color="#F4C430" bg="#FFFBEE" size={16} />}
-              iconBg="#FFFBEE"
-              title="Pets"
-              rows={profile.pets.map(a => ({ label: a.name, value: a.type || 'pet' }))}
-              onEdit={() => openEdit('pets')}
-            />
-          )
-        )}
-
-        {/* Saved providers */}
-        {allProviders.length > 0 && (
-          <div style={{ background:'#fff', borderRadius:16, border:'1px solid #EAE4DA', marginBottom:10, overflow:'hidden' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:8, padding:'13px 16px', borderBottom:'1px solid #EAE4DA' }}>
-              <div style={{ width:28, height:28, borderRadius:8, background:'#FDE8E8', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                <ProvidersIcon size={16} />
+          <div style={S.sectionCard}>
+            <SectionHeader icon={<CarIcon color="#F77F00" bg="#FFF3E0" size={16} />} iconBg="#FFF3E0" title="Car" />
+            {isEditing ? (
+              <div style={{ padding:'10px 16px' }}>
+                {/* Current cars list */}
+                {editCars.map((car, i) => (
+                  <div key={i} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', background:'#F5F0E8', borderRadius:10, padding:'9px 12px', marginBottom:8 }}>
+                    <span style={{ fontSize:13, fontWeight:600, color:'#1C2B22', fontFamily:'DM Sans, sans-serif' }}>{car}</span>
+                    <button onClick={() => setEditCars(editCars.filter((_,j)=>j!==i))} style={{ fontSize:18, color:'#D62828', background:'none', border:'none', cursor:'pointer', padding:'0 4px', lineHeight:1 }}>×</button>
+                  </div>
+                ))}
+                {/* Cascading picker */}
+                {carPicker !== null ? (
+                  <>
+                    <select
+                      value={carPicker.year}
+                      onChange={e => setCarPicker({ year: e.target.value, make: '', model: '' })}
+                      style={{ ...S.input, marginBottom:8 }}
+                    >
+                      <option value="">Year</option>
+                      {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                    {carPicker.year && (
+                      <select
+                        value={carPicker.make}
+                        onChange={e => setCarPicker(x => ({ ...x, make: e.target.value, model: '' }))}
+                        style={{ ...S.input, marginBottom:8 }}
+                      >
+                        <option value="">Make</option>
+                        {Object.keys(CAR_DATA).sort().map(make => <option key={make} value={make}>{make}</option>)}
+                      </select>
+                    )}
+                    {carPicker.make && (
+                      <select
+                        value={carPicker.model}
+                        onChange={e => {
+                          const model = e.target.value;
+                          if (model) commitCar({ ...carPicker, model });
+                        }}
+                        style={{ ...S.input, marginBottom:8 }}
+                      >
+                        <option value="">Model</option>
+                        {CAR_DATA[carPicker.make].map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                    )}
+                    <button
+                      onClick={() => setCarPicker(null)}
+                      style={{ fontSize:12, fontWeight:600, color:'#9B9B9B', background:'none', border:'none', cursor:'pointer', fontFamily:'DM Sans, sans-serif', padding:'2px 0' }}
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setCarPicker({ year:'', make:'', model:'' })}
+                    style={{ fontSize:12, fontWeight:700, color:'#1A5C3A', background:'#E8F5EE', border:'none', borderRadius:20, padding:'5px 14px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                  >
+                    {editCars.length === 0 ? '+ Add vehicle' : '+ Add another'}
+                  </button>
+                )}
               </div>
-              <span style={{ fontFamily:"'Righteous', 'Trebuchet MS', cursive", fontSize:11, letterSpacing:'0.12em', textTransform:'uppercase', color:'#1C2B22' }}>
-                Saved providers
-              </span>
+            ) : (
+              <Row label={profile.cars?.length > 1 ? 'Vehicles' : 'Vehicle'} value={vehicleLabel} last />
+            )}
+          </div>
+        )}
+
+        {/* ── Kids ── */}
+        {profile.hasKids && (
+          <div style={S.sectionCard}>
+            <SectionHeader icon={<PersonIcon color="#06A77D" bg="#E8F5EE" size={16} />} iconBg="#E8F5EE" title="Kids" />
+            {isEditing ? (
+              <div style={{ padding:'10px 16px' }}>
+                {editKids.map((kid, i) => (
+                  <div key={i} style={{ display:'flex', gap:8, marginBottom:10, alignItems:'center' }}>
+                    <div style={{ flex:1 }}>
+                      <div style={S.fieldLabel}>Name</div>
+                      <input
+                        style={S.input}
+                        type="text"
+                        value={kid.name}
+                        onChange={e => { const k=[...editKids]; k[i]={...k[i],name:e.target.value}; setEditKids(k); }}
+                        placeholder="Name"
+                      />
+                    </div>
+                    <div style={{ width:72 }}>
+                      <div style={S.fieldLabel}>Age</div>
+                      <input
+                        style={S.input}
+                        type="number"
+                        value={kid.age}
+                        onChange={e => { const k=[...editKids]; k[i]={...k[i],age:e.target.value}; setEditKids(k); }}
+                        placeholder="Age"
+                        min="0" max="25"
+                      />
+                    </div>
+                    <button onClick={() => setEditKids(editKids.filter((_,j)=>j!==i))} style={{ fontSize:20, color:'#D62828', background:'none', border:'none', cursor:'pointer', padding:'0 2px', lineHeight:1, marginTop:16, flexShrink:0 }}>×</button>
+                  </div>
+                ))}
+                <button
+                  onClick={() => setEditKids([...editKids, { name:'', age:'' }])}
+                  style={{ fontSize:12, fontWeight:700, color:'#1A5C3A', background:'#E8F5EE', border:'none', borderRadius:20, padding:'5px 14px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                >
+                  + Add child
+                </button>
+              </div>
+            ) : (
+              profile.kids?.length > 0
+                ? profile.kids.map((k, i) => <Row key={i} label={k.name} value={`age ${k.age}`} last={i === profile.kids.length - 1} />)
+                : <Row label="No kids added" value={null} last />
+            )}
+          </div>
+        )}
+
+        {/* ── Pets ── */}
+        {profile.hasPets && (
+          <div style={S.sectionCard}>
+            <SectionHeader icon={<PetIcon color="#F4C430" bg="#FFFBEE" size={16} />} iconBg="#FFFBEE" title="Pets" />
+            {isEditing ? (
+              <div style={{ padding:'10px 16px' }}>
+                {editPets.map((pet, i) => (
+                  <div key={i} style={{ display:'flex', gap:8, marginBottom:10, alignItems:'center' }}>
+                    <div style={{ flex:1 }}>
+                      <div style={S.fieldLabel}>Name</div>
+                      <input
+                        style={S.input}
+                        type="text"
+                        value={pet.name}
+                        onChange={e => { const p=[...editPets]; p[i]={...p[i],name:e.target.value}; setEditPets(p); }}
+                        placeholder="Name"
+                      />
+                    </div>
+                    <div style={{ flex:1 }}>
+                      <div style={S.fieldLabel}>Type</div>
+                      <input
+                        style={S.input}
+                        type="text"
+                        value={pet.type || ''}
+                        onChange={e => { const p=[...editPets]; p[i]={...p[i],type:e.target.value}; setEditPets(p); }}
+                        placeholder="dog, cat…"
+                      />
+                    </div>
+                    <button onClick={() => setEditPets(editPets.filter((_,j)=>j!==i))} style={{ fontSize:20, color:'#D62828', background:'none', border:'none', cursor:'pointer', padding:'0 2px', lineHeight:1, marginTop:16, flexShrink:0 }}>×</button>
+                  </div>
+                ))}
+                <button
+                  onClick={() => setEditPets([...editPets, { name:'', type:'' }])}
+                  style={{ fontSize:12, fontWeight:700, color:'#1A5C3A', background:'#E8F5EE', border:'none', borderRadius:20, padding:'5px 14px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                >
+                  + Add pet
+                </button>
+              </div>
+            ) : (
+              profile.pets?.length > 0
+                ? profile.pets.map((a, i) => <Row key={i} label={a.name} value={a.type || 'pet'} last={i === profile.pets.length - 1} />)
+                : <Row label="No pets added" value={null} last />
+            )}
+          </div>
+        )}
+
+        {/* ── Health ── */}
+        <div style={S.sectionCard}>
+          <SectionHeader icon={<PersonIcon color="#4A6256" bg="#F0EDE4" size={16} />} iconBg="#F0EDE4" title="Health" />
+          {isEditing ? (
+            <>
+              <EditField label="Age">
+                <input style={S.input} type="number" value={editAge} onChange={e => setEditAge(e.target.value)} placeholder="e.g. 35" min="0" max="120" />
+              </EditField>
+              <EditField label="Insurance provider" last>
+                <input style={S.input} type="text" value={editInsurance} onChange={e => setEditInsurance(e.target.value)} placeholder="e.g. Blue Cross, Aetna…" />
+              </EditField>
+            </>
+          ) : (
+            <>
+              <Row label="Age"       value={profile.age ? String(profile.age) : null} />
+              <Row label="Insurance" value={profile.insurance} last />
+            </>
+          )}
+        </div>
+
+        {/* ── Save / Cancel bar ── */}
+        {isEditing && (
+          <div style={{ display:'flex', gap:10, marginBottom:10 }}>
+            <button onClick={saveAll} style={{ flex:1, fontSize:14, fontWeight:700, color:'#fff', background:'#1A5C3A', border:'none', borderRadius:20, padding:'12px 0', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
+              Save changes
+            </button>
+            <button onClick={cancelEdit} style={{ fontSize:14, fontWeight:600, color:'#4A6256', background:'#F0EDE4', border:'none', borderRadius:20, padding:'12px 18px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
+              Cancel
+            </button>
+          </div>
+        )}
+
+        {/* ── Saved providers ── */}
+        {allProviders.length > 0 && (
+          <div style={S.sectionCard}>
+            <div style={S.sectionHeader}>
+              <div style={S.iconWrap('#FDE8E8')}><ProvidersIcon size={16} /></div>
+              <span style={S.sectionTitle}>Saved providers</span>
             </div>
             {allProviders.map((p, i) => (
               <div key={i} style={{ padding:'11px 16px', borderBottom: i < allProviders.length - 1 ? '1px solid #F5F0E8' : 'none' }}>
@@ -361,36 +411,12 @@ export function ProfileView({ profile, providerHistory, onReset, onUpdateProfile
           </div>
         )}
 
-        {/* Health (age + insurance) */}
-        {editSection === 'health' ? (
-          <EditCard
-            icon={<PersonIcon color="#4A6256" bg="#F0EDE4" size={16} />}
-            iconBg="#F0EDE4"
-            title="Health"
-            onSave={saveHealth}
-            onCancel={cancelEdit}
-          >
-            <div style={fieldLabel}>Age</div>
-            <input style={fieldInput} type="number" value={editAge} onChange={e => setEditAge(e.target.value)} placeholder="e.g. 35" min="0" max="120" autoFocus />
-            <div style={fieldLabel}>Insurance provider</div>
-            <input style={{ ...fieldInput, marginBottom:0 }} type="text" value={editInsurance} onChange={e => setEditInsurance(e.target.value)} placeholder="e.g. Blue Cross, Aetna..." />
-          </EditCard>
-        ) : (
-          <ProfileSection
-            icon={<PersonIcon color="#4A6256" bg="#F0EDE4" size={16} />}
-            iconBg="#F0EDE4"
-            title="Health"
-            rows={healthRows}
-            onEdit={() => openEdit('health')}
-          />
-        )}
-
-        {/* Account */}
+        {/* ── Account ── */}
         {user && (
-          <div style={{ background:'#fff', borderRadius:16, border:'1px solid #EAE4DA', marginBottom:10 }}>
+          <div style={S.sectionCard}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'13px 16px', borderBottom:'1px solid #F5F0E8' }}>
-              <span style={{ fontSize:12, color:'#4A6256', fontWeight:500, fontFamily:'DM Sans, sans-serif' }}>Signed in as</span>
-              <span style={{ fontSize:13, fontWeight:700, color:'#1C2B22', fontFamily:'DM Sans, sans-serif' }}>{user.email}</span>
+              <span style={S.rowLabel}>Signed in as</span>
+              <span style={S.rowValue(false)}>{user.email}</span>
             </div>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'13px 16px' }}>
               <span style={{ fontSize:13, fontWeight:500, color:'#9B9B9B', fontFamily:'DM Sans, sans-serif' }}>Sign out</span>
@@ -404,8 +430,8 @@ export function ProfileView({ profile, providerHistory, onReset, onUpdateProfile
           </div>
         )}
 
-        {/* Reset */}
-        <div style={{ background:'#fff', borderRadius:16, border:'1px solid #EAE4DA', marginBottom:10 }}>
+        {/* ── Reset ── */}
+        <div style={S.sectionCard}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'13px 16px' }}>
             <span style={{ fontSize:13, fontWeight:500, color:'#9B9B9B', fontFamily:'DM Sans, sans-serif' }}>Start over</span>
             {!confirmReset ? (

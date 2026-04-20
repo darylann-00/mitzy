@@ -31,6 +31,7 @@ export function TaskAnswerChips({
   onDone,
   onNeeded,
   onSkip,
+  onNotSure,
   showDatePicker = false,
   labelStyle,
   chipStyle,
@@ -59,6 +60,9 @@ export function TaskAnswerChips({
         <div style={{ display: 'flex', gap: 8 }}>
           <button style={{ ...baseChip, ...chipStyle }} onClick={() => onDone(today)}>Yes</button>
           <button style={{ ...baseChip, ...chipStyle }} onClick={onNeeded}>Not yet</button>
+          {onNotSure && (
+            <button style={{ ...baseChip, ...chipStyle }} onClick={onNotSure}>Not sure</button>
+          )}
         </div>
       </>
     );

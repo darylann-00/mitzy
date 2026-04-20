@@ -1,6 +1,67 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { C, CAT_META } from "../data/constants";
+import { CategoryTile } from "./CategoryIcons";
 import { Sheet } from "./Sheet";
+
+function CatSelect({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  const selected = CAT_META[value];
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: "100%", display: "flex", alignItems: "center", gap: 10,
+          padding: "10px 12px", background: C.light, border: "none",
+          borderRadius: 10, cursor: "pointer", fontSize: 15, fontWeight: 500,
+          color: C.ink,
+        }}
+      >
+        <CategoryTile cat={value} size={26} />
+        <span style={{ flex: 1, textAlign: "left" }}>{selected.label}</span>
+        <span style={{ color: C.muted, fontSize: 12 }}>▾</span>
+      </button>
+      {open && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0,
+          background: "#fff", borderRadius: 12, boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+          zIndex: 100, overflow: "hidden",
+        }}>
+          {Object.entries(CAT_META).map(([k, v]) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => { onChange(k); setOpen(false); }}
+              style={{
+                width: "100%", display: "flex", alignItems: "center", gap: 10,
+                padding: "10px 12px", background: k === value ? C.light : "transparent",
+                border: "none", cursor: "pointer", fontSize: 15, fontWeight: 500,
+                color: C.ink, textAlign: "left",
+              }}
+            >
+              <CategoryTile cat={k} size={26} />
+              <span>{v.label}</span>
+              {k === value && <span style={{ marginLeft: "auto", color: C.mint }}>✓</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function AddTaskPanel({ onAdd, onClose }) {
   const [label,  setLabel]  = useState("");
@@ -46,11 +107,7 @@ export function AddTaskPanel({ onAdd, onClose }) {
         </div>
         <div>
           <div style={{ fontSize: 13, color: C.muted, fontWeight: 600, marginBottom: 6 }}>Category</div>
-          <select value={cat} onChange={e => setCat(e.target.value)}>
-            {Object.entries(CAT_META).map(([k, v]) => (
-              <option key={k} value={k}>{v.emoji} {v.label}</option>
-            ))}
-          </select>
+          <CatSelect value={cat} onChange={setCat} />
         </div>
         <div>
           <div style={{ fontSize: 13, color: C.muted, fontWeight: 600, marginBottom: 6 }}>How often?</div>

@@ -147,6 +147,7 @@ export function HomeView({
   onDoneTask,
   onTrickleAnswer,
   onTrickleDismiss,
+  onTrickleAssist,
   onHazardAccept,
   onHazardDismiss,
 }) {
@@ -163,6 +164,7 @@ export function HomeView({
               task={trickleTask}
               onAnswer={onTrickleAnswer}
               onDismiss={onTrickleDismiss}
+              onAssist={onTrickleAssist}
             />
             <Divider />
           </>
