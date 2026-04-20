@@ -142,7 +142,7 @@ export default function Mitzy() {
 
   // ─── Domain state ────────────────────────────────────────────────────────────
   const { profile, taskLibrary, setTaskLibrary, updateProfile, addCustomTask } = useProfile(user);
-  const { taskState, setTaskState, disabledTasks, setDisabledTasks, markDone, markScheduled, markNotApplicable, markNeeded } = useTasks(user);
+  const { taskState, setTaskState, disabledTasks, setDisabledTasks, markDone, markScheduled, markNotApplicable, markNeeded, setIntervalOverride } = useTasks(user);
   const { providerHistory, saveProvider } = useProviders();
 
   // ─── UI state ────────────────────────────────────────────────────────────────
@@ -263,6 +263,7 @@ export default function Mitzy() {
           onSchedule={setScheduleTask}
           onDone={setMarkDoneModal}
           onMarkDone={(task, dateStr) => markDone(task.id, dateStr)}
+          onSetIntervalOverride={(id, days) => setIntervalOverride(id, days)}
           onBack={() => setSelectedTask(null)}
         />
       </>
