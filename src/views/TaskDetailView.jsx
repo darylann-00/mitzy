@@ -14,10 +14,8 @@ function formatIntervalDays(days) {
 const FREQ_CANDIDATES = [3, 7, 14, 21, 30, 45, 60, 90, 120, 180, 270, 365, 548, 730, 1095, 1460, 1825, 2555, 3650];
 
 function getFrequencyPresets(defaultDays) {
-  const below = FREQ_CANDIDATES.filter(d => d < defaultDays).slice(-2);
-  const above = FREQ_CANDIDATES.filter(d => d > defaultDays).slice(0, 2);
-  const result = [...below, defaultDays, ...above];
-  return [...new Set(result)];
+  const below = FREQ_CANDIDATES.filter(d => d < defaultDays).slice(-4);
+  return [...new Set([...below, defaultDays])];
 }
 
 
