@@ -87,7 +87,7 @@ export function TaskAnswerChips({
       </div>
       {showDatePicker && (
         <>
-          <div style={{ fontSize: 11, color: '#4A6256', marginBottom: 5, fontFamily: 'DM Sans, sans-serif' }}>
+          <div style={{ fontSize: 11, color: '#ffffff', fontWeight: 700, marginBottom: 5, fontFamily: 'DM Sans, sans-serif' }}>
             Or pick an exact date:
           </div>
           <input
