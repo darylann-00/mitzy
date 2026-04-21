@@ -9,7 +9,18 @@
       "Bash(/usr/local/bin/git --version)",
       "Bash(git commit:*)",
       "Bash(git remote:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git config:*)",
+      "Bash(npm start:*)",
+      "Bash(npx react-scripts:*)",
+      "Bash(claude doctor:*)",
+      "Bash(curl -s --max-time 60 \"https://raw.githubusercontent.com/millbj92/US-Zip-Codes-JSON/master/USCities.json\")",
+      "Bash(claude update:*)",
+      "Bash(ls -la /Users/daryl/Documents/Projects/mitzy/.env*)",
+      "Bash(vercel env:*)",
+      "Bash(ls -la *ontext.md)",
+      "Bash(npm install:*)",
+      "Bash(vercel:*)"
     ]
   }
 }
