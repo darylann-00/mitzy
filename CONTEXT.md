@@ -181,6 +181,10 @@ Three tabs in `BottomDock` (fixed, `#E8F0EC` pill). Sparkle AI FAB sits to the r
 
 ---
 
+## CI
+
+GitHub Actions workflow at `.github/workflows/ci.yml`. Runs `npm ci`, `npm run build`, and `npm test -- --watchAll=false` on push to main and all PRs. `gh` token requires `repo` and `read:org` scopes for Claude Code's CI monitoring panel to work.
+
 ## Where We Are
 
 All screens built and working. Next meaningful work: add `GOOGLE_PLACES_API_KEY` to Vercel env vars (Places API New must be enabled in Google Cloud), fill in `task.why`/`task.guidance` content, build `/api/schedule` Edge Function, wire up the AI FAB, replace hardcoded hazard zip ranges.
