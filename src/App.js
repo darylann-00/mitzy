@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import "./styles/app.css";
 
 import { loadS, saveS, ONBOARDED_KEY, VISIT_COUNT_KEY } from "./utils/storage";
@@ -177,14 +177,6 @@ export default function Mitzy() {
 
   const region = getClimateRegion(profile?.zip);
 
-  const isVisible = (t) => {
-    if (!isWindowActive(t, region)) return false;
-    const entry = taskState[t.id];
-    if (!entry?.lastDone) return true;
-    const daysSince = Math.floor((Date.now() - new Date(entry.lastDone)) / 86400000);
-    return daysSince >= (t.intervalDays - t.windowDays);
-  };
-
   const getStatus = (t) => taskStatus(t, taskState);
   const getDays   = (t) => {
     const entry = taskState[t.id];
@@ -216,10 +208,11 @@ export default function Mitzy() {
 
   const handleReset = async () => {
     if (user) {
-      await Promise.all([
+      const [{ error: te }, { error: pe }] = await Promise.all([
         supabase.from("task_records").delete().eq("user_id", user.id),
         supabase.from("profiles").delete().eq("id", user.id),
       ]);
+      if (te || pe) console.error("Reset: Supabase delete failed", te, pe);
     }
     localStorage.clear();
     await signOut();
@@ -227,13 +220,32 @@ export default function Mitzy() {
   };
 
   // ─── Derived task lists ───────────────────────────────────────────────────────
-  const visibleTasks  = activeTasks.filter(isVisible);
-  const scoredDue     = [...visibleTasks].filter(t => getStatus(t) !== "ok").sort((a, b) => getScore(b) - getScore(a));
-  const focusTasks    = scoredDue.filter(t => getStatus(t) !== "unknown").slice(0, 3);
-  const doneThisWeek  = Object.values(taskState).filter(entry => {
-    if (!entry?.lastDone) return false;
-    return (Date.now() - new Date(entry.lastDone)) <= 7 * 86400000;
-  }).length;
+  const visibleTasks = useMemo(() => activeTasks.filter(t => {
+    if (!isWindowActive(t, region)) return false;
+    const entry = taskState[t.id];
+    if (!entry?.lastDone) return true;
+    const daysSince = Math.floor((Date.now() - new Date(entry.lastDone)) / 86400000);
+    return daysSince >= (t.intervalDays - t.windowDays);
+  }), [activeTasks, taskState, region]);
+
+  const scoredDue = useMemo(() => [...visibleTasks]
+    .filter(t => taskStatus(t, taskState) !== "ok")
+    .sort((a, b) => {
+      const sa = taskScore(a, taskState[a.id]?.lastDone, taskState[a.id]?.intervalDays);
+      const sb = taskScore(b, taskState[b.id]?.lastDone, taskState[b.id]?.intervalDays);
+      return sb - sa;
+    }), [visibleTasks, taskState]);
+
+  const focusTasks = useMemo(() =>
+    scoredDue.filter(t => taskStatus(t, taskState) !== "unknown").slice(0, 3),
+    [scoredDue, taskState]);
+
+  const doneThisWeek = useMemo(() =>
+    Object.values(taskState).filter(entry => {
+      if (!entry?.lastDone) return false;
+      return (Date.now() - new Date(entry.lastDone)) <= 7 * 86400000;
+    }).length,
+    [taskState]);
 
   // ─── Onboarding gates ─────────────────────────────────────────────────────────
   if (authLoading)  return null;
@@ -336,7 +348,7 @@ export default function Mitzy() {
       )}
 
       <FABGroup showAdd={view === 'home' || view === 'all'} onAdd={() => setAddingTask(true)} />
-      <BottomDock view={view} setView={setView} onAI={() => console.log('AI input')} />
+      <BottomDock view={view} setView={setView} onAI={() => {}} />
     </div>
   );
 }

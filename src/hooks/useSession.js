@@ -32,11 +32,13 @@ export function useSession({ onboarded, profile, activeTasks, taskState }) {
 
     // Hazard check
     if (next >= 2 && !hazardDone && profile.zip) {
-      detectHazards(profile.zip).then(hazards => {
-        if (hazards.length > 0) setPendingHazards(hazards);
-        setHazardDone(true);
-        saveS(HAZARD_DONE_KEY, true);
-      });
+      detectHazards(profile.zip)
+        .then(hazards => {
+          if (hazards.length > 0) setPendingHazards(hazards);
+          setHazardDone(true);
+          saveS(HAZARD_DONE_KEY, true);
+        })
+        .catch(() => {});
     }
 
     // Knowledge refresh (mocked)

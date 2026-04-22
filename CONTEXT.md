@@ -187,7 +187,24 @@ GitHub Actions workflow at `.github/workflows/ci.yml`. Runs `npm ci`, `npm run b
 
 ## Where We Are
 
-All screens built and working. Next meaningful work: add `GOOGLE_PLACES_API_KEY` to Vercel env vars (Places API New must be enabled in Google Cloud), fill in `task.why`/`task.guidance` content, build `/api/schedule` Edge Function, wire up the AI FAB, replace hardcoded hazard zip ranges.
+All screens built and working. A security/reliability audit was completed and all critical/high issues are resolved (see below).
+
+**Next feature work (in priority order):**
+1. Add `GOOGLE_PLACES_API_KEY` to Vercel env vars — Places API is wired up but key is missing; provider search is broken in prod. Enable "Places API New" in Google Cloud Console first.
+2. Fill in `task.why` / `task.guidance` content — all null; UI falls back to `task.note` and generic copy.
+3. Build `/api/schedule` Edge Function — Google Calendar integration UI is complete, backend stub at `SchedulePanel.jsx` uses `setTimeout` mock.
+4. Wire up the AI FAB — sparkle button in `BottomDock` is a no-op; needs a design decision (global assist? home-screen shortcut?).
+5. Replace hardcoded hazard zip ranges in `hazards.js` with FEMA API.
+6. Context API refactor — extract task/profile state from `App.js` into `TaskContext`/`ProfileContext` before adding AI FAB (prop drilling is at its limit).
+
+**Security/reliability fixes applied:**
+- `useTasks` + `useProfile`: Supabase migration upsert now checks for errors; `markDone`/`markScheduled`/`markNotApplicable`/`updateProfile` roll back local state on failed upsert. Both hooks return `loading` + `syncError`.
+- CORS: removed wildcard `*` from `/api/assist` and `/api/providers`. Now origin-allowlisted via `ALLOWED_ORIGIN` env var (set to `https://mitzy.io` in Vercel production).
+- `AssistPanel`: `inlineMarkdown` escapes `<`/`>` before applying bold/link transforms — blocks HTML injection from Claude output.
+- `App.js`: `handleReset` checks Supabase delete errors before clearing localStorage. Derived task lists (`visibleTasks`, `scoredDue`, `focusTasks`, `doneThisWeek`) wrapped in `useMemo`.
+- `useSession`: added `.catch()` to `detectHazards` promise.
+- `storage.js`: `cleanupOldKeys()` removes orphaned `mitzy-*` keys from old schema versions, called on startup in `index.js`.
+- Deleted unused `YouView.jsx`.
 
 **Task intervals** — All intervals in `src/data/tasks.js` have been audited against standard safety guidance. Three were corrected to monthly (30d): `hm-smoke` (NFPA 72), `hm-fire` (NFPA 10 §7.2.1), `hm-gfci` (UL/manufacturer standards). All others are correct.
 

@@ -1,14 +1,21 @@
 export const config = { runtime: "edge" };
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "content-type",
-};
+// ALLOWED_ORIGIN: set to your production domain in Vercel env vars (e.g. "https://mitzy.app").
+// Empty = no cross-origin access (safe default; same-origin requests don't need CORS headers).
+function corsHeaders(req) {
+  const allowed = process.env.ALLOWED_ORIGIN || '';
+  const origin  = req.headers.get('origin') || '';
+  const match   = allowed && origin === allowed ? origin : null;
+  return {
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'content-type',
+    ...(match ? { 'Access-Control-Allow-Origin': match } : {}),
+  };
+}
 
 export default async function handler(req) {
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: CORS_HEADERS });
+    return new Response(null, { status: 204, headers: corsHeaders(req) });
   }
 
   if (req.method !== "POST") {
@@ -54,6 +61,6 @@ export default async function handler(req) {
   const text = data.content?.[0]?.text ?? "";
 
   return new Response(JSON.stringify({ text }), {
-    headers: { "content-type": "application/json", ...CORS_HEADERS },
+    headers: { "content-type": "application/json", ...corsHeaders(req) },
   });
 }
