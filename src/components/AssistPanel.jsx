@@ -33,9 +33,16 @@ function inlineMarkdown(text) {
   const escaped = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
   return escaped
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/(https?:\/\/[^\s&<>"]+)/g, (url) =>
-      `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:#1A5C3A;text-decoration:underline">${url}</a>`
-    );
+    .replace(/(https?:\/\/[^\s"<>]+)/g, (rawUrl) => {
+      const decoded = rawUrl.replace(/&amp;/g, '&');
+      try {
+        new URL(decoded);
+        const safeHref = decoded.replace(/&/g, '&amp;');
+        return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer" style="color:#1A5C3A;text-decoration:underline">${decoded}</a>`;
+      } catch {
+        return rawUrl;
+      }
+    });
 }
 
 // Keep old name as alias so blurb rendering still works
