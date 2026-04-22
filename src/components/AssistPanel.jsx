@@ -29,9 +29,11 @@ function PulseLoader({ label }) {
 // ─── Render inline markdown (bold + auto-linked URLs) ─────────────────────────
 function inlineMarkdown(text) {
   if (!text) return '';
-  return text
+  // Escape HTML tags first to block injection from Claude output
+  const escaped = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return escaped
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/(https?:\/\/[^\s<>"]+)/g, (url) =>
+    .replace(/(https?:\/\/[^\s&<>"]+)/g, (url) =>
       `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:#1A5C3A;text-decoration:underline">${url}</a>`
     );
 }

@@ -9,24 +9,28 @@ export function useProfile(user) {
     const saved = loadS(PROFILE_KEY, {});
     return saved.zip ? buildTaskLibrary(saved) : [];
   });
+  const [loading, setLoading] = useState(!!user);
+  const [syncError, setSyncError] = useState(null);
 
   useEffect(() => {
     if (!user) return;
 
     async function load() {
+      setLoading(true);
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
         .maybeSingle();
 
-      if (error) { console.error(error); return; }
+      if (error) { setSyncError(error); setLoading(false); return; }
 
       if (!data) {
         // First login — write whatever onboarding collected to Supabase
         const local = loadS(PROFILE_KEY, {});
         if (Object.keys(local).length > 0) {
-          await supabase.from("profiles").upsert({ id: user.id, ...toRow(local) });
+          const { error: upsertError } = await supabase.from("profiles").upsert({ id: user.id, ...toRow(local) });
+          if (upsertError) { setSyncError(upsertError); setLoading(false); return; }
         }
       } else {
         const p = fromRow(data);
@@ -34,6 +38,7 @@ export function useProfile(user) {
         setTaskLibrary(buildTaskLibrary(p));
         saveS(PROFILE_KEY, p);
       }
+      setLoading(false);
     }
 
     load();
@@ -46,10 +51,16 @@ export function useProfile(user) {
 
   const updateProfile = async (updates) => {
     const next = { ...profile, ...updates };
+    const prev = profile;
+    const prevLib = taskLibrary;
     setProfile(next);
     setTaskLibrary(buildTaskLibrary(next));
     if (user) {
-      await supabase.from("profiles").upsert({ id: user.id, ...toRow(next) });
+      const { error } = await supabase.from("profiles").upsert({ id: user.id, ...toRow(next) });
+      if (error) {
+        setProfile(prev);
+        setTaskLibrary(prevLib);
+      }
     }
   };
 
@@ -57,7 +68,7 @@ export function useProfile(user) {
     setTaskLibrary(prev => [...prev, task]);
   };
 
-  return { profile, setProfile, taskLibrary, setTaskLibrary, updateProfile, addCustomTask };
+  return { profile, setProfile, taskLibrary, setTaskLibrary, updateProfile, addCustomTask, loading, syncError };
 }
 
 function toRow(p) {

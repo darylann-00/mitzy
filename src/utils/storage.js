@@ -14,6 +14,23 @@ export const TRICKLE_DATE_KEY       = "mitzy-td-v6";
 export const ASSIST_CACHE_TTL      = 7  * 24 * 60 * 60 * 1000; // 7 days
 export const KNOWLEDGE_REFRESH_TTL = 90 * 24 * 60 * 60 * 1000; // 90 days
 
+// ─── Old key cleanup ──────────────────────────────────────────────────────────
+// Removes stale mitzy-* keys from previous schema versions on startup.
+const CURRENT_KEYS = new Set([
+  "mitzy-v6", "mitzy-ob-v6", "mitzy-dis-v6", "mitzy-pro-v7",
+  "mitzy-ph-v6", "mitzy-visits-v6", "mitzy-hz-v6", "mitzy-kr-v6", "mitzy-td-v6",
+]);
+
+export function cleanupOldKeys() {
+  try {
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('mitzy-') && !CURRENT_KEYS.has(key) && !key.startsWith(ASSIST_CACHE_PREFIX + '-')) {
+        localStorage.removeItem(key);
+      }
+    });
+  } catch {}
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 export function loadS(key, fallback) {

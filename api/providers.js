@@ -1,10 +1,17 @@
 export const config = { runtime: "edge" };
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "content-type",
-};
+// ALLOWED_ORIGIN: set to your production domain in Vercel env vars (e.g. "https://mitzy.app").
+// Empty = no cross-origin access (safe default; same-origin requests don't need CORS headers).
+function corsHeaders(req) {
+  const allowed = process.env.ALLOWED_ORIGIN || '';
+  const origin  = req.headers.get('origin') || '';
+  const match   = allowed && origin === allowed ? origin : null;
+  return {
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'content-type',
+    ...(match ? { 'Access-Control-Allow-Origin': match } : {}),
+  };
+}
 
 // What Claude should look for when synthesizing blurbs per task category
 function getRelevantSignals(taskCat) {
@@ -33,7 +40,7 @@ function priceLevelToString(level) {
 
 export default async function handler(req) {
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: CORS_HEADERS });
+    return new Response(null, { status: 204, headers: corsHeaders(req) });
   }
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
@@ -94,7 +101,7 @@ export default async function handler(req) {
 
   if (!places.length) {
     return new Response(JSON.stringify({ text: "[]" }), {
-      headers: { "content-type": "application/json", ...CORS_HEADERS },
+      headers: { "content-type": "application/json", ...corsHeaders(req) },
     });
   }
 
@@ -174,6 +181,6 @@ Return ONLY a JSON array (no markdown, no explanation), one object per place, in
   }
 
   return new Response(JSON.stringify({ text }), {
-    headers: { "content-type": "application/json", ...CORS_HEADERS },
+    headers: { "content-type": "application/json", ...corsHeaders(req) },
   });
 }
