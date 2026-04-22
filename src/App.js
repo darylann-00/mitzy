@@ -4,6 +4,7 @@ import "./styles/app.css";
 import { loadS, saveS, ONBOARDED_KEY, VISIT_COUNT_KEY } from "./utils/storage";
 import { taskStatus, taskScore, nextDueStr, isWindowActive, isDependencySatisfied } from "./utils/taskLogic";
 import { getClimateRegion } from "./utils/climateRegion";
+import { detectHazards } from "./utils/hazards";
 import { buildTaskLibrary } from "./data/taskFactory";
 
 import { supabase } from "./lib/supabase";
@@ -205,6 +206,12 @@ export default function Mitzy() {
     setPendingHazards(null);
   };
 
+  const handleAddHazardTasks = async () => {
+    if (!profile?.zip) return;
+    const hazards = await detectHazards(profile.zip);
+    if (hazards.length > 0) updateProfile({ ...profile, hazards });
+  };
+
   const handleReset = async () => {
     if (user) {
       const [{ error: te }, { error: pe }] = await Promise.all([
@@ -238,6 +245,12 @@ export default function Mitzy() {
   const focusTasks = useMemo(() =>
     scoredDue.filter(t => taskStatus(t, taskState) !== "unknown").slice(0, 3),
     [scoredDue, taskState]);
+
+  const nextUpcomingTask = useMemo(() =>
+    visibleTasks
+      .filter(t => taskStatus(t, taskState) === 'coming-up')
+      .sort((a, b) => getDays(a) - getDays(b))[0] ?? null,
+    [visibleTasks, taskState]);
 
   const doneThisWeek = useMemo(() =>
     Object.values(taskState).filter(entry => {
@@ -300,9 +313,11 @@ export default function Mitzy() {
           pendingHazards={pendingHazards}
           focusTasks={focusTasks}
           doneThisWeek={doneThisWeek}
+          nextUpcomingTask={nextUpcomingTask}
+          getDays={getDays}
           providerHistory={providerHistory}
           getStatus={getStatus}
-          getDays={getDays}
+          onGoToAll={() => setView('all')}
           onSelectTask={setSelectedTask}
           onDoneTask={setMarkDoneModal}
           onTrickleAnswer={(answer) => {
@@ -341,6 +356,7 @@ export default function Mitzy() {
           providerHistory={providerHistory}
           onReset={handleReset}
           onUpdateProfile={updateProfile}
+          onAddHazardTasks={handleAddHazardTasks}
           user={user}
           onSignOut={signOut}
         />

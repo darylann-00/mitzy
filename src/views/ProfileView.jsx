@@ -98,9 +98,11 @@ function ProvidersIcon({ size = 16 }) {
 }
 
 // ─── Main view ─────────────────────────────────────────────────────────────────
-export function ProfileView({ profile, providerHistory, onReset, onUpdateProfile, user, onSignOut }) {
-  const [confirmReset, setConfirmReset] = useState(false);
-  const [isEditing,    setIsEditing]    = useState(false);
+export function ProfileView({ profile, providerHistory, onReset, onUpdateProfile, onAddHazardTasks, user, onSignOut }) {
+  const [confirmReset,   setConfirmReset]   = useState(false);
+  const [isEditing,      setIsEditing]      = useState(false);
+  const [addingHazards,  setAddingHazards]  = useState(false);
+  const [pendingRemove,  setPendingRemove]  = useState(null); // { type: 'car'|'kid'|'pet', index: number }
 
   // Edit state — all sections at once
   const [editHasHome,   setEditHasHome]   = useState(null);
@@ -187,7 +189,19 @@ export function ProfileView({ profile, providerHistory, onReset, onUpdateProfile
             ) : (
               <>
                 <Row label="Ownership" value={profile.hasHome === true ? 'Owner' : profile.hasHome === false ? 'Renter' : null} />
-                <Row label="Zip code"  value={profile.zip} last />
+                <Row label="Zip code"  value={profile.zip} last={!profile.zip || !!profile.hazards?.length} />
+                {profile.zip && !profile.hazards?.length && (
+                  <div style={{ padding:'10px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                    <span style={{ fontSize:12, color:'#4A6256', fontFamily:'DM Sans, sans-serif' }}>Disaster prep tasks for your area</span>
+                    <button
+                      disabled={addingHazards}
+                      onClick={async () => { setAddingHazards(true); await onAddHazardTasks(); setAddingHazards(false); }}
+                      style={{ fontSize:12, fontWeight:700, color: addingHazards ? '#9B9B9B' : '#1A5C3A', background:'none', border:'none', cursor: addingHazards ? 'default' : 'pointer', fontFamily:'DM Sans, sans-serif', padding:0 }}
+                    >
+                      {addingHazards ? 'Checking…' : '+ Add'}
+                    </button>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -201,9 +215,20 @@ export function ProfileView({ profile, providerHistory, onReset, onUpdateProfile
               <div style={{ padding:'10px 16px' }}>
                 {/* Current cars list */}
                 {editCars.map((car, i) => (
-                  <div key={i} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', background:'#F5F0E8', borderRadius:10, padding:'9px 12px', marginBottom:8 }}>
-                    <span style={{ fontSize:13, fontWeight:600, color:'#1C2B22', fontFamily:'DM Sans, sans-serif' }}>{car}</span>
-                    <button onClick={() => setEditCars(editCars.filter((_,j)=>j!==i))} style={{ fontSize:18, color:'#D62828', background:'none', border:'none', cursor:'pointer', padding:'0 4px', lineHeight:1 }}>×</button>
+                  <div key={i} style={{ background:'#F5F0E8', borderRadius:10, marginBottom:8, overflow:'hidden' }}>
+                    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'9px 12px' }}>
+                      <span style={{ fontSize:13, fontWeight:600, color:'#1C2B22', fontFamily:'DM Sans, sans-serif' }}>{car}</span>
+                      {pendingRemove?.type === 'car' && pendingRemove.index === i
+                        ? <span style={{ fontSize:12, color:'#D62828', fontFamily:'DM Sans, sans-serif', fontWeight:600 }}>Remove?</span>
+                        : <button onClick={() => setPendingRemove({ type:'car', index:i })} style={{ fontSize:18, color:'#D62828', background:'none', border:'none', cursor:'pointer', padding:'0 4px', lineHeight:1 }}>×</button>
+                      }
+                    </div>
+                    {pendingRemove?.type === 'car' && pendingRemove.index === i && (
+                      <div style={{ display:'flex', gap:8, padding:'0 12px 10px' }}>
+                        <button onClick={() => { setEditCars(editCars.filter((_,j)=>j!==i)); setPendingRemove(null); }} style={{ flex:1, fontSize:12, fontWeight:700, color:'#fff', background:'#D62828', border:'none', borderRadius:8, padding:'6px 0', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>Yes, remove</button>
+                        <button onClick={() => setPendingRemove(null)} style={{ flex:1, fontSize:12, fontWeight:700, color:'#4A6256', background:'#E8E2D8', border:'none', borderRadius:8, padding:'6px 0', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>Cancel</button>
+                      </div>
+                    )}
                   </div>
                 ))}
                 {/* Cascading picker */}
@@ -269,29 +294,39 @@ export function ProfileView({ profile, providerHistory, onReset, onUpdateProfile
             {isEditing ? (
               <div style={{ padding:'10px 16px' }}>
                 {editKids.map((kid, i) => (
-                  <div key={i} style={{ display:'flex', gap:8, marginBottom:10, alignItems:'center' }}>
-                    <div style={{ flex:1 }}>
-                      <div style={S.fieldLabel}>Name</div>
-                      <input
-                        style={S.input}
-                        type="text"
-                        value={kid.name}
-                        onChange={e => { const k=[...editKids]; k[i]={...k[i],name:e.target.value}; setEditKids(k); }}
-                        placeholder="Name"
-                      />
+                  <div key={i} style={{ background:'#F5F0E8', borderRadius:10, marginBottom:8, padding:'10px 12px' }}>
+                    <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                      <div style={{ flex:1 }}>
+                        <div style={S.fieldLabel}>Name</div>
+                        <input
+                          style={S.input}
+                          type="text"
+                          value={kid.name}
+                          onChange={e => { const k=[...editKids]; k[i]={...k[i],name:e.target.value}; setEditKids(k); }}
+                          placeholder="Name"
+                        />
+                      </div>
+                      <div style={{ width:88 }}>
+                        <div style={S.fieldLabel}>Birth year</div>
+                        <input
+                          style={S.input}
+                          type="number"
+                          value={kid.birthYear || ''}
+                          onChange={e => { const k=[...editKids]; k[i]={...k[i],birthYear:e.target.value}; setEditKids(k); }}
+                          placeholder="e.g. 2018"
+                          min="1995" max={new Date().getFullYear()}
+                        />
+                      </div>
+                      <button onClick={() => setPendingRemove({ type:'kid', index:i })} style={{ fontSize:20, color:'#D62828', background:'none', border:'none', cursor:'pointer', padding:'0 2px', lineHeight:1, marginTop:16, flexShrink:0 }}>×</button>
                     </div>
-                    <div style={{ width:88 }}>
-                      <div style={S.fieldLabel}>Birth year</div>
-                      <input
-                        style={S.input}
-                        type="number"
-                        value={kid.birthYear || ''}
-                        onChange={e => { const k=[...editKids]; k[i]={...k[i],birthYear:e.target.value}; setEditKids(k); }}
-                        placeholder="e.g. 2018"
-                        min="1995" max={new Date().getFullYear()}
-                      />
-                    </div>
-                    <button onClick={() => setEditKids(editKids.filter((_,j)=>j!==i))} style={{ fontSize:20, color:'#D62828', background:'none', border:'none', cursor:'pointer', padding:'0 2px', lineHeight:1, marginTop:16, flexShrink:0 }}>×</button>
+                    {pendingRemove?.type === 'kid' && pendingRemove.index === i && (
+                      <div style={{ display:'flex', gap:8, marginTop:8 }}>
+                        <button onClick={() => { setEditKids(editKids.filter((_,j)=>j!==i)); setPendingRemove(null); }} style={{ flex:1, fontSize:12, fontWeight:700, color:'#fff', background:'#D62828', border:'none', borderRadius:8, padding:'6px 0', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
+                          Remove{kid.name ? ` ${kid.name}` : ''}
+                        </button>
+                        <button onClick={() => setPendingRemove(null)} style={{ flex:1, fontSize:12, fontWeight:700, color:'#4A6256', background:'#E8E2D8', border:'none', borderRadius:8, padding:'6px 0', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>Cancel</button>
+                      </div>
+                    )}
                   </div>
                 ))}
                 <button
@@ -316,28 +351,38 @@ export function ProfileView({ profile, providerHistory, onReset, onUpdateProfile
             {isEditing ? (
               <div style={{ padding:'10px 16px' }}>
                 {editPets.map((pet, i) => (
-                  <div key={i} style={{ display:'flex', gap:8, marginBottom:10, alignItems:'center' }}>
-                    <div style={{ flex:1 }}>
-                      <div style={S.fieldLabel}>Name</div>
-                      <input
-                        style={S.input}
-                        type="text"
-                        value={pet.name}
-                        onChange={e => { const p=[...editPets]; p[i]={...p[i],name:e.target.value}; setEditPets(p); }}
-                        placeholder="Name"
-                      />
+                  <div key={i} style={{ background:'#F5F0E8', borderRadius:10, marginBottom:8, padding:'10px 12px' }}>
+                    <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                      <div style={{ flex:1 }}>
+                        <div style={S.fieldLabel}>Name</div>
+                        <input
+                          style={S.input}
+                          type="text"
+                          value={pet.name}
+                          onChange={e => { const p=[...editPets]; p[i]={...p[i],name:e.target.value}; setEditPets(p); }}
+                          placeholder="Name"
+                        />
+                      </div>
+                      <div style={{ flex:1 }}>
+                        <div style={S.fieldLabel}>Type</div>
+                        <input
+                          style={S.input}
+                          type="text"
+                          value={pet.type || ''}
+                          onChange={e => { const p=[...editPets]; p[i]={...p[i],type:e.target.value}; setEditPets(p); }}
+                          placeholder="dog, cat…"
+                        />
+                      </div>
+                      <button onClick={() => setPendingRemove({ type:'pet', index:i })} style={{ fontSize:20, color:'#D62828', background:'none', border:'none', cursor:'pointer', padding:'0 2px', lineHeight:1, marginTop:16, flexShrink:0 }}>×</button>
                     </div>
-                    <div style={{ flex:1 }}>
-                      <div style={S.fieldLabel}>Type</div>
-                      <input
-                        style={S.input}
-                        type="text"
-                        value={pet.type || ''}
-                        onChange={e => { const p=[...editPets]; p[i]={...p[i],type:e.target.value}; setEditPets(p); }}
-                        placeholder="dog, cat…"
-                      />
-                    </div>
-                    <button onClick={() => setEditPets(editPets.filter((_,j)=>j!==i))} style={{ fontSize:20, color:'#D62828', background:'none', border:'none', cursor:'pointer', padding:'0 2px', lineHeight:1, marginTop:16, flexShrink:0 }}>×</button>
+                    {pendingRemove?.type === 'pet' && pendingRemove.index === i && (
+                      <div style={{ display:'flex', gap:8, marginTop:8 }}>
+                        <button onClick={() => { setEditPets(editPets.filter((_,j)=>j!==i)); setPendingRemove(null); }} style={{ flex:1, fontSize:12, fontWeight:700, color:'#fff', background:'#D62828', border:'none', borderRadius:8, padding:'6px 0', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
+                          Remove{pet.name ? ` ${pet.name}` : ''}
+                        </button>
+                        <button onClick={() => setPendingRemove(null)} style={{ flex:1, fontSize:12, fontWeight:700, color:'#4A6256', background:'#E8E2D8', border:'none', borderRadius:8, padding:'6px 0', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>Cancel</button>
+                      </div>
+                    )}
                   </div>
                 ))}
                 <button
