@@ -1,3 +1,6 @@
+const THIS_YEAR = new Date().getFullYear();
+const getAge = (birthYear) => birthYear ? THIS_YEAR - parseInt(birthYear, 10) : null;
+
 export function buildAssistPrompt(task, profile) {
   const loc  = profile.zip       ? `near zip code ${profile.zip}` : "in my area";
   const ins  = profile.insurance ? `Insurance: ${profile.insurance}. ` : "";
@@ -6,10 +9,10 @@ export function buildAssistPrompt(task, profile) {
     : profile.cars?.length ? profile.cars.join(", ") : profile.car;
   const car  = carStr ? `Vehicle: ${carStr}. ` : "";
   const kids = profile.kids?.length
-    ? `Kids: ${profile.kids.map(k => `${k.name} age ${k.age}`).join(", ")}. `
+    ? `Kids: ${profile.kids.map(k => `${k.name} age ${getAge(k.birthYear)}`).join(", ")}. `
     : "";
   const pets = profile.pets?.length
-    ? `Pets: ${profile.pets.map(p => `${p.name} (${p.type}, age ${p.age})`).join(", ")}. `
+    ? `Pets: ${profile.pets.map(p => `${p.name} (${p.type}, age ${getAge(p.birthYear)})`).join(", ")}. `
     : "";
 
   const ctx  = `${ins}${car}${kids}${pets}Location: ${loc}.`;

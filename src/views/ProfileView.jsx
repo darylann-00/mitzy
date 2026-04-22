@@ -109,7 +109,7 @@ export function ProfileView({ profile, providerHistory, onReset, onUpdateProfile
   const [carPicker,     setCarPicker]     = useState(null); // null | { year, make, model }
   const [editKids,      setEditKids]      = useState([]);
   const [editPets,      setEditPets]      = useState([]);
-  const [editAge,       setEditAge]       = useState('');
+  const [editBirthYear, setEditBirthYear] = useState('');
   const [editInsurance, setEditInsurance] = useState('');
 
   const startEditing = () => {
@@ -119,7 +119,7 @@ export function ProfileView({ profile, providerHistory, onReset, onUpdateProfile
     setCarPicker(null);
     setEditKids((profile.kids || []).map(k => ({ ...k })));
     setEditPets((profile.pets || []).map(p => ({ ...p })));
-    setEditAge(profile.age ? String(profile.age) : '');
+    setEditBirthYear(profile.birthYear ? String(profile.birthYear) : '');
     setEditInsurance(profile.insurance || '');
     setIsEditing(true);
   };
@@ -135,7 +135,7 @@ export function ProfileView({ profile, providerHistory, onReset, onUpdateProfile
       car:       editCars[0] || null,
       kids:      editKids.filter(k => k.name.trim()),
       pets:      editPets.filter(p => p.name.trim()),
-      age:       editAge.trim() || null,
+      birthYear: editBirthYear.trim() || null,
       insurance: editInsurance.trim() || null,
     });
     setIsEditing(false);
@@ -280,22 +280,22 @@ export function ProfileView({ profile, providerHistory, onReset, onUpdateProfile
                         placeholder="Name"
                       />
                     </div>
-                    <div style={{ width:72 }}>
-                      <div style={S.fieldLabel}>Age</div>
+                    <div style={{ width:88 }}>
+                      <div style={S.fieldLabel}>Birth year</div>
                       <input
                         style={S.input}
                         type="number"
-                        value={kid.age}
-                        onChange={e => { const k=[...editKids]; k[i]={...k[i],age:e.target.value}; setEditKids(k); }}
-                        placeholder="Age"
-                        min="0" max="25"
+                        value={kid.birthYear || ''}
+                        onChange={e => { const k=[...editKids]; k[i]={...k[i],birthYear:e.target.value}; setEditKids(k); }}
+                        placeholder="e.g. 2018"
+                        min="1995" max={new Date().getFullYear()}
                       />
                     </div>
                     <button onClick={() => setEditKids(editKids.filter((_,j)=>j!==i))} style={{ fontSize:20, color:'#D62828', background:'none', border:'none', cursor:'pointer', padding:'0 2px', lineHeight:1, marginTop:16, flexShrink:0 }}>×</button>
                   </div>
                 ))}
                 <button
-                  onClick={() => setEditKids([...editKids, { name:'', age:'' }])}
+                  onClick={() => setEditKids([...editKids, { name:'', birthYear:'' }])}
                   style={{ fontSize:12, fontWeight:700, color:'#1A5C3A', background:'#E8F5EE', border:'none', borderRadius:20, padding:'5px 14px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
                 >
                   + Add child
@@ -303,7 +303,7 @@ export function ProfileView({ profile, providerHistory, onReset, onUpdateProfile
               </div>
             ) : (
               profile.kids?.length > 0
-                ? profile.kids.map((k, i) => <Row key={i} label={k.name} value={`age ${k.age}`} last={i === profile.kids.length - 1} />)
+                ? profile.kids.map((k, i) => <Row key={i} label={k.name} value={k.birthYear ? `born ${k.birthYear}` : null} last={i === profile.kids.length - 1} />)
                 : <Row label="No kids added" value={null} last />
             )}
           </div>
@@ -360,8 +360,8 @@ export function ProfileView({ profile, providerHistory, onReset, onUpdateProfile
           <SectionHeader icon={<PersonIcon color="#4A6256" bg="#F0EDE4" size={16} />} iconBg="#F0EDE4" title="Health" />
           {isEditing ? (
             <>
-              <EditField label="Age">
-                <input style={S.input} type="number" value={editAge} onChange={e => setEditAge(e.target.value)} placeholder="e.g. 35" min="0" max="120" />
+              <EditField label="Birth year">
+                <input style={S.input} type="number" value={editBirthYear} onChange={e => setEditBirthYear(e.target.value)} placeholder="e.g. 1988" min="1900" max={new Date().getFullYear() - 18} />
               </EditField>
               <EditField label="Insurance provider" last>
                 <input style={S.input} type="text" value={editInsurance} onChange={e => setEditInsurance(e.target.value)} placeholder="e.g. Blue Cross, Aetna…" />
@@ -369,7 +369,7 @@ export function ProfileView({ profile, providerHistory, onReset, onUpdateProfile
             </>
           ) : (
             <>
-              <Row label="Age"       value={profile.age ? String(profile.age) : null} />
+              <Row label="Birth year" value={profile.birthYear ? String(profile.birthYear) : null} />
               <Row label="Insurance" value={profile.insurance} last />
             </>
           )}

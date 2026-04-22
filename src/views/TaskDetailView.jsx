@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { CAT_META } from "../data/constants";
 import { CAT_ICON_CONFIG } from "../components/CategoryIcons";
 
@@ -64,6 +64,19 @@ export function TaskDetailView({ task, status, taskState, savedProvider, getNext
   const [customUnit, setCustomUnit] = useState('months');
   const [showCustomInput, setShowCustomInput] = useState(false);
   const customNumRef = useRef(null);
+  const dateInputWrapRef = useRef(null);
+
+  // Close date picker when clicking outside
+  useEffect(() => {
+    if (!editingLastDone) return;
+    const handleClickOutside = e => {
+      if (dateInputWrapRef.current && !dateInputWrapRef.current.contains(e.target)) {
+        setEditingLastDone(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [editingLastDone]);
 
   // Last done / frequency / due next
   const effectiveInterval = entry?.intervalDays ?? task.intervalDays;
@@ -163,7 +176,7 @@ export function TaskDetailView({ task, status, taskState, savedProvider, getNext
             <div style={{ display:'flex', gap:6 }}>
               {/* Last done */}
               <div
-                onClick={() => { setEditingLastDone(v => !v); setEditingFrequency(false); }}
+                onClick={() => { setEditingLastDone(true); setEditingFrequency(false); setShowCustomInput(false); setCustomNum(''); }}
                 style={{ flex:'1 1 0', minWidth:0, background:'#FDFAF2', borderRadius:10, padding:'7px 9px', cursor:'pointer', border:`1.5px solid ${editingLastDone ? '#1A5C3A' : '#EAE4DA'}` }}
               >
                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
@@ -179,7 +192,7 @@ export function TaskDetailView({ task, status, taskState, savedProvider, getNext
               {/* Frequency */}
               {frequencyStr && (
                 <div
-                  onClick={() => { setEditingFrequency(v => !v); setEditingLastDone(false); setShowCustomInput(false); setCustomNum(''); }}
+                  onClick={() => { setEditingFrequency(true); setEditingLastDone(false); setShowCustomInput(false); setCustomNum(''); }}
                   style={{ flex:'1 1 0', minWidth:0, background:'#FDFAF2', borderRadius:10, padding:'7px 9px', cursor:'pointer', border:`1.5px solid ${editingFrequency ? '#1A5C3A' : '#EAE4DA'}` }}
                 >
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
@@ -200,28 +213,34 @@ export function TaskDetailView({ task, status, taskState, savedProvider, getNext
               )}
             </div>
             {editingLastDone && (
-              <div style={{ marginTop:8 }}>
+              <div ref={dateInputWrapRef} style={{ marginTop:8 }}>
                 <input
                   type="date"
                   defaultValue={lastDoneValue}
                   max={new Date().toISOString().slice(0, 10)}
                   style={{
-                    width:'100%', padding:'8px 10px', fontSize:13, fontFamily:'DM Sans, sans-serif',
+                    width:'auto', padding:'8px 10px', fontSize:13, fontFamily:'DM Sans, sans-serif',
                     border:'1.5px solid #1A5C3A', borderRadius:8, background:'#fff',
-                    color:'#1C2B22', boxSizing:'border-box',
+                    color:'#1C2B22',
                   }}
-                  onChange={() => {}}
-                  onBlur={e => {
+                  onChange={e => {
                     if (e.target.value && onMarkDone) {
                       onMarkDone(task, e.target.value);
+                      setEditingLastDone(false);
                     }
-                    setEditingLastDone(false);
                   }}
                 />
               </div>
             )}
             {editingFrequency && task.intervalDays && (
               <div style={{ marginTop:10 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+                  <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:'#4A6256', fontFamily:'DM Sans, sans-serif' }}>Change frequency</div>
+                  <button
+                    onClick={() => { setEditingFrequency(false); setShowCustomInput(false); setCustomNum(''); }}
+                    style={{ background:'none', border:'none', cursor:'pointer', padding:'2px 4px', fontSize:16, color:'#4A6256', lineHeight:1 }}
+                  >×</button>
+                </div>
                 <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:8 }}>
                   {getFrequencyPresets(task.intervalDays).map(days => {
                     const isDefault = days === task.intervalDays;

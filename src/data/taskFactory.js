@@ -13,6 +13,9 @@ function parseCarParts(carString) {
 const EV_MAKES = new Set(["Tesla"]);
 const EV_MODELS = new Set(["Ioniq 5", "EV6", "ID.4"]);
 
+const THIS_YEAR = new Date().getFullYear();
+const getAge = (birthYear) => birthYear ? THIS_YEAR - parseInt(birthYear, 10) : NaN;
+
 function isEV(make, model) {
   return EV_MAKES.has(make) || EV_MODELS.has(model);
 }
@@ -213,8 +216,8 @@ export function carTasks(carString) {
 // ─── Per-kid Task Generator ───────────────────────────────────────────────────
 
 export function kidTasks(kid) {
-  const { name, age: ageStr } = kid;
-  const age  = parseInt(ageStr, 10);
+  const { name, birthYear } = kid;
+  const age = getAge(birthYear);
   const slug = name.toLowerCase().replace(/\s+/g, "-");
   const tasks = [];
 
@@ -248,8 +251,8 @@ export function kidTasks(kid) {
 // ─── Per-pet Task Generator ───────────────────────────────────────────────────
 
 export function petTasks(pet) {
-  const { name, age: ageStr, type, longCoat } = pet;
-  const age    = parseInt(ageStr, 10);
+  const { name, birthYear, type, longCoat } = pet;
+  const age = getAge(birthYear);
   const slug   = name.toLowerCase().replace(/\s+/g, "-");
   const senior = age >= 7;
   const tasks  = [];
@@ -282,7 +285,7 @@ export function buildTaskLibrary(profile) {
   const flags = [];
   if (profile.hasHome) flags.push("home");
   if (profile.hasCar)  flags.push("car");
-  if (parseInt(profile.age, 10) >= 40) flags.push("40plus");
+  if (getAge(profile.birthYear) >= 40) flags.push("40plus");
 
   const usePerCarTasks = profile.hasCar && profile.cars?.length > 0;
 

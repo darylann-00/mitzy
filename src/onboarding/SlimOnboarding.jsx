@@ -144,13 +144,13 @@ function NextBtn({ onClick, disabled, children }) {
 // ─── Main component ────────────────────────────────────────────────────────────
 export function SlimOnboarding({ onComplete }) {
   const [step,     setStep]     = useState(-1); // -1 = welcome
-  const [profile,  setProfile]  = useState({ name: '', age: '', gender: '', hasHome: null, hasCar: null, cars: [], zip: '', hasKids: null, kids: [], hasPets: null, pets: [] });
+  const [profile,  setProfile]  = useState({ name: '', birthYear: '', gender: '', hasHome: null, hasCar: null, cars: [], zip: '', hasKids: null, kids: [], hasPets: null, pets: [] });
   const [carInput,     setCarInput]     = useState({ year: '', make: '', model: '' });
   const [carInputOpen, setCarInputOpen] = useState(false);
   const [kidInputOpen, setKidInputOpen] = useState(false);
   const [petInputOpen, setPetInputOpen] = useState(false);
-  const [kidInput, setKidInput] = useState({ name: '', age: '' });
-  const [petInput, setPetInput] = useState({ name: '', type: '', age: '', longCoat: false });
+  const [kidInput, setKidInput] = useState({ name: '', birthYear: '' });
+  const [petInput, setPetInput] = useState({ name: '', type: '', birthYear: '', longCoat: false });
   const [err,           setErr]           = useState('');
   const [showTransition, setShowTransition] = useState(false);
 
@@ -171,21 +171,21 @@ export function SlimOnboarding({ onComplete }) {
   const editKid = (i) => {
     const k = profile.kids[i];
     setProfile(p => ({ ...p, kids: p.kids.filter((_, j) => j !== i) }));
-    setKidInput({ name: k.name, age: k.age });
+    setKidInput({ name: k.name, birthYear: k.birthYear });
     setKidInputOpen(true);
   };
 
   const editPet = (i) => {
     const a = profile.pets[i];
     setProfile(p => ({ ...p, pets: p.pets.filter((_, j) => j !== i) }));
-    setPetInput({ name: a.name, type: a.type, age: a.age, longCoat: a.longCoat });
+    setPetInput({ name: a.name, type: a.type, birthYear: a.birthYear, longCoat: a.longCoat });
     setPetInputOpen(true);
   };
 
   const tryNameAge = () => {
-    if (!profile.name.trim() || !profile.age) { setErr('Please fill in all fields.'); return; }
-    const age = Number(profile.age);
-    if (age < 18 || age > 120) { setErr('Please enter a valid age.'); return; }
+    if (!profile.name.trim() || !profile.birthYear) { setErr('Please fill in all fields.'); return; }
+    const year = Number(profile.birthYear);
+    if (year > CUR_YEAR - 18 || year < CUR_YEAR - 120) { setErr('Please enter a valid birth year.'); return; }
     if (!profile.gender) { setErr('Please select a gender option.'); return; }
     go(1);
   };
@@ -205,17 +205,19 @@ export function SlimOnboarding({ onComplete }) {
   };
 
   const commitKid = (input) => {
-    if (Number(input.age) < 0) { setErr('Please enter a valid age.'); return; }
-    setProfile(p => ({ ...p, kids: [...p.kids, { name: input.name.trim(), age: input.age }] }));
-    setKidInput({ name: '', age: '' });
+    const yr = Number(input.birthYear);
+    if (!input.birthYear || yr > CUR_YEAR || yr < CUR_YEAR - 30) { setErr('Please enter a valid birth year.'); return; }
+    setProfile(p => ({ ...p, kids: [...p.kids, { name: input.name.trim(), birthYear: input.birthYear }] }));
+    setKidInput({ name: '', birthYear: '' });
     setKidInputOpen(false);
     setErr('');
   };
 
   const commitPet = (input) => {
-    if (Number(input.age) < 0) { setErr('Please enter a valid age.'); return; }
-    setProfile(p => ({ ...p, pets: [...p.pets, { name: input.name.trim(), type: input.type, age: input.age, longCoat: input.longCoat }] }));
-    setPetInput({ name: '', type: '', age: '', longCoat: false });
+    const yr = Number(input.birthYear);
+    if (!input.birthYear || yr > CUR_YEAR || yr < CUR_YEAR - 40) { setErr('Please enter a valid birth year.'); return; }
+    setProfile(p => ({ ...p, pets: [...p.pets, { name: input.name.trim(), type: input.type, birthYear: input.birthYear, longCoat: input.longCoat }] }));
+    setPetInput({ name: '', type: '', birthYear: '', longCoat: false });
     setPetInputOpen(false);
     setErr('');
   };
@@ -347,8 +349,8 @@ export function SlimOnboarding({ onComplete }) {
                 style={{ marginBottom:10, width:'100%', boxSizing:'border-box' }}
               />
               <input
-                type="number" placeholder="Your age" value={profile.age} min="0" max="120"
-                onChange={e => { setProfile(p => ({ ...p, age: e.target.value })); setErr(''); }}
+                type="number" placeholder="Birth year (e.g. 1988)" value={profile.birthYear} min={CUR_YEAR - 120} max={CUR_YEAR - 18}
+                onChange={e => { setProfile(p => ({ ...p, birthYear: e.target.value })); setErr(''); }}
                 onKeyDown={e => e.key === 'Enter' && tryNameAge()}
                 style={{ marginBottom:14, width:'100%', boxSizing:'border-box' }}
               />
@@ -379,7 +381,7 @@ export function SlimOnboarding({ onComplete }) {
                 ))}
               </div>
               {err && <div style={{ fontSize:13, color:'#F77F00', marginBottom:8, fontFamily:'DM Sans, sans-serif' }}>{err}</div>}
-              <NextBtn onClick={tryNameAge} disabled={!profile.name.trim() || !profile.age || !profile.gender}>Next</NextBtn>
+              <NextBtn onClick={tryNameAge} disabled={!profile.name.trim() || !profile.birthYear || !profile.gender}>Next</NextBtn>
             </QuestionScreen>
           )}
 
@@ -520,7 +522,7 @@ export function SlimOnboarding({ onComplete }) {
                     <div style={{ marginBottom:14 }}>
                       {profile.kids.map((k, i) => (
                         <div key={i} style={{ background:'rgba(255,255,255,0.12)', borderRadius:10, padding:'8px 12px', marginBottom:6, display:'flex', justifyContent:'space-between', alignItems:'center', cursor:'pointer' }} onClick={() => editKid(i)}>
-                          <span style={{ color:'#E8F5EE', fontSize:13, fontWeight:600, fontFamily:'DM Sans, sans-serif' }}>{k.name}, age {k.age}</span>
+                          <span style={{ color:'#E8F5EE', fontSize:13, fontWeight:600, fontFamily:'DM Sans, sans-serif' }}>{k.name}, born {k.birthYear}</span>
                           <button onClick={e => { e.stopPropagation(); setProfile(p => ({ ...p, kids: p.kids.filter((_, j) => j !== i) })); }} style={{ background:'transparent', border:'none', color:'rgba(184,220,200,0.7)', fontSize:18, cursor:'pointer', padding:'0 4px' }}>×</button>
                         </div>
                       ))}
@@ -531,26 +533,26 @@ export function SlimOnboarding({ onComplete }) {
                     <div style={{ display:'flex', gap:8, marginBottom:8 }}>
                       <input
                         type="text" placeholder="Name" value={kidInput.name} style={{ flex:2 }}
-                        onChange={e => { const n = e.target.value; setKidInput(x => ({ ...x, name: n })); if (!n.trim() && !kidInput.age) setErr(''); }}
+                        onChange={e => { const n = e.target.value; setKidInput(x => ({ ...x, name: n })); if (!n.trim() && !kidInput.birthYear) setErr(''); }}
                       />
                       <input
-                        type="number" placeholder="Age" value={kidInput.age} style={{ flex:1 }} min="0" max="25"
-                        onChange={e => { const a = e.target.value; setKidInput(x => ({ ...x, age: a })); if (!kidInput.name.trim() && !a) setErr(''); }}
-                        onKeyDown={e => { if (e.key === 'Enter') { const next = { ...kidInput }; if (next.name.trim() && next.age) commitKid(next); } }}
+                        type="number" placeholder="Birth year" value={kidInput.birthYear} style={{ flex:1 }} min={CUR_YEAR - 30} max={CUR_YEAR}
+                        onChange={e => { const a = e.target.value; setKidInput(x => ({ ...x, birthYear: a })); if (!kidInput.name.trim() && !a) setErr(''); }}
+                        onKeyDown={e => { if (e.key === 'Enter') { const next = { ...kidInput }; if (next.name.trim() && next.birthYear) commitKid(next); } }}
                       />
                       <button
-                        onClick={() => { if (kidInput.name.trim() && kidInput.age) commitKid(kidInput); }}
+                        onClick={() => { if (kidInput.name.trim() && kidInput.birthYear) commitKid(kidInput); }}
                         style={{ padding:'10px 14px', background:'#F4C430', color:'#7a5900', border:'none', borderRadius:12, fontWeight:700, cursor:'pointer', fontSize:18, flexShrink:0 }}
                       >+</button>
                     </div>
-                    {kidInput.age && Number(kidInput.age) > 20 && <div style={{ fontSize:12, color:'rgba(244,196,48,0.85)', marginBottom:6, fontFamily:'DM Sans, sans-serif' }}>Just want to make sure — does that age look right?</div>}
+                    {kidInput.birthYear && Number(kidInput.birthYear) < CUR_YEAR - 25 && <div style={{ fontSize:12, color:'rgba(244,196,48,0.85)', marginBottom:6, fontFamily:'DM Sans, sans-serif' }}>Just want to make sure — does that birth year look right?</div>}
                     {err && <div style={{ fontSize:12, color:'#F4C430', marginBottom:8, fontFamily:'DM Sans, sans-serif' }}>{err}</div>}
                     </>
                   ) : profile.kids.length === 0 ? (
                     <>
                       <OptionBtn label="No kids added" selected={true} onClick={() => {}} />
                       <button
-                        onClick={() => { setProfile(p => ({ ...p, hasKids: true })); setKidInput({ name: '', age: '' }); setKidInputOpen(true); }}
+                        onClick={() => { setProfile(p => ({ ...p, hasKids: true })); setKidInput({ name: '', birthYear: '' }); setKidInputOpen(true); }}
                         style={{ background:'none', border:'1.5px solid rgba(255,255,255,0.25)', borderRadius:10, color:'rgba(232,245,238,0.8)', fontSize:13, fontWeight:600, padding:'10px 16px', cursor:'pointer', fontFamily:'DM Sans, sans-serif', width:'100%', marginBottom:12 }}
                       >
                         + Add a kid
@@ -558,7 +560,7 @@ export function SlimOnboarding({ onComplete }) {
                     </>
                   ) : (
                     <button
-                      onClick={() => { setKidInput({ name: '', age: '' }); setKidInputOpen(true); }}
+                      onClick={() => { setKidInput({ name: '', birthYear: '' }); setKidInputOpen(true); }}
                       style={{ background:'none', border:'1.5px solid rgba(255,255,255,0.25)', borderRadius:10, color:'rgba(232,245,238,0.8)', fontSize:13, fontWeight:600, padding:'10px 16px', cursor:'pointer', fontFamily:'DM Sans, sans-serif', width:'100%', marginBottom:12 }}
                     >
                       + Add another kid
@@ -566,8 +568,8 @@ export function SlimOnboarding({ onComplete }) {
                   )}
                   <NextBtn onClick={() => {
                     if (kidInputOpen) {
-                      const hasPartial = kidInput.name.trim() || kidInput.age;
-                      const isComplete = kidInput.name.trim() && kidInput.age;
+                      const hasPartial = kidInput.name.trim() || kidInput.birthYear;
+                      const isComplete = kidInput.name.trim() && kidInput.birthYear;
                       if (isComplete) { commitKid(kidInput); go(5); return; }
                       if (hasPartial) { setErr(kidInput.name.trim() ? `Finish adding ${kidInput.name.trim()} or clear the fields to continue.` : 'Finish adding this entry or clear the fields to continue.'); return; }
                     }
@@ -606,15 +608,15 @@ export function SlimOnboarding({ onComplete }) {
                   )}
                   {petInputOpen ? (
                     <>
-                      {/* Step 1: Name + age */}
+                      {/* Step 1: Name + birth year */}
                       <div style={{ display:'flex', gap:8, marginBottom:err ? 6 : 10 }}>
-                        <input type="text" placeholder="Name" value={petInput.name} onChange={e => { const n = e.target.value; setPetInput(x => ({ ...x, name: n })); if (!n.trim() && !petInput.age && !petInput.type) setErr(''); }} style={{ flex:2 }} />
-                        <input type="number" placeholder="Age" value={petInput.age} onChange={e => { const a = e.target.value; setPetInput(x => ({ ...x, age: a })); if (!petInput.name.trim() && !a && !petInput.type) setErr(''); }} style={{ flex:1 }} min="0" max="30" />
+                        <input type="text" placeholder="Name" value={petInput.name} onChange={e => { const n = e.target.value; setPetInput(x => ({ ...x, name: n })); if (!n.trim() && !petInput.birthYear && !petInput.type) setErr(''); }} style={{ flex:2 }} />
+                        <input type="number" placeholder="Birth year" value={petInput.birthYear} onChange={e => { const a = e.target.value; setPetInput(x => ({ ...x, birthYear: a })); if (!petInput.name.trim() && !a && !petInput.type) setErr(''); }} style={{ flex:1 }} min={CUR_YEAR - 40} max={CUR_YEAR} />
                       </div>
-                      {petInput.age && Number(petInput.age) > 30 && <div style={{ fontSize:12, color:'rgba(244,196,48,0.85)', marginBottom:6, fontFamily:'DM Sans, sans-serif' }}>Just want to make sure — does that age look right?</div>}
+                      {petInput.birthYear && Number(petInput.birthYear) < CUR_YEAR - 30 && <div style={{ fontSize:12, color:'rgba(244,196,48,0.85)', marginBottom:6, fontFamily:'DM Sans, sans-serif' }}>Just want to make sure — does that birth year look right?</div>}
                       {err && <div style={{ fontSize:12, color:'#F4C430', marginBottom:8, fontFamily:'DM Sans, sans-serif' }}>{err}</div>}
-                      {/* Step 2: Type — appears once name + age are filled */}
-                      {petInput.name.trim() && petInput.age && (
+                      {/* Step 2: Type — appears once name + birth year are filled */}
+                      {petInput.name.trim() && petInput.birthYear && (
                         <div style={{ display:'flex', gap:8, marginBottom:10 }}>
                           {['dog', 'cat', 'other'].map(t => (
                             <button
@@ -650,7 +652,7 @@ export function SlimOnboarding({ onComplete }) {
                     <>
                       <OptionBtn label="No pets added" selected={true} onClick={() => {}} />
                       <button
-                        onClick={() => { setProfile(p => ({ ...p, hasPets: true })); setPetInput({ name: '', type: '', age: '', longCoat: false }); setPetInputOpen(true); }}
+                        onClick={() => { setProfile(p => ({ ...p, hasPets: true })); setPetInput({ name: '', type: '', birthYear: '', longCoat: false }); setPetInputOpen(true); }}
                         style={{ background:'none', border:'1.5px solid rgba(255,255,255,0.25)', borderRadius:10, color:'rgba(232,245,238,0.8)', fontSize:13, fontWeight:600, padding:'10px 16px', cursor:'pointer', fontFamily:'DM Sans, sans-serif', width:'100%', marginBottom:12 }}
                       >
                         + Add a pet
@@ -658,14 +660,14 @@ export function SlimOnboarding({ onComplete }) {
                     </>
                   ) : (
                     <button
-                      onClick={() => { setPetInput({ name: '', type: '', age: '', longCoat: false }); setPetInputOpen(true); }}
+                      onClick={() => { setPetInput({ name: '', type: '', birthYear: '', longCoat: false }); setPetInputOpen(true); }}
                       style={{ background:'none', border:'1.5px solid rgba(255,255,255,0.25)', borderRadius:10, color:'rgba(232,245,238,0.8)', fontSize:13, fontWeight:600, padding:'10px 16px', cursor:'pointer', fontFamily:'DM Sans, sans-serif', width:'100%', marginBottom:12 }}
                     >
                       + Add another pet
                     </button>
                   )}
                   <NextBtn onClick={() => {
-                    if (petInputOpen && (petInput.name.trim() || petInput.age || petInput.type)) {
+                    if (petInputOpen && (petInput.name.trim() || petInput.birthYear || petInput.type)) {
                       setErr(petInput.name.trim() ? `Finish adding ${petInput.name.trim()} or clear the fields to continue.` : 'Finish adding this entry or clear the fields to continue.');
                       return;
                     }

@@ -9,7 +9,7 @@ export function YouView({ profile, onReset }) {
     profile.hasCar   && { label: "🚗 Car",        value: profile.car || "has car" },
     profile.zip      && { label: "📍 Zip",        value: profile.zip            },
     profile.insurance && { label: "💊 Insurance", value: profile.insurance      },
-    profile.age      && { label: "🎂 Age",        value: profile.age            },
+    profile.birthYear && { label: "🎂 Born",       value: profile.birthYear      },
   ].filter(Boolean);
 
   return (
@@ -35,7 +35,7 @@ export function YouView({ profile, onReset }) {
           {profile.kids.map((k, i) => (
             <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: i < profile.kids.length - 1 ? "1px solid #F0E8E0" : "none" }}>
               <div style={{ fontSize: 14, color: C.ink, fontWeight: 600 }}>{k.name}</div>
-              <div style={{ fontSize: 14, color: C.muted }}>age {k.age}</div>
+              <div style={{ fontSize: 14, color: C.muted }}>born {k.birthYear}</div>
             </div>
           ))}
         </div>
@@ -48,7 +48,7 @@ export function YouView({ profile, onReset }) {
           {profile.pets.map((a, i) => (
             <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: i < profile.pets.length - 1 ? "1px solid #F0E8E0" : "none" }}>
               <div style={{ fontSize: 14, color: C.ink, fontWeight: 600 }}>{a.type === "dog" ? "🐕" : a.type === "cat" ? "🐈" : "🐾"} {a.name}</div>
-              <div style={{ fontSize: 14, color: C.muted }}>age {a.age}</div>
+              <div style={{ fontSize: 14, color: C.muted }}>born {a.birthYear}</div>
             </div>
           ))}
         </div>
