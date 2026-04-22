@@ -186,7 +186,6 @@ export default function Mitzy() {
     return intervalDays - Math.floor((Date.now() - new Date(entry.lastDone)) / 86400000);
   };
   const getNext  = (t) => nextDueStr(t, taskState[t.id]?.lastDone, taskState[t.id]?.intervalDays);
-  const getScore = (t) => taskScore(t, taskState[t.id]?.lastDone, taskState[t.id]?.intervalDays);
 
   // ─── Action handlers ──────────────────────────────────────────────────────────
   const handleMarkDone = (id, dateStr) => {
