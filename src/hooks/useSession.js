@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import {
   loadS, saveS,
   VISIT_COUNT_KEY, HAZARD_DONE_KEY,
-  KNOWLEDGE_REFRESH_KEY, KNOWLEDGE_REFRESH_TTL, TRICKLE_DATE_KEY,
+  KNOWLEDGE_REFRESH_KEY, KNOWLEDGE_REFRESH_TTL, TRICKLE_DATE_KEY, TRICKLE_QUEUE_KEY,
 } from "../utils/storage";
 import { detectHazards } from "../utils/hazards";
 
@@ -19,15 +19,31 @@ export function useSession({ onboarded, profile, activeTasks, taskState }) {
     setVisitCount(next);
     saveS(VISIT_COUNT_KEY, next);
 
-    // Trickle: one unknown task per calendar day
-    const today    = new Date().toISOString().slice(0, 10);
-    const lastDate = loadS(TRICKLE_DATE_KEY, null);
-    if (lastDate !== today && activeTasks?.length > 0) {
+    // Trickle: rotate through unknown tasks, one per 5 days.
+    // Clock starts when surfaced — dismiss/ignore/answer all advance the same way.
+    const lastDate  = loadS(TRICKLE_DATE_KEY, null);
+    const daysSince = lastDate
+      ? Math.floor((Date.now() - new Date(lastDate).getTime()) / 86400000)
+      : 999;
+    if (daysSince >= 5 && activeTasks?.length > 0) {
       const stakeWeight = { high: 3, medium: 2, low: 1 };
       const unknown = activeTasks
         .filter(t => !taskState[t.id]?.lastDone)
         .sort((a, b) => (stakeWeight[b.stakes] || 1) - (stakeWeight[a.stakes] || 1));
-      if (unknown.length > 0) setTrickleTask(unknown[0]);
+      if (unknown.length > 0) {
+        const unknownIds = new Set(unknown.map(t => t.id));
+        // Keep only still-unknown IDs, then append any new ones not yet queued
+        let queue = loadS(TRICKLE_QUEUE_KEY, []).filter(id => unknownIds.has(id));
+        const inQueue = new Set(queue);
+        unknown.forEach(t => { if (!inQueue.has(t.id)) queue.push(t.id); });
+        // Pick from front, rotate to back
+        const taskId = queue[0];
+        queue.push(queue.shift());
+        saveS(TRICKLE_QUEUE_KEY, queue);
+        saveS(TRICKLE_DATE_KEY, new Date().toISOString().slice(0, 10));
+        const task = unknown.find(t => t.id === taskId);
+        if (task) setTrickleTask(task);
+      }
     }
 
     // Hazard check
@@ -48,15 +64,8 @@ export function useSession({ onboarded, profile, activeTasks, taskState }) {
     }
   }, [onboarded]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const dismissTrickle = () => {
-    saveS(TRICKLE_DATE_KEY, new Date().toISOString().slice(0, 10));
-    setTrickleTask(null);
-  };
-
-  const answerTrickle = () => {
-    saveS(TRICKLE_DATE_KEY, new Date().toISOString().slice(0, 10));
-    setTrickleTask(null);
-  };
+  const dismissTrickle = () => setTrickleTask(null);
+  const answerTrickle  = () => setTrickleTask(null);
 
   return {
     visitCount,

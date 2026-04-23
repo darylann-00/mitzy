@@ -162,13 +162,15 @@ export default function Mitzy() {
   const { providerHistory, saveProvider } = useProviders();
 
   // ─── UI state ────────────────────────────────────────────────────────────────
-  const [view,          setView]          = useState("home");
-  const [selectedTask,  setSelectedTask]  = useState(null);
-  const [celebration,   setCelebration]   = useState(false);
-  const [assistTask,    setAssistTask]    = useState(null);
-  const [scheduleTask,  setScheduleTask]  = useState(null);
-  const [markDoneModal, setMarkDoneModal] = useState(null);
-  const [addingTask,    setAddingTask]    = useState(false);
+  const [view,            setView]            = useState("home");
+  const [selectedTask,    setSelectedTask]    = useState(null);
+  const [celebration,     setCelebration]     = useState(false);
+  const [assistTask,      setAssistTask]      = useState(null);
+  const [scheduleTask,    setScheduleTask]    = useState(null);
+  const [markDoneModal,   setMarkDoneModal]   = useState(null);
+  const [addingTask,      setAddingTask]      = useState(false);
+  const [activeCategory,  setActiveCategory]  = useState('all');
+  const [dueOnly,         setDueOnly]         = useState(false);
 
   // ─── Onboarding handlers ─────────────────────────────────────────────────────
   const handleSlimOnboardingComplete = (p) => {
@@ -368,6 +370,10 @@ export default function Mitzy() {
           onDoneTask={setMarkDoneModal}
           markDone={markDone}
           markNeeded={markNeeded}
+          activeCategory={activeCategory}
+          setActiveCategory={setActiveCategory}
+          dueOnly={dueOnly}
+          setDueOnly={setDueOnly}
         />
       )}
 
