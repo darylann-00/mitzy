@@ -1,9 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import "./styles/app.css";
 
 import { loadS, saveS, ONBOARDED_KEY, VISIT_COUNT_KEY } from "./utils/storage";
 import { taskStatus, taskScore, nextDueStr, isWindowActive, isDependencySatisfied } from "./utils/taskLogic";
 import { getClimateRegion } from "./utils/climateRegion";
+import { detectHazards } from "./utils/hazards";
 import { buildTaskLibrary } from "./data/taskFactory";
 
 import { supabase } from "./lib/supabase";
@@ -193,13 +194,13 @@ export default function Mitzy() {
   const region = getClimateRegion(profile?.zip);
 
   const getStatus = (t) => taskStatus(t, taskState);
-  const getDays   = (t) => {
+  const getDays = useCallback((t) => {
     const entry = taskState[t.id];
     if (!entry?.lastDone) return 0;
     if (t.oneTime) return null;
     const intervalDays = entry?.intervalDays ?? t.intervalDays;
     return intervalDays - Math.floor((Date.now() - new Date(entry.lastDone)) / 86400000);
-  };
+  }, [taskState]);
   const getNext  = (t) => nextDueStr(t, taskState[t.id]?.lastDone, taskState[t.id]?.intervalDays);
 
   // ─── Action handlers ──────────────────────────────────────────────────────────
@@ -220,6 +221,12 @@ export default function Mitzy() {
     const next = { ...profile, hazards: pendingHazards };
     updateProfile(next);
     setPendingHazards(null);
+  };
+
+  const handleAddHazardTasks = async () => {
+    if (!profile?.zip) return;
+    const hazards = await detectHazards(profile.zip);
+    if (hazards.length > 0) updateProfile({ ...profile, hazards });
   };
 
   const handleReset = async () => {
@@ -255,6 +262,12 @@ export default function Mitzy() {
   const focusTasks = useMemo(() =>
     scoredDue.filter(t => taskStatus(t, taskState) !== "unknown").slice(0, 3),
     [scoredDue, taskState]);
+
+  const nextUpcomingTask = useMemo(() =>
+    visibleTasks
+      .filter(t => taskStatus(t, taskState) === 'coming-up')
+      .sort((a, b) => getDays(a) - getDays(b))[0] ?? null,
+    [visibleTasks, taskState, getDays]);
 
   const doneThisWeek = useMemo(() =>
     Object.values(taskState).filter(entry => {
@@ -321,9 +334,11 @@ export default function Mitzy() {
           pendingHazards={pendingHazards}
           focusTasks={focusTasks}
           doneThisWeek={doneThisWeek}
+          nextUpcomingTask={nextUpcomingTask}
+          getDays={getDays}
           providerHistory={providerHistory}
           getStatus={getStatus}
-          getDays={getDays}
+          onGoToAll={() => setView('all')}
           onSelectTask={setSelectedTask}
           onDoneTask={setMarkDoneModal}
           onTrickleAnswer={(answer) => {
@@ -362,6 +377,7 @@ export default function Mitzy() {
           providerHistory={providerHistory}
           onReset={handleReset}
           onUpdateProfile={updateProfile}
+          onAddHazardTasks={handleAddHazardTasks}
           user={user}
           onSignOut={signOut}
         />
