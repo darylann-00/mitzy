@@ -250,7 +250,7 @@ export default function Mitzy() {
     visibleTasks
       .filter(t => taskStatus(t, taskState) === 'coming-up')
       .sort((a, b) => getDays(a) - getDays(b))[0] ?? null,
-    [visibleTasks, taskState]);
+    [visibleTasks, taskState, getDays]);
 
   const doneThisWeek = useMemo(() =>
     Object.values(taskState).filter(entry => {
