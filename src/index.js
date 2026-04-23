@@ -3,7 +3,6 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import { cleanupOldKeys } from './utils/storage';
-import reportWebVitals from './reportWebVitals';
 
 cleanupOldKeys();
 
@@ -13,5 +12,3 @@ root.render(
     <App />
   </React.StrictMode>
 );
-
-reportWebVitals();

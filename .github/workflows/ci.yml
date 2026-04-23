@@ -9,8 +9,8 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     env:
-      REACT_APP_SUPABASE_URL: https://placeholder.supabase.co
-      REACT_APP_SUPABASE_ANON_KEY: placeholder
+      VITE_SUPABASE_URL: https://placeholder.supabase.co
+      VITE_SUPABASE_ANON_KEY: placeholder
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -20,4 +20,4 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run build
-      - run: npm test -- --watchAll=false --passWithNoTests
+      - run: npm test
