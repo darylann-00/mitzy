@@ -242,6 +242,7 @@ export function HomeView({
                 hasSavedProvider={!!providerHistory[task.id]}
                 onSelect={onSelectTask}
                 onDone={onDoneTask}
+                showCategoryIcon
                 subtitle={getStatus(task) === 'needed' ? '' : undefined}
               />
             ))}
