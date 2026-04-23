@@ -1,10 +1,16 @@
 import { useState } from "react";
 
 export function MarkDoneModal({ task, onDone, onClose }) {
-  const [dateStr, setDateStr] = useState(new Date().toISOString().split('T')[0]);
+  const [dateStr,   setDateStr]   = useState(new Date().toISOString().split('T')[0]);
+  const [saving,    setSaving]    = useState(false);
+  const [saveError, setSaveError] = useState(false);
 
-  const handleDone = () => {
-    onDone(task.id, dateStr || null);
+  const handleDone = async () => {
+    setSaving(true);
+    setSaveError(false);
+    const result = await onDone(task.id, dateStr || null);
+    if (result?.error) { setSaving(false); setSaveError(true); }
+    // on success App.js closes the modal via setMarkDoneModal(null)
   };
 
   return (
@@ -36,18 +42,25 @@ export function MarkDoneModal({ task, onDone, onClose }) {
           </>
         )}
 
+        {saveError && (
+          <div style={{ fontSize:13, color:'#D62828', textAlign:'center', marginBottom:10, fontFamily:'DM Sans, sans-serif' }}>
+            Couldn't save. Try again.
+          </div>
+        )}
         <div style={{ display:'flex', gap:10 }}>
           <button
             onClick={onClose}
-            style={{ flex:1, padding:'12px', background:'#F0EDE4', color:'#4A6256', border:'none', borderRadius:12, fontWeight:600, fontSize:14, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+            disabled={saving}
+            style={{ flex:1, padding:'12px', background:'#F0EDE4', color:'#4A6256', border:'none', borderRadius:12, fontWeight:600, fontSize:14, cursor: saving ? 'default' : 'pointer', fontFamily:'DM Sans, sans-serif', opacity: saving ? 0.5 : 1 }}
           >
             cancel
           </button>
           <button
             onClick={handleDone}
-            style={{ flex:2, padding:'12px', background:'#06A77D', color:'#fff', border:'none', borderRadius:12, fontWeight:700, fontSize:15, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+            disabled={saving}
+            style={{ flex:2, padding:'12px', background: saving ? '#4A6256' : '#06A77D', color:'#fff', border:'none', borderRadius:12, fontWeight:700, fontSize:15, cursor: saving ? 'default' : 'pointer', fontFamily:'DM Sans, sans-serif' }}
           >
-            done
+            {saving ? 'Saving…' : 'done'}
           </button>
         </div>
       </div>

@@ -9,10 +9,16 @@ export function LoginGate({ sendMagicLink, signInWithGoogle }) {
   const [err,          setErr]          = useState("");
 
   const handleGoogle = async () => {
+    setErr("");
     setGoogleLoading(true);
-    const { error } = await signInWithGoogle();
-    if (error) { setErr("Google sign-in failed. Try again."); setGoogleLoading(false); }
-    // on success, Supabase redirects — no need to reset state
+    try {
+      const { error } = await signInWithGoogle();
+      if (error) { setErr("Google sign-in failed. Try again."); setGoogleLoading(false); }
+      // on success, Supabase redirects — no need to reset state
+    } catch {
+      setErr("Google sign-in failed. Try again.");
+      setGoogleLoading(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -95,6 +101,10 @@ export function LoginGate({ sendMagicLink, signInWithGoogle }) {
               )}
               {googleLoading ? "Signing in…" : "Continue with Google"}
             </button>
+
+            {err && !showEmail && (
+              <p style={{ color: "#F77F00", fontSize: 14, margin: "-8px 0 14px", textAlign: "center", fontFamily: "DM Sans, sans-serif" }}>{err}</p>
+            )}
 
             {/* Divider */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
