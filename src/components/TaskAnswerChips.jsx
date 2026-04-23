@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 export const CHIPS_GENERAL = [
-  { key: 'recently',   label: 'Recently',         days: 30  },
+  { key: 'recently',   label: 'Recently (last month)',  days: 30  },
   { key: 'few-months', label: 'A few months ago',  days: 90  },
   { key: 'over-year',  label: 'Over a year ago',   days: 400 },
   { key: 'never',      label: 'Never / not sure',  needed: true },

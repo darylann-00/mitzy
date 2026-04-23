@@ -189,13 +189,15 @@ function MitzyApp({ user, signOut, sendMagicLink, signInWithGoogle }) {
   const [onboarded,   setOnboarded]   = useState(() => loadS(ONBOARDED_KEY, false));
 
   // ─── UI state ──────────────────────────────────────────────────────────────
-  const [view,          setView]          = useState("home");
-  const [selectedTask,  setSelectedTask]  = useState(null);
-  const [celebration,   setCelebration]   = useState(false);
-  const [assistTask,    setAssistTask]    = useState(null);
-  const [scheduleTask,  setScheduleTask]  = useState(null);
-  const [markDoneModal, setMarkDoneModal] = useState(null);
-  const [addingTask,    setAddingTask]    = useState(false);
+  const [view,            setView]            = useState("home");
+  const [selectedTask,    setSelectedTask]    = useState(null);
+  const [celebration,     setCelebration]     = useState(false);
+  const [assistTask,      setAssistTask]      = useState(null);
+  const [scheduleTask,    setScheduleTask]    = useState(null);
+  const [markDoneModal,   setMarkDoneModal]   = useState(null);
+  const [addingTask,      setAddingTask]      = useState(false);
+  const [activeCategory,  setActiveCategory]  = useState('all');
+  const [dueOnly,         setDueOnly]         = useState(false);
 
   // ─── Session (trickle + hazards) ───────────────────────────────────────────
   const { trickleTask, dismissTrickle, answerTrickle, pendingHazards, setPendingHazards } = useSession({ onboarded, profile, activeTasks, taskState });
@@ -319,6 +321,10 @@ function MitzyApp({ user, signOut, sendMagicLink, signInWithGoogle }) {
         <AllView
           onSelectTask={setSelectedTask}
           onDoneTask={setMarkDoneModal}
+          activeCategory={activeCategory}
+          setActiveCategory={setActiveCategory}
+          dueOnly={dueOnly}
+          setDueOnly={setDueOnly}
         />
       )}
 

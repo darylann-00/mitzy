@@ -171,12 +171,9 @@ function ExploreSection({ tasks, markDone, markNeeded }) {
 }
 
 // ─── AllView ───────────────────────────────────────────────────────────────────
-export function AllView({ onSelectTask, onDoneTask }) {
+export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCategory, dueOnly, setDueOnly }) {
   const { providerHistory } = useProfileContext();
   const { activeTasks, getStatus, getDays, markDone, markNeeded } = useTaskContext();
-
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [dueOnly, setDueOnly] = useState(false);
 
   // Which categories are actually present in tasks
   const presentCats = new Set(activeTasks.map(t => t.cat));
