@@ -21,14 +21,14 @@ export function useAuth() {
   const sendMagicLink = (email) => supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: process.env.REACT_APP_SUPABASE_REDIRECT_URL || window.location.origin,
+      emailRedirectTo: import.meta.env.VITE_SUPABASE_REDIRECT_URL || window.location.origin,
     },
   })
 
   const signInWithGoogle = () => supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: process.env.REACT_APP_SUPABASE_REDIRECT_URL || window.location.origin,
+      redirectTo: import.meta.env.VITE_SUPABASE_REDIRECT_URL || window.location.origin,
     },
   })
 

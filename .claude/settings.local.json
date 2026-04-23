@@ -20,7 +20,9 @@
       "Bash(vercel env:*)",
       "Bash(ls -la *ontext.md)",
       "Bash(npm install:*)",
-      "Bash(vercel:*)"
+      "Bash(vercel:*)",
+      "Bash(npm test *)",
+      "Bash(npm i *)"
     ]
   }
 }

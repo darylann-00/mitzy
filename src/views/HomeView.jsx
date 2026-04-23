@@ -1,6 +1,8 @@
 import { TrickleCard } from "../components/TrickleCard";
 import { TaskCard }    from "../components/TaskCard";
 import { HazardCard }  from "../components/HazardCard";
+import { useProfileContext } from "../contexts/ProfileContext";
+import { useTaskContext }    from "../contexts/TaskContext";
 
 // ─── Shared header pattern ─────────────────────────────────────────────────────
 export function AppHeader({ rightContent }) {
@@ -193,14 +195,8 @@ function QuietState({ nextUpcomingTask, getDays }) {
 
 export function HomeView({
   trickleTask,
-  profile,
   pendingHazards,
-  focusTasks,
-  doneThisWeek,
   nextUpcomingTask,
-  getDays,
-  providerHistory,
-  getStatus,
   onGoToAll,
   onSelectTask,
   onDoneTask,
@@ -210,6 +206,9 @@ export function HomeView({
   onHazardAccept,
   onHazardDismiss,
 }) {
+  const { profile, providerHistory } = useProfileContext();
+  const { focusTasks, doneThisWeek, getStatus, getDays } = useTaskContext();
+
   return (
     <div style={{ background:'#FDFAF2' }}>
       <HomeHeader profile={profile} doneThisWeek={doneThisWeek} />
@@ -242,6 +241,7 @@ export function HomeView({
                 hasSavedProvider={!!providerHistory[task.id]}
                 onSelect={onSelectTask}
                 onDone={onDoneTask}
+                showCategoryIcon
                 subtitle={getStatus(task) === 'needed' ? '' : undefined}
               />
             ))}

@@ -3,6 +3,8 @@ import { TaskCard } from "../components/TaskCard";
 import { HouseIcon, CarIcon, PersonIcon, CalendarIcon, StarIcon, PetIcon, CategoryTile } from "../components/CategoryIcons";
 import { TaskAnswerChips } from "../components/TaskAnswerChips";
 import { AppHeader } from "./HomeView";
+import { useProfileContext } from "../contexts/ProfileContext";
+import { useTaskContext }    from "../contexts/TaskContext";
 
 // ─── Group divider (Memphis dots) ──────────────────────────────────────────────
 function GroupDivider() {
@@ -169,7 +171,9 @@ function ExploreSection({ tasks, markDone, markNeeded }) {
 }
 
 // ─── AllView ───────────────────────────────────────────────────────────────────
-export function AllView({ activeTasks, getStatus, getDays, providerHistory, onSelectTask, onDoneTask, markDone, markNeeded, activeCategory, setActiveCategory, dueOnly, setDueOnly }) {
+export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCategory, dueOnly, setDueOnly }) {
+  const { providerHistory } = useProfileContext();
+  const { activeTasks, getStatus, getDays, markDone, markNeeded } = useTaskContext();
 
   // Which categories are actually present in tasks
   const presentCats = new Set(activeTasks.map(t => t.cat));
