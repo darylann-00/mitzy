@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import "./styles/app.css";
 
 import { loadS, saveS, ONBOARDED_KEY, VISIT_COUNT_KEY } from "./utils/storage";
@@ -179,13 +179,13 @@ export default function Mitzy() {
   const region = getClimateRegion(profile?.zip);
 
   const getStatus = (t) => taskStatus(t, taskState);
-  const getDays   = (t) => {
+  const getDays = useCallback((t) => {
     const entry = taskState[t.id];
     if (!entry?.lastDone) return 0;
     if (t.oneTime) return null;
     const intervalDays = entry?.intervalDays ?? t.intervalDays;
     return intervalDays - Math.floor((Date.now() - new Date(entry.lastDone)) / 86400000);
-  };
+  }, [taskState]);
   const getNext  = (t) => nextDueStr(t, taskState[t.id]?.lastDone, taskState[t.id]?.intervalDays);
 
   // ─── Action handlers ──────────────────────────────────────────────────────────
