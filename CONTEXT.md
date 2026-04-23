@@ -18,7 +18,7 @@ A household management PWA. Acts as a personal secretary that already knows what
 
 | Layer | Choice |
 |-------|--------|
-| UI | React 19 (Create React App) |
+| UI | React 19 (Vite) |
 | State | Custom hooks + localStorage (cache/offline) + Supabase (`profiles`, `task_records`) |
 | API | Vercel Edge Functions |
 | AI | Claude Haiku 4.5 via `/api/assist` proxy |
