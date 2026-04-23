@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AppHeader } from "./HomeView";
 import { HouseIcon, CarIcon, PersonIcon, PetIcon } from "../components/CategoryIcons";
+import { useProfileContext } from "../contexts/ProfileContext";
 
 // ─── Car data (shared with SlimOnboarding) ─────────────────────────────────────
 const CAR_DATA = {
@@ -98,7 +99,8 @@ function ProvidersIcon({ size = 16 }) {
 }
 
 // ─── Main view ─────────────────────────────────────────────────────────────────
-export function ProfileView({ profile, providerHistory, onReset, onUpdateProfile, onAddHazardTasks, user, onSignOut }) {
+export function ProfileView({ onReset, onAddHazardTasks, user, onSignOut }) {
+  const { profile, providerHistory, updateProfile: onUpdateProfile } = useProfileContext();
   const [confirmReset,   setConfirmReset]   = useState(false);
   const [resetting,      setResetting]      = useState(false);
   const [resetError,     setResetError]     = useState(null);

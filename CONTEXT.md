@@ -35,6 +35,7 @@ User data is persisted in Supabase (`profiles` + `task_records` tables). localSt
 /src
   /components       — TaskCard, AssistPanel, SchedulePanel, MarkDoneModal, AddTaskPanel,
                       TrickleCard, HazardCard, Celebration, Sheet, CategoryIcons
+  /contexts         — ProfileContext, TaskContext
   /views            — HomeView, AllView, ProfileView, TaskDetailView
   /data             — constants.js, tasks.js, taskFactory.js
   /hooks            — useProfile, useTasks, useSession, useProviders
@@ -165,6 +166,7 @@ Three tabs in `BottomDock` (fixed, `#E8F0EC` pill). Sparkle AI FAB sits to the r
 
 ## Key Implementation Notes
 
+- **State architecture**: `ProfileContext` (`src/contexts/ProfileContext.jsx`) wraps `useProfile` + `useProviders` + `region`. `TaskContext` (`src/contexts/TaskContext.jsx`) wraps `useTasks` + all derived lists (`activeTasks`, `visibleTasks`, `scoredDue`, `focusTasks`, `doneThisWeek`) + helpers (`getStatus`, `getDays`, `getNext`). `TaskProvider` is nested inside `ProfileProvider`. `App.js` = `Mitzy` (providers + auth) → `MitzyApp` (all UI/onboarding logic) → views. Views and `AssistPanel` consume context directly; `MitzyApp` only passes UI callbacks (not domain data) to views.
 - `AppHeader` is exported from `HomeView.jsx` and imported by AllView, ProfileView, TaskDetailView. `HomeHeader` (greeting variant) is used only in HomeView.
 - `task.label` is the display name field (not `task.name`).
 - `getDays(task)` returns positive = days until due, negative = days overdue. Returns `0` for unknown tasks.
@@ -195,7 +197,6 @@ All screens built and working. A security/reliability audit was completed and al
 3. Build `/api/schedule` Edge Function — Google Calendar integration UI is complete, backend stub at `SchedulePanel.jsx` uses `setTimeout` mock.
 4. Wire up the AI FAB — sparkle button in `BottomDock` is a no-op; needs a design decision (global assist? home-screen shortcut?).
 5. Replace hardcoded hazard zip ranges in `hazards.js` with FEMA API.
-6. Context API refactor — extract task/profile state from `App.js` into `TaskContext`/`ProfileContext` before adding AI FAB (prop drilling is at its limit).
 
 **Security/reliability fixes applied:**
 - `useTasks` + `useProfile`: Supabase migration upsert now checks for errors; `markDone`/`markScheduled`/`markNotApplicable`/`updateProfile` roll back local state on failed upsert. Both hooks return `loading` + `syncError`.

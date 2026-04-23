@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, memo } from "react";
 import { saveS, ASSIST_CACHE_PREFIX, ASSIST_CACHE_TTL } from "../utils/storage";
 import { buildAssistPrompt } from "../utils/assistPrompt";
+import { useProfileContext } from "../contexts/ProfileContext";
 
 // ─── Pulsing dot loader ────────────────────────────────────────────────────────
 function PulseLoader({ label }) {
@@ -338,13 +339,31 @@ function parseProviders(text) {
 }
 
 // ─── AssistPanel ───────────────────────────────────────────────────────────────
-export function AssistPanel({ task, profile, providerHistory, onSaveProvider, onClose }) {
+export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
+  const { profile, providerHistory, saveProvider } = useProfileContext();
   const [status,    setStatus]    = useState('idle');
   const [result,    setResult]    = useState(null);
   const [cached,    setCached]    = useState(null);
   const [errorKind, setErrorKind] = useState('general');
 
   const cacheKey = `${ASSIST_CACHE_PREFIX}-${task.id}`;
+
+  const parsedProviders = useMemo(() => {
+    if (task.assistType !== 'providers' || !result) return null;
+    return parseProviders(result);
+  }, [task.assistType, result]);
+
+  const parsedGuidanceCompanies = useMemo(() => {
+    if (task.assistType !== 'guidance_companies' || !result) return null;
+    try {
+      const match = result.match(/\{[\s\S]*\}/);
+      if (match) {
+        const parsed = JSON.parse(match[0]);
+        return { guidance: parsed.guidance ?? result, companies: parsed.companies ?? [] };
+      }
+    } catch {}
+    return { guidance: result, companies: [] };
+  }, [task.assistType, result]);
 
   const loadCache = () => {
     try {
@@ -415,7 +434,7 @@ export function AssistPanel({ task, profile, providerHistory, onSaveProvider, on
   const savedProvider = providerHistory[task.id];
 
   const handleSave = (provider, vote, notes) => {
-    onSaveProvider(task.id, { ...provider, vote, notes });
+    saveProvider(task.id, { ...provider, vote, notes });
   };
 
   const getLoadingLabel = () => {
@@ -506,26 +525,22 @@ export function AssistPanel({ task, profile, providerHistory, onSaveProvider, on
           })()}
 
           {/* Done — providers */}
-          {status === 'done' && task.assistType === 'providers' && (() => {
-            const providers = parseProviders(result);
-            if (!providers?.length) {
-              return <div style={{ fontSize:14, lineHeight:1.8, color:'#1C2B22', whiteSpace:'pre-wrap', fontFamily:'DM Sans, sans-serif' }}>{result}</div>;
-            }
-            return (
-              <>
-                {savedProvider && (
-                  <>
-                    <SectionLabel label={`${task.label} — saved provider`} />
-                    <ProviderCard provider={savedProvider} isSaved onSave={handleSave} />
-                  </>
-                )}
-                <SectionLabel label={savedProvider ? 'Other options nearby' : 'Services near you'} />
-                {providers.map((p, i) => (
-                  <ProviderCard key={i} provider={p} isSaved={false} onSave={handleSave} />
-                ))}
-              </>
-            );
-          })()}
+          {status === 'done' && task.assistType === 'providers' && (
+            !parsedProviders?.length
+              ? <div style={{ fontSize:14, lineHeight:1.8, color:'#1C2B22', whiteSpace:'pre-wrap', fontFamily:'DM Sans, sans-serif' }}>{result}</div>
+              : <>
+                  {savedProvider && (
+                    <>
+                      <SectionLabel label={`${task.label} — saved provider`} />
+                      <ProviderCard provider={savedProvider} isSaved onSave={handleSave} />
+                    </>
+                  )}
+                  <SectionLabel label={savedProvider ? 'Other options nearby' : 'Services near you'} />
+                  {parsedProviders.map((p, i) => (
+                    <ProviderCard key={i} provider={p} isSaved={false} onSave={handleSave} />
+                  ))}
+                </>
+          )}
 
           {/* Done — script */}
           {status === 'done' && task.assistType === 'script' && (
@@ -552,29 +567,17 @@ export function AssistPanel({ task, profile, providerHistory, onSaveProvider, on
           )}
 
           {/* Done — guidance + companies */}
-          {status === 'done' && task.assistType === 'guidance_companies' && (() => {
-            let guidance = result;
-            let companies = [];
-            try {
-              const match = result.match(/\{[\s\S]*\}/);
-              if (match) {
-                const parsed = JSON.parse(match[0]);
-                guidance = parsed.guidance ?? result;
-                companies = parsed.companies ?? [];
-              }
-            } catch { /* fall back to rendering result as plain guidance */ }
-            return (
-              <>
-                <MarkdownBlock text={guidance} />
-                {companies.length > 0 && (
-                  <>
-                    <SectionLabel label="Top options" />
-                    {companies.map((c, i) => <CompanyCard key={i} company={c} />)}
-                  </>
-                )}
-              </>
-            );
-          })()}
+          {status === 'done' && task.assistType === 'guidance_companies' && parsedGuidanceCompanies && (
+            <>
+              <MarkdownBlock text={parsedGuidanceCompanies.guidance} />
+              {parsedGuidanceCompanies.companies.length > 0 && (
+                <>
+                  <SectionLabel label="Top options" />
+                  {parsedGuidanceCompanies.companies.map((c, i) => <CompanyCard key={i} company={c} />)}
+                </>
+              )}
+            </>
+          )}
 
         </div>
       </div>
@@ -588,4 +591,4 @@ export function AssistPanel({ task, profile, providerHistory, onSaveProvider, on
       `}</style>
     </div>
   );
-}
+});

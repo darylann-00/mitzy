@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { CAT_META } from "../data/constants";
 import { CAT_ICON_CONFIG } from "../components/CategoryIcons";
+import { useProfileContext } from "../contexts/ProfileContext";
+import { useTaskContext }    from "../contexts/TaskContext";
 
 function formatIntervalDays(days) {
   if (!days) return null;
@@ -53,7 +55,11 @@ function FourDots({ size = 7 }) {
   );
 }
 
-export function TaskDetailView({ task, status, taskState, savedProvider, getNext, onAssist, onSchedule, onDone, onBack, onMarkDone, onSetIntervalOverride }) {
+export function TaskDetailView({ task, onAssist, onSchedule, onDone, onBack, onMarkDone, onSetIntervalOverride }) {
+  const { providerHistory } = useProfileContext();
+  const { taskState, getStatus } = useTaskContext();
+  const savedProvider = providerHistory[task.id];
+  const status = getStatus(task);
   const entry    = taskState[task.id];
   const meta     = CAT_META[task.cat] || CAT_META.home;
   const iconCfg  = CAT_ICON_CONFIG[task.cat] || CAT_ICON_CONFIG.home;
