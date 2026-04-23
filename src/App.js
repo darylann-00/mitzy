@@ -2,6 +2,7 @@ import { useState } from "react";
 import "./styles/app.css";
 
 import { loadS, saveS, ONBOARDED_KEY, VISIT_COUNT_KEY } from "./utils/storage";
+import { detectHazards } from "./utils/hazards";
 import { supabase } from "./lib/supabase";
 
 import { useAuth }    from "./hooks/useAuth";
@@ -14,8 +15,8 @@ import { LoginGate }      from "./components/LoginGate";
 import { SlimOnboarding } from "./onboarding/SlimOnboarding";
 import { PrioritySetup }  from "./onboarding/PrioritySetup";
 
-import { Celebration }  from "./components/Celebration";
-import { AssistPanel }  from "./components/AssistPanel";
+import { Celebration }   from "./components/Celebration";
+import { AssistPanel }   from "./components/AssistPanel";
 import { SchedulePanel } from "./components/SchedulePanel";
 import { MarkDoneModal } from "./components/MarkDoneModal";
 import { AddTaskPanel }  from "./components/AddTaskPanel";
@@ -24,6 +25,21 @@ import { HomeView }       from "./views/HomeView";
 import { AllView }        from "./views/AllView";
 import { ProfileView }    from "./views/ProfileView";
 import { TaskDetailView } from "./views/TaskDetailView";
+
+// ─── Sync status banner ────────────────────────────────────────────────────────
+function SyncBanner({ loading, error }) {
+  if (!loading && !error) return null;
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 300,
+      background: error ? '#D62828' : '#1A5C3A',
+      color: '#E8F5EE', fontSize: 12, fontFamily: 'DM Sans, sans-serif',
+      fontWeight: 600, textAlign: 'center', padding: '7px 16px',
+    }}>
+      {loading ? 'Syncing your tasks…' : "Couldn't reach the server — showing local data"}
+    </div>
+  );
+}
 
 // ─── Bottom nav ────────────────────────────────────────────────────────────────
 function BottomDock({ view, setView, onAI }) {
@@ -165,8 +181,8 @@ export default function Mitzy() {
 
 // ─── Inner app — consumes contexts ─────────────────────────────────────────────
 function MitzyApp({ user, signOut, sendMagicLink, signInWithGoogle }) {
-  const { profile, taskLibrary, updateProfile, region } = useProfileContext();
-  const { activeTasks, taskState, setTaskState, setDisabledTasks, markDone, markNotApplicable, markNeeded, setIntervalOverride } = useTaskContext();
+  const { profile, taskLibrary, updateProfile, region, loading: profileLoading, syncError: profileSyncError } = useProfileContext();
+  const { activeTasks, taskState, setTaskState, setDisabledTasks, markDone, markNotApplicable, markNeeded, setIntervalOverride, nextUpcomingTask, loading: tasksLoading, syncError: tasksSyncError } = useTaskContext();
 
   // ─── Onboarding state ──────────────────────────────────────────────────────
   const [profileDone, setProfileDone] = useState(() => loadS(ONBOARDED_KEY + "-p", false));
@@ -200,10 +216,12 @@ function MitzyApp({ user, signOut, sendMagicLink, signInWithGoogle }) {
   };
 
   // ─── Action handlers ───────────────────────────────────────────────────────
-  const handleMarkDone = (id, dateStr) => {
-    markDone(id, dateStr);
+  const handleMarkDone = async (id, dateStr) => {
+    const result = await markDone(id, dateStr);
+    if (result?.error) return { error: true };
     setCelebration(true);
     setMarkDoneModal(null);
+    return {};
   };
 
   const handleMarkDoneClose = () => {
@@ -216,13 +234,19 @@ function MitzyApp({ user, signOut, sendMagicLink, signInWithGoogle }) {
     setPendingHazards(null);
   };
 
+  const handleAddHazardTasks = async () => {
+    if (!profile?.zip) return;
+    const hazards = await detectHazards(profile.zip);
+    if (hazards.length > 0) updateProfile({ ...profile, hazards });
+  };
+
   const handleReset = async () => {
     if (user) {
       const [{ error: te }, { error: pe }] = await Promise.all([
         supabase.from("task_records").delete().eq("user_id", user.id),
         supabase.from("profiles").delete().eq("id", user.id),
       ]);
-      if (te || pe) console.error("Reset: Supabase delete failed", te, pe);
+      if (te || pe) return { error: "Couldn't delete your data from the server. Try again." };
     }
     localStorage.clear();
     await signOut();
@@ -262,20 +286,26 @@ function MitzyApp({ user, signOut, sendMagicLink, signInWithGoogle }) {
   }
 
   // ─── Main app ──────────────────────────────────────────────────────────────
+  const syncLoading = profileLoading || tasksLoading;
+  const syncError   = profileSyncError || tasksSyncError;
+
   return (
     <div style={{ background: '#FDFAF2', minHeight: '100vh' }}>
+      <SyncBanner loading={syncLoading} error={syncError} />
       <Overlays {...overlayProps} />
 
       {view === "home" && (
         <HomeView
           trickleTask={trickleTask}
           pendingHazards={pendingHazards}
+          nextUpcomingTask={nextUpcomingTask}
+          onGoToAll={() => setView('all')}
           onSelectTask={setSelectedTask}
           onDoneTask={setMarkDoneModal}
           onTrickleAnswer={(answer) => {
-            if (answer.needed)         markNeeded(answer.taskId);
+            if (answer.needed)             markNeeded(answer.taskId);
             else if (answer.notApplicable) markNotApplicable(answer.taskId);
-            else                       markDone(answer.taskId, answer.lastDone, answer.intervalDays);
+            else                           markDone(answer.taskId, answer.lastDone, answer.intervalDays);
             answerTrickle();
           }}
           onTrickleDismiss={dismissTrickle}
@@ -295,6 +325,7 @@ function MitzyApp({ user, signOut, sendMagicLink, signInWithGoogle }) {
       {view === "you" && (
         <ProfileView
           onReset={handleReset}
+          onAddHazardTasks={handleAddHazardTasks}
           user={user}
           onSignOut={signOut}
         />

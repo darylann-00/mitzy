@@ -34,9 +34,16 @@ function inlineMarkdown(text) {
   const escaped = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
   return escaped
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/(https?:\/\/[^\s&<>"]+)/g, (url) =>
-      `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:#1A5C3A;text-decoration:underline">${url}</a>`
-    );
+    .replace(/(https?:\/\/[^\s"<>]+)/g, (rawUrl) => {
+      const decoded = rawUrl.replace(/&amp;/g, '&');
+      try {
+        new URL(decoded);
+        const safeHref = decoded.replace(/&/g, '&amp;');
+        return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer" style="color:#1A5C3A;text-decoration:underline">${decoded}</a>`;
+      } catch {
+        return rawUrl;
+      }
+    });
 }
 
 // Keep old name as alias so blurb rendering still works
@@ -334,9 +341,10 @@ function parseProviders(text) {
 // ─── AssistPanel ───────────────────────────────────────────────────────────────
 export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
   const { profile, providerHistory, saveProvider } = useProfileContext();
-  const [status, setStatus] = useState('idle');
-  const [result, setResult] = useState(null);
-  const [cached, setCached] = useState(null);
+  const [status,    setStatus]    = useState('idle');
+  const [result,    setResult]    = useState(null);
+  const [cached,    setCached]    = useState(null);
+  const [errorKind, setErrorKind] = useState('general');
 
   const cacheKey = `${ASSIST_CACHE_PREFIX}-${task.id}`;
 
@@ -408,7 +416,14 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
       setResult(text);
       setStatus('done');
       setCached({ data: text, ts: Date.now() });
-    } catch {
+    } catch (err) {
+      const msg = err?.message ?? '';
+      let kind = 'general';
+      if (typeof navigator !== 'undefined' && !navigator.onLine) kind = 'offline';
+      else if (msg === '429') kind = 'rate_limit';
+      else if (msg === '504' || msg === '408' || msg === '524') kind = 'timeout';
+      else if (err instanceof SyntaxError) kind = 'bad_response';
+      setErrorKind(kind);
       setStatus('error');
     }
   };
@@ -484,17 +499,30 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
           {status === 'loading' && <PulseLoader label={getLoadingLabel()} />}
 
           {/* Error */}
-          {status === 'error' && (
-            <div style={{ textAlign:'center', padding:'40px 20px' }}>
-              <div style={{ fontSize:14, color:'#4A6256', marginBottom:16, fontFamily:'DM Sans, sans-serif' }}>Something went wrong. Try again?</div>
-              <button
-                onClick={() => fetchResult(true)}
-                style={{ fontSize:13, fontWeight:700, background:'#D62828', color:'#fff', border:'none', borderRadius:10, padding:'10px 24px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
-              >
-                Retry
-              </button>
-            </div>
-          )}
+          {status === 'error' && (() => {
+            const errorMessages = {
+              offline:      'No internet connection. Check your connection and try again.',
+              rate_limit:   'Too many requests right now. Wait a moment, then retry.',
+              timeout:      'The server took too long to respond. Try again in a moment.',
+              bad_response: 'Got an unexpected response. Close and try again.',
+              general:      'Something went wrong. Try again?',
+            };
+            return (
+              <div style={{ textAlign:'center', padding:'40px 20px' }}>
+                <div style={{ fontSize:14, color:'#4A6256', marginBottom:16, fontFamily:'DM Sans, sans-serif', lineHeight:1.5 }}>
+                  {errorMessages[errorKind] ?? errorMessages.general}
+                </div>
+                {errorKind !== 'bad_response' && (
+                  <button
+                    onClick={() => fetchResult(true)}
+                    style={{ fontSize:13, fontWeight:700, background:'#D62828', color:'#fff', border:'none', borderRadius:10, padding:'10px 24px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                  >
+                    Retry
+                  </button>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Done — providers */}
           {status === 'done' && task.assistType === 'providers' && (

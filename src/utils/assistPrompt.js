@@ -1,18 +1,25 @@
 const THIS_YEAR = new Date().getFullYear();
 const getAge = (birthYear) => birthYear ? THIS_YEAR - parseInt(birthYear, 10) : null;
 
+// Strip control chars and newlines to prevent prompt injection from profile fields
+const sanitize = (str) =>
+  str ? String(str).replace(/[\r\n\t]/g, ' ').replace(/[^\x20-\x7E]/g, '').trim() : str;
+const sanitizeZip = (zip) =>
+  zip ? String(zip).replace(/\D/g, '').slice(0, 10) : zip;
+
 export function buildAssistPrompt(task, profile) {
-  const loc  = profile.zip       ? `near zip code ${profile.zip}` : "in my area";
-  const ins  = profile.insurance ? `Insurance: ${profile.insurance}. ` : "";
+  const zip  = sanitizeZip(profile.zip);
+  const loc  = zip                   ? `near zip code ${zip}` : "in my area";
+  const ins  = profile.insurance     ? `Insurance: ${sanitize(profile.insurance)}. ` : "";
   const carStr = task.vehicle
     ? task.vehicle
     : profile.cars?.length ? profile.cars.join(", ") : profile.car;
-  const car  = carStr ? `Vehicle: ${carStr}. ` : "";
+  const car  = carStr ? `Vehicle: ${sanitize(carStr)}. ` : "";
   const kids = profile.kids?.length
-    ? `Kids: ${profile.kids.map(k => `${k.name} age ${getAge(k.birthYear)}`).join(", ")}. `
+    ? `Kids: ${profile.kids.map(k => `${sanitize(k.name)} age ${getAge(k.birthYear)}`).join(", ")}. `
     : "";
   const pets = profile.pets?.length
-    ? `Pets: ${profile.pets.map(p => `${p.name} (${p.type}, age ${getAge(p.birthYear)})`).join(", ")}. `
+    ? `Pets: ${profile.pets.map(p => `${sanitize(p.name)} (${sanitize(p.type)}, age ${getAge(p.birthYear)})`).join(", ")}. `
     : "";
 
   const ctx  = `${ins}${car}${kids}${pets}Location: ${loc}.`;

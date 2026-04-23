@@ -153,6 +153,7 @@ export function SlimOnboarding({ onComplete }) {
   const [petInput, setPetInput] = useState({ name: '', type: '', birthYear: '', longCoat: false });
   const [err,           setErr]           = useState('');
   const [showTransition, setShowTransition] = useState(false);
+  const [completing,    setCompleting]    = useState(false);
 
   const TOTAL_STEPS = 6;
   const go = n => setTimeout(() => { setStep(n); setErr(''); }, 200);
@@ -300,10 +301,19 @@ export function SlimOnboarding({ onComplete }) {
           </div>
 
           <button
-            onClick={() => onComplete(profile)}
-            style={{ width:'100%', padding:'16px', fontSize:15, fontWeight:700, background:'#F4C430', color:'#7a5900', border:'none', borderRadius:14, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+            disabled={completing}
+            onClick={() => { setCompleting(true); onComplete(profile); }}
+            style={{ width:'100%', padding:'16px', fontSize:15, fontWeight:700, background: completing ? '#c9a400' : '#F4C430', color:'#7a5900', border:'none', borderRadius:14, cursor: completing ? 'default' : 'pointer', fontFamily:'DM Sans, sans-serif', transition:'background 0.15s', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}
           >
-            I'm ready
+            {completing ? (
+              <>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ animation:'spin 0.7s linear infinite' }}>
+                  <circle cx="8" cy="8" r="6" stroke="#7a5900" strokeWidth="2" strokeOpacity="0.3" />
+                  <path d="M8 2 A6 6 0 0 1 14 8" stroke="#7a5900" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+                One moment…
+              </>
+            ) : "Let's go"}
           </button>
         </div>
         </div>

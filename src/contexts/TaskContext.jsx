@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo } from "react";
+import { createContext, useContext, useMemo, useCallback } from "react";
 import { useTasks } from "../hooks/useTasks";
 import { useProfileContext } from "./ProfileContext";
 import { taskStatus, taskScore, nextDueStr, isWindowActive, isDependencySatisfied } from "../utils/taskLogic";
@@ -11,6 +11,7 @@ export function TaskProvider({ user, children }) {
     taskState, setTaskState,
     disabledTasks, setDisabledTasks,
     markDone, markScheduled, markNotApplicable, markNeeded, setIntervalOverride,
+    loading, syncError,
   } = useTasks(user);
 
   const activeTasks = useMemo(() =>
@@ -47,23 +48,31 @@ export function TaskProvider({ user, children }) {
 
   const getStatus = (t) => taskStatus(t, taskState);
 
-  const getDays = (t) => {
+  const getDays = useCallback((t) => {
     const entry = taskState[t.id];
     if (!entry?.lastDone) return 0;
     if (t.oneTime) return null;
     const intervalDays = entry?.intervalDays ?? t.intervalDays;
     return intervalDays - Math.floor((Date.now() - new Date(entry.lastDone)) / 86400000);
-  };
+  }, [taskState]);
 
   const getNext = (t) => nextDueStr(t, taskState[t.id]?.lastDone, taskState[t.id]?.intervalDays);
+
+  const nextUpcomingTask = useMemo(() =>
+    visibleTasks
+      .filter(t => taskStatus(t, taskState) === 'coming-up')
+      .sort((a, b) => getDays(a) - getDays(b))[0] ?? null,
+    [visibleTasks, taskState, getDays]);
 
   return (
     <TaskContext.Provider value={{
       taskState, setTaskState,
       disabledTasks, setDisabledTasks,
       activeTasks, visibleTasks, scoredDue, focusTasks, doneThisWeek,
+      nextUpcomingTask,
       markDone, markScheduled, markNotApplicable, markNeeded, setIntervalOverride,
       getStatus, getDays, getNext,
+      loading, syncError,
     }}>
       {children}
     </TaskContext.Provider>

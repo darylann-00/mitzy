@@ -136,9 +136,68 @@ function SectionLabel({ label, color }) {
 }
 
 
+function getDayOfYear() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 0);
+  return Math.floor((now - start) / 86400000);
+}
+
+function EarnedState({ doneThisWeek, profile, onGoToAll }) {
+  const name = profile?.name ? `, ${profile.name}` : '';
+  const count = doneThisWeek;
+  const variants = [
+    { headline: `You're on top of it${name}.`, sub: `${count} task${count !== 1 ? 's' : ''} handled this week. Nice work.` },
+    { headline: 'Nothing to do but enjoy the day.', sub: `You knocked out ${count} this week.` },
+    { headline: `All caught up${name}.`, sub: `${count} task${count !== 1 ? 's' : ''} done this week. ✓` },
+  ];
+  const { headline, sub } = variants[getDayOfYear() % 3];
+  return (
+    <div style={{ background:'#FFFFFF', borderRadius:14, padding:'32px 20px 24px', textAlign:'center', border:'1px solid #EAE4DA' }}>
+      <div style={{ width:40, height:40, borderRadius:'50%', background:'#E8F5EE', margin:'0 auto 14px', display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <polyline points="4,11 9,16 18,5" stroke="#06A77D" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
+      <div style={{ fontFamily:"'Righteous', cursive", fontSize:19, color:'#1C2B22', marginBottom:6 }}>{headline}</div>
+      <div style={{ fontSize:13, color:'#4A6256', lineHeight:1.7, fontFamily:'DM Sans, sans-serif', marginBottom:20 }}>{sub}</div>
+      <button
+        onClick={onGoToAll}
+        style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:'#1A5C3A', fontFamily:'DM Sans, sans-serif', fontWeight:600, display:'inline-flex', alignItems:'center', gap:4 }}
+      >
+        Feeling ambitious? See what else Mitzy's tracking
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <polyline points="4,2 10,7 4,12" stroke="#1A5C3A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
+function QuietState({ nextUpcomingTask, getDays }) {
+  const daysAway = nextUpcomingTask ? getDays(nextUpcomingTask) : null;
+  const nextLine = nextUpcomingTask && daysAway != null
+    ? `Next up: ${nextUpcomingTask.label} in ${daysAway} day${daysAway !== 1 ? 's' : ''}.`
+    : null;
+  return (
+    <div style={{ background:'#FFFFFF', borderRadius:14, padding:'32px 20px 24px', textAlign:'center', border:'1px solid #EAE4DA' }}>
+      <div style={{ width:40, height:40, borderRadius:'50%', background:'#E8F5EE', margin:'0 auto 14px', display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <polyline points="4,11 9,16 18,5" stroke="#06A77D" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
+      <div style={{ fontFamily:"'Righteous', cursive", fontSize:19, color:'#1C2B22', marginBottom:6 }}>You're on track.</div>
+      <div style={{ fontSize:13, color:'#4A6256', lineHeight:1.7, fontFamily:'DM Sans, sans-serif' }}>
+        Nothing pressing today. {nextLine ?? 'Mitzy has you covered.'}
+      </div>
+    </div>
+  );
+}
+
 export function HomeView({
   trickleTask,
   pendingHazards,
+  nextUpcomingTask,
+  onGoToAll,
   onSelectTask,
   onDoneTask,
   onTrickleAnswer,
@@ -200,19 +259,11 @@ export function HomeView({
           </>
         )}
 
-        {/* All clear */}
+        {/* Empty state — two variants based on whether user has done anything this week */}
         {focusTasks.length === 0 && !pendingHazards && (
-          <div style={{ background:'#FFFFFF', borderRadius:14, padding:'36px 20px', textAlign:'center', border:'1px solid #EAE4DA' }}>
-            <div style={{ width:36, height:36, borderRadius:'50%', background:'#E8F5EE', margin:'0 auto 12px', display:'flex', alignItems:'center', justifyContent:'center' }}>
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <polyline points="4,10 8,14 16,5" stroke="#06A77D" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <div style={{ fontFamily:"'Righteous', cursive", fontSize:18, color:'#06A77D', marginBottom:6 }}>All clear</div>
-            <div style={{ fontSize:13, color:'#4A6256', lineHeight:1.7, fontFamily:'DM Sans, sans-serif' }}>
-              Nothing pressing right now. Mitzy has you covered.
-            </div>
-          </div>
+          doneThisWeek > 0
+            ? <EarnedState doneThisWeek={doneThisWeek} profile={profile} onGoToAll={onGoToAll} />
+            : <QuietState nextUpcomingTask={nextUpcomingTask} getDays={getDays} />
         )}
 
       </div>
