@@ -81,6 +81,7 @@ function TaskSlide({ task, onAnswer, onNeeded }) {
 
 export function PrioritySetup({ taskLib, region, onComplete }) {
   const priorityTasks = taskLib.filter(t => isPriority(t.id) && isDependencySatisfied(t, {}) && isWindowActive(t, region)).slice(0, 12);
+  const [started,    setStarted]    = useState(false);
   const [index,      setIndex]      = useState(0);
   const [selections, setSelections] = useState({});
   const [done,       setDone]       = useState(false);
@@ -88,6 +89,31 @@ export function PrioritySetup({ taskLib, region, onComplete }) {
 
   const current = priorityTasks[index];
   const isLast  = index === priorityTasks.length - 1;
+
+  if (!started && priorityTasks.length > 0) {
+    return (
+      <>
+        <style>{SLIDE_CSS}</style>
+        <div style={{ minHeight:'100vh', background:'#1A5C3A', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'28px 24px', position:'relative', overflow:'hidden' }}>
+          <ScatterShapes />
+          <div style={{ maxWidth:360, width:'100%', textAlign:'center', position:'relative' }}>
+            <div style={{ fontFamily:"'Righteous', 'Trebuchet MS', cursive", fontSize:26, color:'#E8F5EE', marginBottom:14, lineHeight:1.2 }}>
+              Almost there
+            </div>
+            <div style={{ fontSize:15, color:'#B8DCC8', lineHeight:1.7, marginBottom:36, fontFamily:'DM Sans, sans-serif' }}>
+              Let's quickly set up your {priorityTasks.length} tasks — takes about 2 minutes.
+            </div>
+            <button
+              onClick={() => setStarted(true)}
+              style={{ width:'100%', padding:'16px', fontSize:15, fontWeight:700, background:'#F4C430', color:'#7a5900', border:'none', borderRadius:14, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+            >
+              Let's go
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   if (!current && !done) return null;
 
