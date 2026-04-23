@@ -1,16 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { loadS, saveS, PROFILE_KEY } from "../utils/storage";
 import { buildTaskLibrary } from "../data/taskFactory";
 import { supabase } from "../lib/supabase";
 
 export function useProfile(user) {
   const [profile, setProfile] = useState(() => loadS(PROFILE_KEY, {}));
-  const [taskLibrary, setTaskLibrary] = useState(() => {
-    const saved = loadS(PROFILE_KEY, {});
-    return saved.zip ? buildTaskLibrary(saved) : [];
-  });
+  const [customTasks, setCustomTasks] = useState([]);
   const [loading, setLoading] = useState(!!user);
   const [syncError, setSyncError] = useState(null);
+
+  const taskLibrary = useMemo(() => {
+    const base = profile.zip ? buildTaskLibrary(profile) : [];
+    return [...base, ...customTasks];
+  }, [profile, customTasks]);
 
   useEffect(() => {
     if (!user) return;
@@ -35,7 +37,6 @@ export function useProfile(user) {
       } else {
         const p = fromRow(data);
         setProfile(p);
-        setTaskLibrary(buildTaskLibrary(p));
         saveS(PROFILE_KEY, p);
       }
       setLoading(false);
@@ -52,23 +53,20 @@ export function useProfile(user) {
   const updateProfile = async (updates) => {
     const next = { ...profile, ...updates };
     const prev = profile;
-    const prevLib = taskLibrary;
     setProfile(next);
-    setTaskLibrary(buildTaskLibrary(next));
     if (user) {
       const { error } = await supabase.from("profiles").upsert({ id: user.id, ...toRow(next) });
       if (error) {
         setProfile(prev);
-        setTaskLibrary(prevLib);
       }
     }
   };
 
   const addCustomTask = (task) => {
-    setTaskLibrary(prev => [...prev, task]);
+    setCustomTasks(prev => [...prev, task]);
   };
 
-  return { profile, setProfile, taskLibrary, setTaskLibrary, updateProfile, addCustomTask, loading, syncError };
+  return { profile, setProfile, taskLibrary, updateProfile, addCustomTask, loading, syncError };
 }
 
 function toRow(p) {

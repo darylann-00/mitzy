@@ -1,6 +1,8 @@
 import { TrickleCard } from "../components/TrickleCard";
 import { TaskCard }    from "../components/TaskCard";
 import { HazardCard }  from "../components/HazardCard";
+import { useProfileContext } from "../contexts/ProfileContext";
+import { useTaskContext }    from "../contexts/TaskContext";
 
 // ─── Shared header pattern ─────────────────────────────────────────────────────
 export function AppHeader({ rightContent }) {
@@ -136,13 +138,7 @@ function SectionLabel({ label, color }) {
 
 export function HomeView({
   trickleTask,
-  profile,
   pendingHazards,
-  focusTasks,
-  doneThisWeek,
-  providerHistory,
-  getStatus,
-  getDays,
   onSelectTask,
   onDoneTask,
   onTrickleAnswer,
@@ -151,6 +147,9 @@ export function HomeView({
   onHazardAccept,
   onHazardDismiss,
 }) {
+  const { profile, providerHistory } = useProfileContext();
+  const { focusTasks, doneThisWeek, getStatus, getDays } = useTaskContext();
+
   return (
     <div style={{ background:'#FDFAF2' }}>
       <HomeHeader profile={profile} doneThisWeek={doneThisWeek} />
