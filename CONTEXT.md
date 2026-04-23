@@ -197,6 +197,7 @@ All screens built and working. A security/reliability audit was completed and al
 3. Build `/api/schedule` Edge Function — Google Calendar integration UI is complete, backend stub at `SchedulePanel.jsx` uses `setTimeout` mock.
 4. Wire up the AI FAB — sparkle button in `BottomDock` is a no-op; needs a design decision (global assist? home-screen shortcut?).
 5. Replace hardcoded hazard zip ranges in `hazards.js` with FEMA API.
+6. Remaining onboarding polish: zip error message copy (#12 — deferred).
 
 **Security/reliability fixes applied:**
 - `useTasks` + `useProfile`: Supabase migration upsert now checks for errors; `markDone`/`markScheduled`/`markNotApplicable`/`updateProfile` roll back local state on failed upsert. Both hooks return `loading` + `syncError`.
@@ -210,6 +211,8 @@ All screens built and working. A security/reliability audit was completed and al
 **Task intervals** — All intervals in `src/data/tasks.js` have been audited against standard safety guidance. Three were corrected to monthly (30d): `hm-smoke` (NFPA 72), `hm-fire` (NFPA 10 §7.2.1), `hm-gfci` (UL/manufacturer standards). All others are correct.
 
 **Prescription trickle flow** — `h-scrip` gates behind "Do you take regular prescriptions?" (yes/no). Yes leads to "How often?" — Monthly (30d) / Every 3 months (90d) / It varies (45d) — which sets a per-user `intervalDays` override stored in `taskState`. No marks the task `notApplicable`. `taskStatus`, `taskScore`, `nextDueStr`, `getDays`, `getNext`, `getScore` all prefer `taskState[id].intervalDays` over the task-level default when present. The `trickleSteps` field on a task definition triggers `SteppedFlow` in `TrickleCard`; other tasks are unaffected. `intervalDays` override lives in localStorage only — Supabase `task_records` doesn't have this column yet.
+
+**Onboarding polish (partial)** — `PrioritySetup` now shows an intro screen before the first task slide: exact task count + "about 2 minutes" estimate. `SlimOnboarding` tracks `editingCar`/`editingKid`/`editingPet` state — tapping a list item to edit now shows "Editing your [X]" above the input fields, clearing confusion with delete. Zip error copy (#12) was deferred.
 
 **Per-task frequency override** — Frequency pill in `TaskDetailView` is tappable. Opens an inline picker with preset chips (up to 4 below default + default, generated from `FREQ_CANDIDATES`) plus a Custom option (number + days/months/years dropdown). Chips never suggest intervals longer than the recommended default — Custom is the only path to go longer. Selecting any option saves to `taskState[id].intervalDays` via `setIntervalOverride` in `useTasks`. A yellow warning banner shows persistently below the dates card when `effectiveInterval > task.intervalDays` (user is going less frequent than default). Frequency pill text turns green when an override is active. `effectiveInterval = entry?.intervalDays ?? task.intervalDays` drives all display. Override is localStorage only.
 
