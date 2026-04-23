@@ -1,33 +1,45 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState } from "react";
 import "./styles/app.css";
 
 import { loadS, saveS, ONBOARDED_KEY, VISIT_COUNT_KEY } from "./utils/storage";
-import { taskStatus, taskScore, nextDueStr, isWindowActive, isDependencySatisfied } from "./utils/taskLogic";
-import { getClimateRegion } from "./utils/climateRegion";
 import { detectHazards } from "./utils/hazards";
-import { buildTaskLibrary } from "./data/taskFactory";
-
 import { supabase } from "./lib/supabase";
-import { useAuth }     from "./hooks/useAuth";
-import { useProfile }   from "./hooks/useProfile";
-import { useTasks }     from "./hooks/useTasks";
-import { useProviders } from "./hooks/useProviders";
-import { useSession }   from "./hooks/useSession";
+
+import { useAuth }    from "./hooks/useAuth";
+import { useSession } from "./hooks/useSession";
+
+import { ProfileProvider, useProfileContext } from "./contexts/ProfileContext";
+import { TaskProvider,   useTaskContext }    from "./contexts/TaskContext";
 
 import { LoginGate }      from "./components/LoginGate";
 import { SlimOnboarding } from "./onboarding/SlimOnboarding";
 import { PrioritySetup }  from "./onboarding/PrioritySetup";
 
-import { Celebration }    from "./components/Celebration";
-import { AssistPanel }    from "./components/AssistPanel";
-import { SchedulePanel }  from "./components/SchedulePanel";
-import { MarkDoneModal }  from "./components/MarkDoneModal";
-import { AddTaskPanel }   from "./components/AddTaskPanel";
+import { Celebration }   from "./components/Celebration";
+import { AssistPanel }   from "./components/AssistPanel";
+import { SchedulePanel } from "./components/SchedulePanel";
+import { MarkDoneModal } from "./components/MarkDoneModal";
+import { AddTaskPanel }  from "./components/AddTaskPanel";
 
-import { HomeView }    from "./views/HomeView";
-import { AllView }     from "./views/AllView";
-import { ProfileView } from "./views/ProfileView";
+import { HomeView }       from "./views/HomeView";
+import { AllView }        from "./views/AllView";
+import { ProfileView }    from "./views/ProfileView";
 import { TaskDetailView } from "./views/TaskDetailView";
+
+// ─── Sync status banner ────────────────────────────────────────────────────────
+function SyncBanner({ loading, error }) {
+  if (!loading && !error) return null;
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 300,
+      background: error ? '#D62828' : '#1A5C3A',
+      color: '#E8F5EE', fontSize: 12, fontFamily: 'DM Sans, sans-serif',
+      fontWeight: 600, textAlign: 'center', padding: '7px 16px',
+    }}>
+      {loading ? 'Syncing your tasks…' : "Couldn't reach the server — showing local data"}
+    </div>
+  );
+}
 
 // ─── Bottom nav ────────────────────────────────────────────────────────────────
 function BottomDock({ view, setView, onAI }) {
@@ -66,7 +78,6 @@ function BottomDock({ view, setView, onAI }) {
       background: '#FDFAF2', padding: '8px 10px 14px', borderTop: '1px solid #E0D8CC',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, maxWidth: 680, margin: '0 auto' }}>
-        {/* Nav pill */}
         <div style={{ flex: 1, background: '#E8F0EC', borderRadius: 14, padding: 4, display: 'flex', gap: 2 }}>
           {TABS.map(({ id, label, Icon }) => {
             const active = view === id;
@@ -88,7 +99,6 @@ function BottomDock({ view, setView, onAI }) {
           })}
         </div>
 
-        {/* Sparkle AI button */}
         <button
           onClick={onAI}
           aria-label="AI assistant"
@@ -110,7 +120,7 @@ function BottomDock({ view, setView, onAI }) {
   );
 }
 
-// ─── FAB (HomeView only: add task) ────────────────────────────────────────────
+// ─── FAB ───────────────────────────────────────────────────────────────────────
 function FABGroup({ showAdd, onAdd }) {
   if (!showAdd) return null;
   return (
@@ -133,20 +143,52 @@ function FABGroup({ showAdd, onAdd }) {
   );
 }
 
-export default function Mitzy() {
-  // ─── Auth ────────────────────────────────────────────────────────────────────
-  const { user, loading: authLoading, sendMagicLink, signInWithGoogle, signOut } = useAuth();
+// ─── Overlay stack ─────────────────────────────────────────────────────────────
+function Overlays({
+  celebration, onCelebrationDone,
+  markDoneModal, onMarkDone, onMarkDoneClose,
+  assistTask, onAssistClose,
+  scheduleTask, onScheduleClose,
+  addingTask, onAddClose,
+}) {
+  const { addCustomTask } = useProfileContext();
+  const { markScheduled } = useTaskContext();
 
-  // ─── Onboarding state ────────────────────────────────────────────────────────
+  return (
+    <>
+      {celebration   && <Celebration onDone={onCelebrationDone} />}
+      {markDoneModal && <MarkDoneModal task={markDoneModal} onDone={onMarkDone} onClose={onMarkDoneClose} />}
+      {assistTask    && <AssistPanel task={assistTask} onClose={onAssistClose} />}
+      {scheduleTask  && <SchedulePanel task={scheduleTask} onSchedule={(d) => markScheduled(scheduleTask.id, d)} onClose={onScheduleClose} />}
+      {addingTask    && <AddTaskPanel onAdd={addCustomTask} onClose={onAddClose} />}
+    </>
+  );
+}
+
+// ─── Root — wires up providers then delegates ──────────────────────────────────
+export default function Mitzy() {
+  const { user, loading: authLoading, sendMagicLink, signInWithGoogle, signOut } = useAuth();
+  if (authLoading) return null;
+
+  return (
+    <ProfileProvider user={user}>
+      <TaskProvider user={user}>
+        <MitzyApp user={user} signOut={signOut} sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} />
+      </TaskProvider>
+    </ProfileProvider>
+  );
+}
+
+// ─── Inner app — consumes contexts ─────────────────────────────────────────────
+function MitzyApp({ user, signOut, sendMagicLink, signInWithGoogle }) {
+  const { profile, taskLibrary, updateProfile, region, loading: profileLoading, syncError: profileSyncError } = useProfileContext();
+  const { activeTasks, taskState, setTaskState, setDisabledTasks, markDone, markNotApplicable, markNeeded, setIntervalOverride, nextUpcomingTask, loading: tasksLoading, syncError: tasksSyncError } = useTaskContext();
+
+  // ─── Onboarding state ──────────────────────────────────────────────────────
   const [profileDone, setProfileDone] = useState(() => loadS(ONBOARDED_KEY + "-p", false));
   const [onboarded,   setOnboarded]   = useState(() => loadS(ONBOARDED_KEY, false));
 
-  // ─── Domain state ────────────────────────────────────────────────────────────
-  const { profile, taskLibrary, setTaskLibrary, updateProfile, addCustomTask } = useProfile(user);
-  const { taskState, setTaskState, disabledTasks, setDisabledTasks, markDone, markScheduled, markNotApplicable, markNeeded, setIntervalOverride } = useTasks(user);
-  const { providerHistory, saveProvider } = useProviders();
-
-  // ─── UI state ────────────────────────────────────────────────────────────────
+  // ─── UI state ──────────────────────────────────────────────────────────────
   const [view,          setView]          = useState("home");
   const [selectedTask,  setSelectedTask]  = useState(null);
   const [celebration,   setCelebration]   = useState(false);
@@ -155,9 +197,11 @@ export default function Mitzy() {
   const [markDoneModal, setMarkDoneModal] = useState(null);
   const [addingTask,    setAddingTask]    = useState(false);
 
-  // ─── Onboarding handlers ─────────────────────────────────────────────────────
+  // ─── Session (trickle + hazards) ───────────────────────────────────────────
+  const { trickleTask, dismissTrickle, answerTrickle, pendingHazards, setPendingHazards } = useSession({ onboarded, profile, activeTasks, taskState });
+
+  // ─── Onboarding handlers ───────────────────────────────────────────────────
   const handleSlimOnboardingComplete = (p) => {
-    setTaskLibrary(buildTaskLibrary(p));
     updateProfile(p);
     saveS(ONBOARDED_KEY + "-p", true);
     setProfileDone(true);
@@ -171,28 +215,13 @@ export default function Mitzy() {
     saveS(VISIT_COUNT_KEY, 1);
   };
 
-  // ─── Task helpers ─────────────────────────────────────────────────────────────
-  const activeTasks = taskLibrary.filter(t => !disabledTasks[t.id] && isDependencySatisfied(t, taskState));
-
-  const { trickleTask, dismissTrickle, answerTrickle, pendingHazards, setPendingHazards } = useSession({ onboarded, profile, activeTasks, taskState });
-
-  const region = getClimateRegion(profile?.zip);
-
-  const getStatus = (t) => taskStatus(t, taskState);
-  const getDays = useCallback((t) => {
-    const entry = taskState[t.id];
-    if (!entry?.lastDone) return 0;
-    if (t.oneTime) return null;
-    const intervalDays = entry?.intervalDays ?? t.intervalDays;
-    return intervalDays - Math.floor((Date.now() - new Date(entry.lastDone)) / 86400000);
-  }, [taskState]);
-  const getNext  = (t) => nextDueStr(t, taskState[t.id]?.lastDone, taskState[t.id]?.intervalDays);
-
-  // ─── Action handlers ──────────────────────────────────────────────────────────
-  const handleMarkDone = (id, dateStr) => {
-    markDone(id, dateStr);
+  // ─── Action handlers ───────────────────────────────────────────────────────
+  const handleMarkDone = async (id, dateStr) => {
+    const result = await markDone(id, dateStr);
+    if (result?.error) return { error: true };
     setCelebration(true);
     setMarkDoneModal(null);
+    return {};
   };
 
   const handleMarkDoneClose = () => {
@@ -201,8 +230,7 @@ export default function Mitzy() {
   };
 
   const handleHazardAccept = () => {
-    const next = { ...profile, hazards: pendingHazards };
-    updateProfile(next);
+    updateProfile({ ...profile, hazards: pendingHazards });
     setPendingHazards(null);
   };
 
@@ -218,71 +246,34 @@ export default function Mitzy() {
         supabase.from("task_records").delete().eq("user_id", user.id),
         supabase.from("profiles").delete().eq("id", user.id),
       ]);
-      if (te || pe) console.error("Reset: Supabase delete failed", te, pe);
+      if (te || pe) return { error: "Couldn't delete your data from the server. Try again." };
     }
     localStorage.clear();
     await signOut();
     window.location.reload();
   };
 
-  // ─── Derived task lists ───────────────────────────────────────────────────────
-  const visibleTasks = useMemo(() => activeTasks.filter(t => {
-    if (!isWindowActive(t, region)) return false;
-    const entry = taskState[t.id];
-    if (!entry?.lastDone) return true;
-    const daysSince = Math.floor((Date.now() - new Date(entry.lastDone)) / 86400000);
-    return daysSince >= (t.intervalDays - t.windowDays);
-  }), [activeTasks, taskState, region]);
+  // ─── Shared overlay props ──────────────────────────────────────────────────
+  const overlayProps = {
+    celebration, onCelebrationDone: () => setCelebration(false),
+    markDoneModal, onMarkDone: handleMarkDone, onMarkDoneClose: handleMarkDoneClose,
+    assistTask, onAssistClose: () => setAssistTask(null),
+    scheduleTask, onScheduleClose: () => setScheduleTask(null),
+    addingTask, onAddClose: () => setAddingTask(false),
+  };
 
-  const scoredDue = useMemo(() => [...visibleTasks]
-    .filter(t => taskStatus(t, taskState) !== "ok")
-    .sort((a, b) => {
-      const sa = taskScore(a, taskState[a.id]?.lastDone, taskState[a.id]?.intervalDays);
-      const sb = taskScore(b, taskState[b.id]?.lastDone, taskState[b.id]?.intervalDays);
-      return sb - sa;
-    }), [visibleTasks, taskState]);
-
-  const focusTasks = useMemo(() =>
-    scoredDue.filter(t => taskStatus(t, taskState) !== "unknown").slice(0, 3),
-    [scoredDue, taskState]);
-
-  const nextUpcomingTask = useMemo(() =>
-    visibleTasks
-      .filter(t => taskStatus(t, taskState) === 'coming-up')
-      .sort((a, b) => getDays(a) - getDays(b))[0] ?? null,
-    [visibleTasks, taskState, getDays]);
-
-  const doneThisWeek = useMemo(() =>
-    Object.values(taskState).filter(entry => {
-      if (!entry?.lastDone) return false;
-      return (Date.now() - new Date(entry.lastDone)) <= 7 * 86400000;
-    }).length,
-    [taskState]);
-
-  // ─── Onboarding gates ─────────────────────────────────────────────────────────
-  if (authLoading)  return null;
+  // ─── Onboarding gates ──────────────────────────────────────────────────────
   if (!profileDone) return <SlimOnboarding onComplete={handleSlimOnboardingComplete} />;
   if (!onboarded)   return <PrioritySetup taskLib={taskLibrary} region={region} onComplete={handlePrioritySetupComplete} />;
   if (!user)        return <LoginGate sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} />;
 
-  // ─── Task detail screen ───────────────────────────────────────────────────────
+  // ─── Task detail screen ────────────────────────────────────────────────────
   if (selectedTask) {
     return (
       <>
-        <Overlays
-          celebration={celebration}     onCelebrationDone={() => setCelebration(false)}
-          markDoneModal={markDoneModal}  onMarkDone={handleMarkDone} onMarkDoneClose={handleMarkDoneClose}
-          assistTask={assistTask}        onAssistClose={() => setAssistTask(null)}
-          scheduleTask={scheduleTask}    onSchedule={(d) => markScheduled(scheduleTask.id, d)} onScheduleClose={() => setScheduleTask(null)}
-          addingTask={addingTask}        onAddTask={addCustomTask} onAddClose={() => setAddingTask(false)}
-          profile={profile} providerHistory={providerHistory} onSaveProvider={saveProvider}
-        />
+        <Overlays {...overlayProps} />
         <TaskDetailView
           task={selectedTask}
-          status={getStatus(selectedTask)}
-          taskState={taskState}
-          savedProvider={providerHistory[selectedTask.id]}
-          getNext={getNext}
           onAssist={setAssistTask}
           onSchedule={setScheduleTask}
           onDone={setMarkDoneModal}
@@ -294,40 +285,27 @@ export default function Mitzy() {
     );
   }
 
-  // ─── Main app ─────────────────────────────────────────────────────────────────
+  // ─── Main app ──────────────────────────────────────────────────────────────
+  const syncLoading = profileLoading || tasksLoading;
+  const syncError   = profileSyncError || tasksSyncError;
+
   return (
-    <div style={{ background:'#FDFAF2', minHeight:'100vh' }}>
-      <Overlays
-        celebration={celebration}     onCelebrationDone={() => setCelebration(false)}
-        markDoneModal={markDoneModal}  onMarkDone={handleMarkDone} onMarkDoneClose={handleMarkDoneClose}
-        assistTask={assistTask}        onAssistClose={() => setAssistTask(null)}
-        scheduleTask={scheduleTask}    onSchedule={(d) => markScheduled(scheduleTask.id, d)} onScheduleClose={() => setScheduleTask(null)}
-        addingTask={addingTask}        onAddTask={addCustomTask} onAddClose={() => setAddingTask(false)}
-        profile={profile} providerHistory={providerHistory} onSaveProvider={saveProvider}
-      />
+    <div style={{ background: '#FDFAF2', minHeight: '100vh' }}>
+      <SyncBanner loading={syncLoading} error={syncError} />
+      <Overlays {...overlayProps} />
 
       {view === "home" && (
         <HomeView
           trickleTask={trickleTask}
-          profile={profile}
           pendingHazards={pendingHazards}
-          focusTasks={focusTasks}
-          doneThisWeek={doneThisWeek}
           nextUpcomingTask={nextUpcomingTask}
-          getDays={getDays}
-          providerHistory={providerHistory}
-          getStatus={getStatus}
           onGoToAll={() => setView('all')}
           onSelectTask={setSelectedTask}
           onDoneTask={setMarkDoneModal}
           onTrickleAnswer={(answer) => {
-            if (answer.needed) {
-              markNeeded(answer.taskId);
-            } else if (answer.notApplicable) {
-              markNotApplicable(answer.taskId);
-            } else {
-              markDone(answer.taskId, answer.lastDone, answer.intervalDays);
-            }
+            if (answer.needed)             markNeeded(answer.taskId);
+            else if (answer.notApplicable) markNotApplicable(answer.taskId);
+            else                           markDone(answer.taskId, answer.lastDone, answer.intervalDays);
             answerTrickle();
           }}
           onTrickleDismiss={dismissTrickle}
@@ -339,23 +317,14 @@ export default function Mitzy() {
 
       {view === "all" && (
         <AllView
-          activeTasks={activeTasks}
-          getStatus={getStatus}
-          getDays={getDays}
-          providerHistory={providerHistory}
           onSelectTask={setSelectedTask}
           onDoneTask={setMarkDoneModal}
-          markDone={markDone}
-          markNeeded={markNeeded}
         />
       )}
 
       {view === "you" && (
         <ProfileView
-          profile={profile}
-          providerHistory={providerHistory}
           onReset={handleReset}
-          onUpdateProfile={updateProfile}
           onAddHazardTasks={handleAddHazardTasks}
           user={user}
           onSignOut={signOut}
@@ -365,24 +334,5 @@ export default function Mitzy() {
       <FABGroup showAdd={view === 'home' || view === 'all'} onAdd={() => setAddingTask(true)} />
       <BottomDock view={view} setView={setView} onAI={() => {}} />
     </div>
-  );
-}
-
-// ─── Overlay stack ────────────────────────────────────────────────────────────
-function Overlays({ celebration, onCelebrationDone, markDoneModal, onMarkDone, onMarkDoneClose, assistTask, onAssistClose, scheduleTask, onSchedule, onScheduleClose, addingTask, onAddTask, onAddClose, profile, providerHistory, onSaveProvider }) {
-  return (
-    <>
-      {celebration   && <Celebration onDone={onCelebrationDone} />}
-      {markDoneModal && (
-        <MarkDoneModal
-          task={markDoneModal}
-          onDone={onMarkDone}
-          onClose={onMarkDoneClose}
-        />
-      )}
-      {assistTask   && <AssistPanel task={assistTask} profile={profile} providerHistory={providerHistory} onSaveProvider={onSaveProvider} onClose={onAssistClose} />}
-      {scheduleTask && <SchedulePanel task={scheduleTask} onSchedule={onSchedule} onClose={onScheduleClose} />}
-      {addingTask   && <AddTaskPanel onAdd={onAddTask} onClose={onAddClose} />}
-    </>
   );
 }

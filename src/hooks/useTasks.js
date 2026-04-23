@@ -77,8 +77,9 @@ export function useTasks(user) {
       const { error } = await supabase.from("task_records").upsert({
         user_id: user.id, task_id: id, last_done: iso, scheduled_date: null,
       });
-      if (error) setTaskState(s => ({ ...s, [id]: prev }));
+      if (error) { setTaskState(s => ({ ...s, [id]: prev })); return { error }; }
     }
+    return {};
   };
 
   const markScheduled = async (id, date) => {

@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, memo } from "react";
 import { saveS, ASSIST_CACHE_PREFIX, ASSIST_CACHE_TTL } from "../utils/storage";
 import { buildAssistPrompt } from "../utils/assistPrompt";
+import { useProfileContext } from "../contexts/ProfileContext";
 
 // ─── Pulsing dot loader ────────────────────────────────────────────────────────
 function PulseLoader({ label }) {
@@ -338,12 +339,31 @@ function parseProviders(text) {
 }
 
 // ─── AssistPanel ───────────────────────────────────────────────────────────────
-export function AssistPanel({ task, profile, providerHistory, onSaveProvider, onClose }) {
-  const [status, setStatus] = useState('idle');
-  const [result, setResult] = useState(null);
-  const [cached, setCached] = useState(null);
+export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
+  const { profile, providerHistory, saveProvider } = useProfileContext();
+  const [status,    setStatus]    = useState('idle');
+  const [result,    setResult]    = useState(null);
+  const [cached,    setCached]    = useState(null);
+  const [errorKind, setErrorKind] = useState('general');
 
   const cacheKey = `${ASSIST_CACHE_PREFIX}-${task.id}`;
+
+  const parsedProviders = useMemo(() => {
+    if (task.assistType !== 'providers' || !result) return null;
+    return parseProviders(result);
+  }, [task.assistType, result]);
+
+  const parsedGuidanceCompanies = useMemo(() => {
+    if (task.assistType !== 'guidance_companies' || !result) return null;
+    try {
+      const match = result.match(/\{[\s\S]*\}/);
+      if (match) {
+        const parsed = JSON.parse(match[0]);
+        return { guidance: parsed.guidance ?? result, companies: parsed.companies ?? [] };
+      }
+    } catch {}
+    return { guidance: result, companies: [] };
+  }, [task.assistType, result]);
 
   const loadCache = () => {
     try {
@@ -396,7 +416,14 @@ export function AssistPanel({ task, profile, providerHistory, onSaveProvider, on
       setResult(text);
       setStatus('done');
       setCached({ data: text, ts: Date.now() });
-    } catch {
+    } catch (err) {
+      const msg = err?.message ?? '';
+      let kind = 'general';
+      if (typeof navigator !== 'undefined' && !navigator.onLine) kind = 'offline';
+      else if (msg === '429') kind = 'rate_limit';
+      else if (msg === '504' || msg === '408' || msg === '524') kind = 'timeout';
+      else if (err instanceof SyntaxError) kind = 'bad_response';
+      setErrorKind(kind);
       setStatus('error');
     }
   };
@@ -407,7 +434,7 @@ export function AssistPanel({ task, profile, providerHistory, onSaveProvider, on
   const savedProvider = providerHistory[task.id];
 
   const handleSave = (provider, vote, notes) => {
-    onSaveProvider(task.id, { ...provider, vote, notes });
+    saveProvider(task.id, { ...provider, vote, notes });
   };
 
   const getLoadingLabel = () => {
@@ -472,39 +499,48 @@ export function AssistPanel({ task, profile, providerHistory, onSaveProvider, on
           {status === 'loading' && <PulseLoader label={getLoadingLabel()} />}
 
           {/* Error */}
-          {status === 'error' && (
-            <div style={{ textAlign:'center', padding:'40px 20px' }}>
-              <div style={{ fontSize:14, color:'#4A6256', marginBottom:16, fontFamily:'DM Sans, sans-serif' }}>Something went wrong. Try again?</div>
-              <button
-                onClick={() => fetchResult(true)}
-                style={{ fontSize:13, fontWeight:700, background:'#D62828', color:'#fff', border:'none', borderRadius:10, padding:'10px 24px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
-              >
-                Retry
-              </button>
-            </div>
-          )}
-
-          {/* Done — providers */}
-          {status === 'done' && task.assistType === 'providers' && (() => {
-            const providers = parseProviders(result);
-            if (!providers?.length) {
-              return <div style={{ fontSize:14, lineHeight:1.8, color:'#1C2B22', whiteSpace:'pre-wrap', fontFamily:'DM Sans, sans-serif' }}>{result}</div>;
-            }
+          {status === 'error' && (() => {
+            const errorMessages = {
+              offline:      'No internet connection. Check your connection and try again.',
+              rate_limit:   'Too many requests right now. Wait a moment, then retry.',
+              timeout:      'The server took too long to respond. Try again in a moment.',
+              bad_response: 'Got an unexpected response. Close and try again.',
+              general:      'Something went wrong. Try again?',
+            };
             return (
-              <>
-                {savedProvider && (
-                  <>
-                    <SectionLabel label={`${task.label} — saved provider`} />
-                    <ProviderCard provider={savedProvider} isSaved onSave={handleSave} />
-                  </>
+              <div style={{ textAlign:'center', padding:'40px 20px' }}>
+                <div style={{ fontSize:14, color:'#4A6256', marginBottom:16, fontFamily:'DM Sans, sans-serif', lineHeight:1.5 }}>
+                  {errorMessages[errorKind] ?? errorMessages.general}
+                </div>
+                {errorKind !== 'bad_response' && (
+                  <button
+                    onClick={() => fetchResult(true)}
+                    style={{ fontSize:13, fontWeight:700, background:'#D62828', color:'#fff', border:'none', borderRadius:10, padding:'10px 24px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                  >
+                    Retry
+                  </button>
                 )}
-                <SectionLabel label={savedProvider ? 'Other options nearby' : 'Services near you'} />
-                {providers.map((p, i) => (
-                  <ProviderCard key={i} provider={p} isSaved={false} onSave={handleSave} />
-                ))}
-              </>
+              </div>
             );
           })()}
+
+          {/* Done — providers */}
+          {status === 'done' && task.assistType === 'providers' && (
+            !parsedProviders?.length
+              ? <div style={{ fontSize:14, lineHeight:1.8, color:'#1C2B22', whiteSpace:'pre-wrap', fontFamily:'DM Sans, sans-serif' }}>{result}</div>
+              : <>
+                  {savedProvider && (
+                    <>
+                      <SectionLabel label={`${task.label} — saved provider`} />
+                      <ProviderCard provider={savedProvider} isSaved onSave={handleSave} />
+                    </>
+                  )}
+                  <SectionLabel label={savedProvider ? 'Other options nearby' : 'Services near you'} />
+                  {parsedProviders.map((p, i) => (
+                    <ProviderCard key={i} provider={p} isSaved={false} onSave={handleSave} />
+                  ))}
+                </>
+          )}
 
           {/* Done — script */}
           {status === 'done' && task.assistType === 'script' && (
@@ -531,29 +567,17 @@ export function AssistPanel({ task, profile, providerHistory, onSaveProvider, on
           )}
 
           {/* Done — guidance + companies */}
-          {status === 'done' && task.assistType === 'guidance_companies' && (() => {
-            let guidance = result;
-            let companies = [];
-            try {
-              const match = result.match(/\{[\s\S]*\}/);
-              if (match) {
-                const parsed = JSON.parse(match[0]);
-                guidance = parsed.guidance ?? result;
-                companies = parsed.companies ?? [];
-              }
-            } catch { /* fall back to rendering result as plain guidance */ }
-            return (
-              <>
-                <MarkdownBlock text={guidance} />
-                {companies.length > 0 && (
-                  <>
-                    <SectionLabel label="Top options" />
-                    {companies.map((c, i) => <CompanyCard key={i} company={c} />)}
-                  </>
-                )}
-              </>
-            );
-          })()}
+          {status === 'done' && task.assistType === 'guidance_companies' && parsedGuidanceCompanies && (
+            <>
+              <MarkdownBlock text={parsedGuidanceCompanies.guidance} />
+              {parsedGuidanceCompanies.companies.length > 0 && (
+                <>
+                  <SectionLabel label="Top options" />
+                  {parsedGuidanceCompanies.companies.map((c, i) => <CompanyCard key={i} company={c} />)}
+                </>
+              )}
+            </>
+          )}
 
         </div>
       </div>
@@ -567,4 +591,4 @@ export function AssistPanel({ task, profile, providerHistory, onSaveProvider, on
       `}</style>
     </div>
   );
-}
+});

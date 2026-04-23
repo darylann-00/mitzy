@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AppHeader } from "./HomeView";
 import { HouseIcon, CarIcon, PersonIcon, PetIcon } from "../components/CategoryIcons";
+import { useProfileContext } from "../contexts/ProfileContext";
 
 // ─── Car data (shared with SlimOnboarding) ─────────────────────────────────────
 const CAR_DATA = {
@@ -98,8 +99,11 @@ function ProvidersIcon({ size = 16 }) {
 }
 
 // ─── Main view ─────────────────────────────────────────────────────────────────
-export function ProfileView({ profile, providerHistory, onReset, onUpdateProfile, onAddHazardTasks, user, onSignOut }) {
+export function ProfileView({ onReset, onAddHazardTasks, user, onSignOut }) {
+  const { profile, providerHistory, updateProfile: onUpdateProfile } = useProfileContext();
   const [confirmReset,   setConfirmReset]   = useState(false);
+  const [resetting,      setResetting]      = useState(false);
+  const [resetError,     setResetError]     = useState(null);
   const [isEditing,      setIsEditing]      = useState(false);
   const [addingHazards,  setAddingHazards]  = useState(false);
   const [pendingRemove,  setPendingRemove]  = useState(null); // { type: 'car'|'kid'|'pet', index: number }
@@ -476,6 +480,11 @@ export function ProfileView({ profile, providerHistory, onReset, onUpdateProfile
         )}
 
         {/* ── Reset ── */}
+        {resetError && (
+          <div style={{ fontSize:12, color:'#D62828', fontFamily:'DM Sans, sans-serif', padding:'8px 16px', background:'#FDE8E8', borderRadius:10, marginBottom:8 }}>
+            {resetError}
+          </div>
+        )}
         <div style={S.sectionCard}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'13px 16px' }}>
             <span style={{ fontSize:13, fontWeight:500, color:'#9B9B9B', fontFamily:'DM Sans, sans-serif' }}>Start over</span>
@@ -488,11 +497,20 @@ export function ProfileView({ profile, providerHistory, onReset, onUpdateProfile
               </button>
             ) : (
               <div style={{ display:'flex', gap:8 }}>
-                <button onClick={() => setConfirmReset(false)} style={{ fontSize:12, fontWeight:600, color:'#4A6256', background:'#F0EDE4', border:'none', borderRadius:20, padding:'5px 12px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
+                <button onClick={() => { setConfirmReset(false); setResetError(null); }} style={{ fontSize:12, fontWeight:600, color:'#4A6256', background:'#F0EDE4', border:'none', borderRadius:20, padding:'5px 12px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
                   cancel
                 </button>
-                <button onClick={onReset} style={{ fontSize:12, fontWeight:700, color:'#fff', background:'#D62828', border:'none', borderRadius:20, padding:'5px 12px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
-                  yes, reset
+                <button
+                  disabled={resetting}
+                  onClick={async () => {
+                    setResetting(true);
+                    setResetError(null);
+                    const result = await onReset();
+                    if (result?.error) { setResetError(result.error); setResetting(false); setConfirmReset(false); }
+                  }}
+                  style={{ fontSize:12, fontWeight:700, color:'#fff', background: resetting ? '#9B9B9B' : '#D62828', border:'none', borderRadius:20, padding:'5px 12px', cursor: resetting ? 'default' : 'pointer', fontFamily:'DM Sans, sans-serif' }}
+                >
+                  {resetting ? 'resetting…' : 'yes, reset'}
                 </button>
               </div>
             )}
