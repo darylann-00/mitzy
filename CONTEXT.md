@@ -192,12 +192,13 @@ GitHub Actions workflow at `.github/workflows/ci.yml`. Runs `npm ci`, `npm run b
 All screens built and working. A security/reliability audit was completed and all critical/high issues are resolved (see below).
 
 **Next feature work (in priority order):**
-1. Add `GOOGLE_PLACES_API_KEY` to Vercel env vars — Places API is wired up but key is missing; provider search is broken in prod. Enable "Places API New" in Google Cloud Console first.
-2. Fill in `task.why` / `task.guidance` content — all null; UI falls back to `task.note` and generic copy.
-3. Build `/api/schedule` Edge Function — Google Calendar integration UI is complete, backend stub at `SchedulePanel.jsx` uses `setTimeout` mock.
-4. Wire up the AI FAB — sparkle button in `BottomDock` is a no-op; needs a design decision (global assist? home-screen shortcut?).
-5. Replace hardcoded hazard zip ranges in `hazards.js` with FEMA API.
-6. Remaining onboarding polish: zip error message copy (#12 — deferred).
+1. Build `/api/schedule` Edge Function (was #2 — `task.why`/`task.guidance` now complete).
+2. Build `/api/schedule` Edge Function — Google Calendar integration UI is complete, backend stub at `SchedulePanel.jsx` uses `setTimeout` mock.
+3. Wire up the AI FAB — sparkle button in `BottomDock` is a no-op; needs a design decision (global assist? home-screen shortcut?).
+4. Replace hardcoded hazard zip ranges in `hazards.js` with FEMA API.
+5. Remaining onboarding polish: zip error message copy (#12 — deferred).
+
+`task.why` and `task.guidance` are now filled in for all tasks. The 6 `EM_UNIVERSAL` and 13 `EM_HAZARD` tasks were converted from `T()` factory calls to full inline objects to support the fields. `GOOGLE_PLACES_API_KEY` confirmed already present in Vercel (Production + Preview) — stale context note removed.
 
 **Security/reliability fixes applied:**
 - `useTasks` + `useProfile`: Supabase migration upsert now checks for errors; `markDone`/`markScheduled`/`markNotApplicable`/`updateProfile` roll back local state on failed upsert. Both hooks return `loading` + `syncError`.
