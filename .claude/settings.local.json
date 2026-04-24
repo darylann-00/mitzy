@@ -23,8 +23,7 @@
       "Bash(vercel:*)",
       "Bash(npm test *)",
       "Bash(npm i *)",
-      "Bash(git checkout *)",
-      "Bash(npm ci *)"
+      "Bash(git checkout *)"
     ]
   }
 }
