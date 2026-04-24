@@ -2,6 +2,7 @@
 
 export const TASK_STATE_KEY         = "mitzy-v6";
 export const ONBOARDED_KEY          = "mitzy-ob-v6";
+export const PROFILE_DONE_KEY       = "mitzy-ob-v6-p";
 export const DISABLED_KEY           = "mitzy-dis-v6";
 export const PROFILE_KEY            = "mitzy-pro-v7";
 export const ASSIST_CACHE_PREFIX    = "mitzy-assist-v12";
@@ -18,7 +19,7 @@ export const KNOWLEDGE_REFRESH_TTL = 90 * 24 * 60 * 60 * 1000; // 90 days
 // ─── Old key cleanup ──────────────────────────────────────────────────────────
 // Removes stale mitzy-* keys from previous schema versions on startup.
 const CURRENT_KEYS = new Set([
-  "mitzy-v6", "mitzy-ob-v6", "mitzy-dis-v6", "mitzy-pro-v7",
+  "mitzy-v6", "mitzy-ob-v6", "mitzy-ob-v6-p", "mitzy-dis-v6", "mitzy-pro-v7",
   "mitzy-ph-v6", "mitzy-visits-v6", "mitzy-hz-v6", "mitzy-kr-v6", "mitzy-td-v6", "mitzy-tq-v6",
 ]);
 
