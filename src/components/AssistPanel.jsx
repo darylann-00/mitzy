@@ -4,8 +4,16 @@ import { buildAssistPrompt } from "../utils/assistPrompt";
 import { useProfileContext } from "../contexts/ProfileContext";
 
 // ─── Pulsing dot loader ────────────────────────────────────────────────────────
-function PulseLoader({ label }) {
+function PulseLoader({ messages }) {
+  const [idx, setIdx] = useState(0);
   const dots = ['#D62828', '#F77F00', '#06A77D', '#F4C430'];
+
+  useEffect(() => {
+    if (messages.length <= 1) return;
+    const id = setInterval(() => setIdx(i => (i + 1) % messages.length), 2500);
+    return () => clearInterval(id);
+  }, [messages.length]);
+
   return (
     <div style={{ textAlign:'center', padding:'48px 20px' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, marginBottom:18 }}>
@@ -22,7 +30,7 @@ function PulseLoader({ label }) {
           />
         ))}
       </div>
-      <div style={{ fontSize:13, color:'#4A6256', fontFamily:'DM Sans, sans-serif' }}>{label}</div>
+      <div style={{ fontSize:13, color:'#4A6256', fontFamily:'DM Sans, sans-serif' }}>{messages[idx]}</div>
     </div>
   );
 }
@@ -437,11 +445,14 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
     saveProvider(task.id, { ...provider, vote, notes });
   };
 
-  const getLoadingLabel = () => {
-    if (task.assistType === 'providers') return `Finding ${task.cat} services near you...`;
-    if (task.assistType === 'script')    return 'Drafting your script...';
-    if (task.assistType === 'deadline')  return 'Looking up key dates...';
-    return 'Mitzy is looking this up...';
+  const getLoadingMessages = () => {
+    const subject = task.searchQuery || task.label;
+    if (task.assistType === 'providers')          return [`Finding ${subject} services near you...`, 'Checking reviews and hours...', 'Almost there...'];
+    if (task.assistType === 'script')             return ['Drafting your script...', 'Choosing the right words...', 'Almost ready...'];
+    if (task.assistType === 'deadline')           return ['Looking up key dates...', 'Checking current rules...', 'Almost done...'];
+    if (task.assistType === 'guidance')           return ['Pulling together the best approach...', 'Reviewing what matters most...', 'Almost done...'];
+    if (task.assistType === 'guidance_companies') return ['Finding the right companies for this...', 'Checking coverage and ratings...', 'Almost there...'];
+    return ['Mitzy is looking this up...', 'Digging into the details...', 'Almost done...'];
   };
 
   return (
@@ -496,7 +507,7 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
           )}
 
           {/* Loading */}
-          {status === 'loading' && <PulseLoader label={getLoadingLabel()} />}
+          {status === 'loading' && <PulseLoader messages={getLoadingMessages()} />}
 
           {/* Error */}
           {status === 'error' && (() => {
