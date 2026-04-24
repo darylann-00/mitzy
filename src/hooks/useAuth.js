@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { clearLocalUserData } from '../utils/storage'
 
 export function useAuth() {
   const [user, setUser] = useState(null)
@@ -11,24 +12,25 @@ export function useAuth() {
   })
 
   useEffect(() => {
-    // onAuthStateChange fires INITIAL_SESSION after any OAuth code exchange finishes,
-    // so it's the right place to resolve both user and loading. getSession() can race
-    // against the PKCE exchange and flash the login gate before auth completes.
-    // Safety net: if INITIAL_SESSION never fires (network error, bad state), unblock
-    // the UI after 4s rather than showing a permanent blank screen.
-    let resolved = false
-    const resolve = (session) => {
-      setUser(session?.user ?? null)
-      if (!resolved) { resolved = true; setLoading(false) }
-    }
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        setUser(session?.user ?? null)
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      resolve(session)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        clearLocalUserData()
+        setUser(null)
+        window.location.reload()
+        return
+      }
+      setUser(session?.user ?? null)
+      setLoading(false)
     })
 
-    const fallback = setTimeout(() => { if (!resolved) resolve(null) }, 4000)
-
-    return () => { subscription.unsubscribe(); clearTimeout(fallback) }
+    return () => subscription.unsubscribe()
   }, [])
 
   const sendMagicLink = (email) => supabase.auth.signInWithOtp({

@@ -24,7 +24,7 @@
       "Bash(npm test *)",
       "Bash(npm i *)",
       "Bash(git checkout *)",
-      "Bash(gh pr create --title 'docs: restructure instructional context into focused reference files' --body ' *)"
+      "Bash(npm ci *)"
     ]
   }
 }

@@ -168,7 +168,21 @@ function Overlays({
 // ─── Root — wires up providers then delegates ──────────────────────────────────
 export default function Mitzy() {
   const { user, loading: authLoading, authError, sendMagicLink, signInWithGoogle, signOut } = useAuth();
-  if (authLoading) return null;
+  if (authLoading) {
+    return (
+      <div style={{
+        minHeight: '100vh', background: '#1A5C3A',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+          <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#D62828' }} />
+          <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#F77F00' }} />
+          <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#06A77D' }} />
+          <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#F4C430' }} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ProfileProvider user={user}>
@@ -250,9 +264,8 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle })
       ]);
       if (te || pe) return { error: "Couldn't delete your data from the server. Try again." };
     }
-    localStorage.clear();
     await signOut();
-    window.location.reload();
+    // signOut triggers SIGNED_OUT → clearLocalUserData() + reload in useAuth
   };
 
   // ─── Shared overlay props ──────────────────────────────────────────────────
