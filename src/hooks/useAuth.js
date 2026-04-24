@@ -26,7 +26,7 @@ export function useAuth() {
       resolve(session)
     })
 
-    const fallback = setTimeout(() => resolve(null), 4000)
+    const fallback = setTimeout(() => { if (!resolved) resolve(null) }, 4000)
 
     return () => { subscription.unsubscribe(); clearTimeout(fallback) }
   }, [])
