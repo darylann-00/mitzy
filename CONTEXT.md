@@ -61,11 +61,11 @@ User data is persisted in Supabase (`profiles` + `task_records` tables). localSt
 
 - **AllView** — Three urgency groups. Category filter chips. Due-only toggle. `GroupDivider` between groups. Category icon tile on each card. "X tasks to explore" accordion section at bottom for `unknown`-status tasks with inline chip picker. `paddingBottom: 160px`.
 
-- **ProfileView** — Sections: Home, Car, Kids, Pets, Saved providers, Birth year/Health. Account section shows signed-in email + logout button. Reset deletes Supabase rows + clears localStorage.
+- **ProfileView** — Sections: Home, Car, Kids, Pets, Health, Saved providers, Account. Health section shows/edits: Name, Birth year, Gender, Insurance provider. Gender chips match onboarding style; "prefer not to say" is hidden in view mode. Account section shows signed-in email + logout button. Reset deletes Supabase rows + clears localStorage.
 
 - **TaskDetailView** — Green header, meta pills, "Why it matters" + "How to do it" cards, Assist button, calendar + mark done.
 
-- **AssistPanel** — Full-screen overlay. Provider/script/deadline/guidance/guidance_companies modes. Caches 7 days (currently v12). Provider mode passes `task.searchQuery` (if set) to `/api/providers` so Places queries are task-appropriate rather than using the raw label. Provider cards show condensed weekly hours (Claude-formatted from Places `weekdayDescriptions`), review count under star rating, address links to Google Maps, blurbs with **bold** key phrases. `guidance_companies` mode returns JSON with guidance markdown + top 3 national companies (no aggregators); renders `MarkdownBlock` + `CompanyCard` rows with external link icon. `MarkdownBlock` handles ##headers, bullets, numbered lists with nested sub-bullets, tables, horizontal rules, bold, and auto-linked URLs.
+- **AssistPanel** — Full-screen overlay. Provider/script/deadline/guidance/guidance_companies modes. Caches 7 days (currently v12). Provider mode passes `task.searchQuery` (if set) to `/api/providers` so Places queries are task-appropriate rather than using the raw label. Provider cards show condensed weekly hours (Claude-formatted from Places `weekdayDescriptions`), review count under star rating, address links to Google Maps, blurbs with **bold** key phrases. `guidance_companies` mode returns JSON with guidance markdown + top 3 national companies (no aggregators); renders `MarkdownBlock` + `CompanyCard` rows with external link icon. `MarkdownBlock` handles ##headers, bullets, numbered lists with nested sub-bullets, tables, horizontal rules, bold, and auto-linked URLs. `PulseLoader` cycles through 3 contextual messages per `assistType` every 2.5s; providers uses `task.searchQuery || task.label` for specificity.
 
 - **MarkDoneModal** — Date picker pre-filled today (hidden for one-time tasks). Closes immediately on done; confetti fires via `Celebration` separately.
 
@@ -225,3 +225,5 @@ All screens built and working. A security/reliability audit was completed and al
 **AllView filter persistence** — `activeCategory` and `dueOnly` lifted from AllView local state to App.js. Filters survive tab switches (Today → Profile → All retains the selected category and toggle state).
 
 **"Recently" chip clarity** — Label changed from `'Recently'` to `'Recently (last month)'` in `CHIPS_GENERAL` (`TaskAnswerChips.jsx`) to eliminate ambiguity about the 30-day mapping.
+
+**Custom frequency input validation** — Set button in the frequency picker (`TaskDetailView`) is now disabled and grayed out when `customNum` is empty, `0`, or negative. Red error hint "Enter a number greater than 0" appears after the user types an invalid value (not on open). Prevents silent creation of invalid schedules.
