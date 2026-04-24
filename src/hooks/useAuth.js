@@ -6,13 +6,12 @@ export function useAuth() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
-
+    // onAuthStateChange fires INITIAL_SESSION after any OAuth code exchange finishes,
+    // so it's the right place to resolve both user and loading. getSession() can race
+    // against the PKCE exchange and flash the login gate before auth completes.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
+      setLoading(false)
     })
 
     return () => subscription.unsubscribe()
