@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export function LoginGate({ sendMagicLink, signInWithGoogle }) {
+export function LoginGate({ sendMagicLink, signInWithGoogle, authError }) {
   const [email,        setEmail]        = useState("");
   const [sent,         setSent]         = useState(false);
   const [loading,      setLoading]      = useState(false);
@@ -71,7 +71,12 @@ export function LoginGate({ sendMagicLink, signInWithGoogle }) {
           </>
         ) : (
           <>
-            <h2 style={{ fontFamily: "'Righteous', cursive", color: "#E8F5EE", fontSize: 26, margin: "0 0 8px" }}>
+            {authError && (
+              <div style={{ background: '#7B1A1A', borderRadius: 10, padding: '12px 14px', marginBottom: 20, color: '#FFB3B3', fontSize: 13, fontFamily: 'DM Sans, sans-serif', lineHeight: 1.5 }}>
+                Sign-in failed: {authError}
+              </div>
+            )}
+          <h2 style={{ fontFamily: "'Righteous', cursive", color: "#E8F5EE", fontSize: 26, margin: "0 0 8px" }}>
               Save your setup
             </h2>
             <p style={{ color: "#A8D5B8", fontSize: 15, lineHeight: 1.6, margin: "0 0 28px" }}>
