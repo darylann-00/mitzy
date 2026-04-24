@@ -115,8 +115,10 @@ export function ProfileView({ onReset, onAddHazardTasks, user, onSignOut }) {
   const [carPicker,     setCarPicker]     = useState(null); // null | { year, make, model }
   const [editKids,      setEditKids]      = useState([]);
   const [editPets,      setEditPets]      = useState([]);
+  const [editName,      setEditName]      = useState('');
   const [editBirthYear, setEditBirthYear] = useState('');
   const [editInsurance, setEditInsurance] = useState('');
+  const [editGender,    setEditGender]    = useState(null);
 
   const startEditing = () => {
     setEditHasHome(profile.hasHome);
@@ -125,8 +127,10 @@ export function ProfileView({ onReset, onAddHazardTasks, user, onSignOut }) {
     setCarPicker(null);
     setEditKids((profile.kids || []).map(k => ({ ...k })));
     setEditPets((profile.pets || []).map(p => ({ ...p })));
+    setEditName(profile.name || '');
     setEditBirthYear(profile.birthYear ? String(profile.birthYear) : '');
     setEditInsurance(profile.insurance || '');
+    setEditGender(profile.gender || null);
     setIsEditing(true);
   };
 
@@ -141,8 +145,10 @@ export function ProfileView({ onReset, onAddHazardTasks, user, onSignOut }) {
       car:       editCars[0] || null,
       kids:      editKids.filter(k => k.name.trim()),
       pets:      editPets.filter(p => p.name.trim()),
+      name:      editName.trim() || null,
       birthYear: editBirthYear.trim() || null,
       insurance: editInsurance.trim() || null,
+      gender:    editGender || null,
     });
     setIsEditing(false);
   };
@@ -409,8 +415,18 @@ export function ProfileView({ onReset, onAddHazardTasks, user, onSignOut }) {
           <SectionHeader icon={<PersonIcon color="#4A6256" bg="#F0EDE4" size={16} />} iconBg="#F0EDE4" title="Health" />
           {isEditing ? (
             <>
+              <EditField label="Name">
+                <input style={S.input} type="text" value={editName} onChange={e => setEditName(e.target.value)} placeholder="First name" />
+              </EditField>
               <EditField label="Birth year">
                 <input style={S.input} type="number" value={editBirthYear} onChange={e => setEditBirthYear(e.target.value)} placeholder="e.g. 1988" min="1900" max={new Date().getFullYear() - 18} />
+              </EditField>
+              <EditField label="Gender">
+                <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                  {[['woman','Woman'],['man','Man'],['nonbinary','Non-binary'],['prefer-not','Prefer not to say']].map(([key, label]) => (
+                    <button key={key} onClick={() => setEditGender(key)} style={{ fontSize:12, fontWeight:700, border:'none', borderRadius:20, padding:'6px 14px', cursor:'pointer', fontFamily:'DM Sans, sans-serif', background: editGender === key ? '#1A5C3A' : '#F0EDE4', color: editGender === key ? '#fff' : '#4A6256' }}>{label}</button>
+                  ))}
+                </div>
               </EditField>
               <EditField label="Insurance provider" last>
                 <input style={S.input} type="text" value={editInsurance} onChange={e => setEditInsurance(e.target.value)} placeholder="e.g. Blue Cross, Aetna…" />
@@ -418,7 +434,11 @@ export function ProfileView({ onReset, onAddHazardTasks, user, onSignOut }) {
             </>
           ) : (
             <>
+              <Row label="Name" value={profile.name} />
               <Row label="Birth year" value={profile.birthYear ? String(profile.birthYear) : null} />
+              {profile.gender && profile.gender !== 'prefer-not' && (
+                <Row label="Gender" value={{ woman:'Woman', man:'Man', nonbinary:'Non-binary' }[profile.gender] ?? null} />
+              )}
               <Row label="Insurance" value={profile.insurance} last />
             </>
           )}
