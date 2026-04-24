@@ -4,6 +4,11 @@ import { supabase } from '../lib/supabase'
 export function useAuth() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [authError, setAuthError] = useState(() => {
+    const p = new URLSearchParams(window.location.search)
+    const h = new URLSearchParams(window.location.hash.slice(1))
+    return p.get('error_description') || h.get('error_description') || null
+  })
 
   useEffect(() => {
     // onAuthStateChange fires INITIAL_SESSION after any OAuth code exchange finishes,
@@ -42,5 +47,5 @@ export function useAuth() {
 
   const signOut = () => supabase.auth.signOut()
 
-  return { user, loading, sendMagicLink, signInWithGoogle, signOut }
+  return { user, loading, authError, sendMagicLink, signInWithGoogle, signOut }
 }
