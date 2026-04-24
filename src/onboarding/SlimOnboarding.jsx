@@ -497,7 +497,20 @@ export function SlimOnboarding({ onComplete }) {
                       + Add another vehicle
                     </button>
                   )}
-                  <NextBtn onClick={() => { setCarInputOpen(false); go(3); }}>Next</NextBtn>
+                  <NextBtn onClick={() => {
+                    if (carInputOpen) {
+                      if (carInput.year && carInput.make && carInput.model) {
+                        commitCar(carInput);
+                      } else if (editingCar) {
+                        setProfile(p => ({ ...p, cars: [...p.cars, editingCar] }));
+                        setEditingCar(null);
+                        setCarInputOpen(false);
+                      } else {
+                        setCarInputOpen(false);
+                      }
+                    }
+                    go(3);
+                  }}>Next</NextBtn>
                 </>
               )}
             </QuestionScreen>
@@ -701,9 +714,14 @@ export function SlimOnboarding({ onComplete }) {
                     </button>
                   )}
                   <NextBtn onClick={() => {
-                    if (petInputOpen && (petInput.name.trim() || petInput.birthYear || petInput.type)) {
-                      setErr(petInput.name.trim() ? `Finish adding ${petInput.name.trim()} or clear the fields to continue.` : 'Finish adding this entry or clear the fields to continue.');
-                      return;
+                    if (petInputOpen) {
+                      const isComplete = petInput.name.trim() && petInput.birthYear && petInput.type && (petInput.type !== 'dog' || editingPet !== null);
+                      const hasPartial = petInput.name.trim() || petInput.birthYear || petInput.type;
+                      if (isComplete) { commitPet(petInput); setShowTransition(true); return; }
+                      if (hasPartial) {
+                        setErr(petInput.name.trim() ? `Finish adding ${petInput.name.trim()} or clear the fields to continue.` : 'Finish adding this entry or clear the fields to continue.');
+                        return;
+                      }
                     }
                     setPetInputOpen(false);
                     setShowTransition(true);
