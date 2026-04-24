@@ -61,7 +61,7 @@ User data is persisted in Supabase (`profiles` + `task_records` tables). localSt
 
 - **AllView** — Three urgency groups. Category filter chips. Due-only toggle. `GroupDivider` between groups. Category icon tile on each card. "X tasks to explore" accordion section at bottom for `unknown`-status tasks with inline chip picker. `paddingBottom: 160px`.
 
-- **ProfileView** — Sections: Home, Car, Kids, Pets, Saved providers, Birth year/Health. Account section shows signed-in email + logout button. Reset deletes Supabase rows + clears localStorage.
+- **ProfileView** — Sections: Home, Car, Kids, Pets, Health, Saved providers, Account. Health section shows/edits: Name, Birth year, Gender, Insurance provider. Gender chips match onboarding style; "prefer not to say" is hidden in view mode. Account section shows signed-in email + logout button. Reset deletes Supabase rows + clears localStorage.
 
 - **TaskDetailView** — Green header, meta pills, "Why it matters" + "How to do it" cards, Assist button, calendar + mark done.
 
