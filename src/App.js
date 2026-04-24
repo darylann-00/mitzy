@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "./styles/app.css";
 
-import { loadS, saveS, ONBOARDED_KEY, VISIT_COUNT_KEY } from "./utils/storage";
+import { loadS, saveS, ONBOARDED_KEY, PROFILE_DONE_KEY, VISIT_COUNT_KEY } from "./utils/storage";
 import { detectHazards } from "./utils/hazards";
 import { supabase } from "./lib/supabase";
 
@@ -185,7 +185,7 @@ function MitzyApp({ user, signOut, sendMagicLink, signInWithGoogle }) {
   const { activeTasks, taskState, setTaskState, setDisabledTasks, markDone, markNotApplicable, markNeeded, setIntervalOverride, nextUpcomingTask, loading: tasksLoading, syncError: tasksSyncError } = useTaskContext();
 
   // ─── Onboarding state ──────────────────────────────────────────────────────
-  const [profileDone, setProfileDone] = useState(() => loadS(ONBOARDED_KEY + "-p", false));
+  const [profileDone, setProfileDone] = useState(() => loadS(PROFILE_DONE_KEY, false));
   const [onboarded,   setOnboarded]   = useState(() => loadS(ONBOARDED_KEY, false));
 
   // ─── UI state ──────────────────────────────────────────────────────────────
@@ -205,7 +205,7 @@ function MitzyApp({ user, signOut, sendMagicLink, signInWithGoogle }) {
   // ─── Onboarding handlers ───────────────────────────────────────────────────
   const handleSlimOnboardingComplete = (p) => {
     updateProfile(p);
-    saveS(ONBOARDED_KEY + "-p", true);
+    saveS(PROFILE_DONE_KEY, true);
     setProfileDone(true);
   };
 
