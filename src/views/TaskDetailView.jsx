@@ -288,53 +288,63 @@ export function TaskDetailView({ task, onAssist, onSchedule, onDone, onBack, onM
                   </button>
                 </div>
                 {showCustomInput && (
-                  <div style={{ display:'flex', gap:6, alignItems:'center', marginBottom:8 }}>
-                    <span style={{ fontSize:12, color:'#4A6256', fontFamily:'DM Sans, sans-serif', flexShrink:0 }}>Every</span>
-                    <input
-                      ref={customNumRef}
-                      type="number"
-                      min="1"
-                      value={customNum}
-                      onChange={e => setCustomNum(e.target.value)}
-                      placeholder="e.g. 3"
-                      style={{
-                        width:64, padding:'6px 8px', fontSize:13, fontFamily:'DM Sans, sans-serif',
-                        border:'1.5px solid #1A5C3A', borderRadius:8, background:'#fff',
-                        color:'#1C2B22', textAlign:'center',
-                      }}
-                    />
-                    <select
-                      value={customUnit}
-                      onChange={e => setCustomUnit(e.target.value)}
-                      style={{
-                        padding:'6px 8px', fontSize:13, fontFamily:'DM Sans, sans-serif',
-                        border:'1.5px solid #EAE4DA', borderRadius:8, background:'#fff',
-                        color:'#1C2B22', width:'auto',
-                      }}
-                    >
-                      <option value="days">days</option>
-                      <option value="months">months</option>
-                      <option value="years">years</option>
-                    </select>
-                    <button
-                      onClick={() => {
-                        const n = parseInt(customNum, 10);
-                        if (!n || n < 1) return;
-                        const mult = { days: 1, months: 30, years: 365 }[customUnit];
-                        if (onSetIntervalOverride) onSetIntervalOverride(task.id, n * mult);
-                        setShowCustomInput(false);
-                        setCustomNum('');
-                        setEditingFrequency(false);
-                      }}
-                      style={{
-                        padding:'6px 12px', borderRadius:8, fontSize:12, fontWeight:700,
-                        fontFamily:'DM Sans, sans-serif', background:'#1A5C3A', color:'#E8F5EE',
-                        border:'none', cursor:'pointer', flexShrink:0,
-                      }}
-                    >
-                      Set
-                    </button>
-                  </div>
+                  <>
+                    <div style={{ display:'flex', gap:6, alignItems:'center', marginBottom:8 }}>
+                      <span style={{ fontSize:12, color:'#4A6256', fontFamily:'DM Sans, sans-serif', flexShrink:0 }}>Every</span>
+                      <input
+                        ref={customNumRef}
+                        type="number"
+                        min="1"
+                        value={customNum}
+                        onChange={e => setCustomNum(e.target.value)}
+                        placeholder="e.g. 3"
+                        style={{
+                          width:64, padding:'6px 8px', fontSize:13, fontFamily:'DM Sans, sans-serif',
+                          border:'1.5px solid #1A5C3A', borderRadius:8, background:'#fff',
+                          color:'#1C2B22', textAlign:'center',
+                        }}
+                      />
+                      <select
+                        value={customUnit}
+                        onChange={e => setCustomUnit(e.target.value)}
+                        style={{
+                          padding:'6px 8px', fontSize:13, fontFamily:'DM Sans, sans-serif',
+                          border:'1.5px solid #EAE4DA', borderRadius:8, background:'#fff',
+                          color:'#1C2B22', width:'auto',
+                        }}
+                      >
+                        <option value="days">days</option>
+                        <option value="months">months</option>
+                        <option value="years">years</option>
+                      </select>
+                      <button
+                        disabled={!customNum || parseInt(customNum, 10) < 1}
+                        onClick={() => {
+                          const n = parseInt(customNum, 10);
+                          if (!n || n < 1) return;
+                          const mult = { days: 1, months: 30, years: 365 }[customUnit];
+                          if (onSetIntervalOverride) onSetIntervalOverride(task.id, n * mult);
+                          setShowCustomInput(false);
+                          setCustomNum('');
+                          setEditingFrequency(false);
+                        }}
+                        style={{
+                          padding:'6px 12px', borderRadius:8, fontSize:12, fontWeight:700,
+                          fontFamily:'DM Sans, sans-serif', flexShrink:0, border:'none',
+                          background: (!customNum || parseInt(customNum, 10) < 1) ? '#C8D9D1' : '#1A5C3A',
+                          color: (!customNum || parseInt(customNum, 10) < 1) ? '#7A9B8E' : '#E8F5EE',
+                          cursor: (!customNum || parseInt(customNum, 10) < 1) ? 'default' : 'pointer',
+                        }}
+                      >
+                        Set
+                      </button>
+                    </div>
+                    {customNum !== '' && parseInt(customNum, 10) < 1 && (
+                      <div style={{ fontSize:11, color:'#D62828', fontFamily:'DM Sans, sans-serif', marginBottom:4 }}>
+                        Enter a number greater than 0
+                      </div>
+                    )}
+                  </>
                 )}
                 <div style={{ fontSize:10, color:'#4A6256', fontFamily:'DM Sans, sans-serif', marginTop:6 }}>
                   ✓ marks the default recommendation
