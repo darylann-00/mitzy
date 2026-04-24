@@ -223,3 +223,5 @@ All screens built and working. A security/reliability audit was completed and al
 **AllView filter persistence** — `activeCategory` and `dueOnly` lifted from AllView local state to App.js. Filters survive tab switches (Today → Profile → All retains the selected category and toggle state).
 
 **"Recently" chip clarity** — Label changed from `'Recently'` to `'Recently (last month)'` in `CHIPS_GENERAL` (`TaskAnswerChips.jsx`) to eliminate ambiguity about the 30-day mapping.
+
+**Custom frequency input validation** — Set button in the frequency picker (`TaskDetailView`) is now disabled and grayed out when `customNum` is empty, `0`, or negative. Red error hint "Enter a number greater than 0" appears after the user types an invalid value (not on open). Prevents silent creation of invalid schedules.
