@@ -149,6 +149,9 @@ export function SlimOnboarding({ onComplete }) {
   const [carInputOpen, setCarInputOpen] = useState(false);
   const [kidInputOpen, setKidInputOpen] = useState(false);
   const [petInputOpen, setPetInputOpen] = useState(false);
+  const [editingCar,   setEditingCar]   = useState(null);
+  const [editingKid,   setEditingKid]   = useState(null);
+  const [editingPet,   setEditingPet]   = useState(null);
   const [kidInput, setKidInput] = useState({ name: '', birthYear: '' });
   const [petInput, setPetInput] = useState({ name: '', type: '', birthYear: '', longCoat: false });
   const [err,           setErr]           = useState('');
@@ -166,6 +169,7 @@ export function SlimOnboarding({ onComplete }) {
     const model = make ? rest.slice(make.length + 1) : rest;
     setProfile(p => ({ ...p, cars: p.cars.filter((_, j) => j !== i) }));
     setCarInput({ year, make, model });
+    setEditingCar(label);
     setCarInputOpen(true);
   };
 
@@ -173,6 +177,7 @@ export function SlimOnboarding({ onComplete }) {
     const k = profile.kids[i];
     setProfile(p => ({ ...p, kids: p.kids.filter((_, j) => j !== i) }));
     setKidInput({ name: k.name, birthYear: k.birthYear });
+    setEditingKid(k.name);
     setKidInputOpen(true);
   };
 
@@ -180,6 +185,7 @@ export function SlimOnboarding({ onComplete }) {
     const a = profile.pets[i];
     setProfile(p => ({ ...p, pets: p.pets.filter((_, j) => j !== i) }));
     setPetInput({ name: a.name, type: a.type, birthYear: a.birthYear, longCoat: a.longCoat });
+    setEditingPet(a.name);
     setPetInputOpen(true);
   };
 
@@ -202,6 +208,7 @@ export function SlimOnboarding({ onComplete }) {
     const label = `${input.year} ${input.make} ${input.model}`;
     setProfile(p => ({ ...p, cars: [...p.cars, label] }));
     setCarInput({ year: '', make: '', model: '' });
+    setEditingCar(null);
     setCarInputOpen(false);
   };
 
@@ -210,6 +217,7 @@ export function SlimOnboarding({ onComplete }) {
     if (!input.birthYear || yr > CUR_YEAR || yr < CUR_YEAR - 30) { setErr('Please enter a valid birth year.'); return; }
     setProfile(p => ({ ...p, kids: [...p.kids, { name: input.name.trim(), birthYear: input.birthYear }] }));
     setKidInput({ name: '', birthYear: '' });
+    setEditingKid(null);
     setKidInputOpen(false);
     setErr('');
   };
@@ -219,6 +227,7 @@ export function SlimOnboarding({ onComplete }) {
     if (!input.birthYear || yr > CUR_YEAR || yr < CUR_YEAR - 40) { setErr('Please enter a valid birth year.'); return; }
     setProfile(p => ({ ...p, pets: [...p.pets, { name: input.name.trim(), type: input.type, birthYear: input.birthYear, longCoat: input.longCoat }] }));
     setPetInput({ name: '', type: '', birthYear: '', longCoat: false });
+    setEditingPet(null);
     setPetInputOpen(false);
     setErr('');
   };
@@ -431,6 +440,11 @@ export function SlimOnboarding({ onComplete }) {
                   )}
                   {carInputOpen ? (
                     <>
+                      {editingCar && (
+                        <div style={{ fontSize:12, color:'rgba(184,220,200,0.75)', marginBottom:10, fontFamily:'DM Sans, sans-serif' }}>
+                          Editing your {editingCar}
+                        </div>
+                      )}
                       <select
                         value={carInput.year}
                         onChange={e => setCarInput({ year: e.target.value, make: '', model: '' })}
@@ -477,7 +491,7 @@ export function SlimOnboarding({ onComplete }) {
                     </>
                   ) : (
                     <button
-                      onClick={() => { setCarInput({ year: '', make: '', model: '' }); setCarInputOpen(true); }}
+                      onClick={() => { setCarInput({ year: '', make: '', model: '' }); setEditingCar(null); setCarInputOpen(true); }}
                       style={{ background:'none', border:'1.5px solid rgba(255,255,255,0.25)', borderRadius:10, color:'rgba(232,245,238,0.8)', fontSize:13, fontWeight:600, padding:'10px 16px', cursor:'pointer', fontFamily:'DM Sans, sans-serif', width:'100%', marginBottom:12 }}
                     >
                       + Add another vehicle
@@ -540,6 +554,11 @@ export function SlimOnboarding({ onComplete }) {
                   )}
                   {kidInputOpen ? (
                     <>
+                    {editingKid && (
+                      <div style={{ fontSize:12, color:'rgba(184,220,200,0.75)', marginBottom:10, fontFamily:'DM Sans, sans-serif' }}>
+                        Editing {editingKid}
+                      </div>
+                    )}
                     <div style={{ display:'flex', gap:8, marginBottom:8 }}>
                       <input
                         type="text" placeholder="Name" value={kidInput.name} style={{ flex:2 }}
@@ -570,7 +589,7 @@ export function SlimOnboarding({ onComplete }) {
                     </>
                   ) : (
                     <button
-                      onClick={() => { setKidInput({ name: '', birthYear: '' }); setKidInputOpen(true); }}
+                      onClick={() => { setKidInput({ name: '', birthYear: '' }); setEditingKid(null); setKidInputOpen(true); }}
                       style={{ background:'none', border:'1.5px solid rgba(255,255,255,0.25)', borderRadius:10, color:'rgba(232,245,238,0.8)', fontSize:13, fontWeight:600, padding:'10px 16px', cursor:'pointer', fontFamily:'DM Sans, sans-serif', width:'100%', marginBottom:12 }}
                     >
                       + Add another kid
@@ -618,6 +637,11 @@ export function SlimOnboarding({ onComplete }) {
                   )}
                   {petInputOpen ? (
                     <>
+                      {editingPet && (
+                        <div style={{ fontSize:12, color:'rgba(184,220,200,0.75)', marginBottom:10, fontFamily:'DM Sans, sans-serif' }}>
+                          Editing {editingPet}
+                        </div>
+                      )}
                       {/* Step 1: Name + birth year */}
                       <div style={{ display:'flex', gap:8, marginBottom:err ? 6 : 10 }}>
                         <input type="text" placeholder="Name" value={petInput.name} onChange={e => { const n = e.target.value; setPetInput(x => ({ ...x, name: n })); if (!n.trim() && !petInput.birthYear && !petInput.type) setErr(''); }} style={{ flex:2 }} />
@@ -670,7 +694,7 @@ export function SlimOnboarding({ onComplete }) {
                     </>
                   ) : (
                     <button
-                      onClick={() => { setPetInput({ name: '', type: '', birthYear: '', longCoat: false }); setPetInputOpen(true); }}
+                      onClick={() => { setPetInput({ name: '', type: '', birthYear: '', longCoat: false }); setEditingPet(null); setPetInputOpen(true); }}
                       style={{ background:'none', border:'1.5px solid rgba(255,255,255,0.25)', borderRadius:10, color:'rgba(232,245,238,0.8)', fontSize:13, fontWeight:600, padding:'10px 16px', cursor:'pointer', fontFamily:'DM Sans, sans-serif', width:'100%', marginBottom:12 }}
                     >
                       + Add another pet
