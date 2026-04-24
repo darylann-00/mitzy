@@ -61,7 +61,8 @@ const ZIP_REGION_RANGES = [
   { min: 20000, max: 23999, region: "northeast" },   // DC, MD, VA (northern)
 ];
 
-const DEFAULT_REGION = "midwest";
+// null → no regional adjustment; task's own defaults apply as-is
+const DEFAULT_REGION = null;
 
 export function getClimateRegion(zip) {
   const zipNum = parseInt(zip, 10);
