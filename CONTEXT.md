@@ -64,12 +64,10 @@ GitHub Actions at `.github/workflows/ci.yml`. Runs `npm ci`, `npm run build`, `n
 
 ## Next Priorities
 
-1. Add `GOOGLE_PLACES_API_KEY` to Vercel env vars — Places API is wired up but key is missing; provider search is broken in prod. Enable "Places API New" in Google Cloud Console first.
-2. Fill in `task.why` / `task.guidance` content — all null; UI falls back to `task.note` and generic copy.
-3. Build `/api/schedule` Edge Function — Google Calendar integration UI is complete, backend stub uses `setTimeout` mock.
-4. Wire up the AI FAB — sparkle button in `BottomDock` is a no-op; needs a design decision (global assist? home-screen shortcut?).
-5. Replace hardcoded hazard zip ranges in `hazards.js` with FEMA API.
-6. Zip error message copy in onboarding (deferred).
+1. Build `/api/schedule` Edge Function — Google Calendar integration UI is complete, backend stub uses `setTimeout` mock.
+2. Wire up the AI FAB — sparkle button in `BottomDock` is a no-op; needs a design decision (global assist? home-screen shortcut?).
+3. Replace hardcoded hazard zip ranges in `hazards.js` with FEMA API.
+4. Zip error message copy in onboarding (deferred).
 
 ## Known Gaps / Mocked
 
@@ -77,6 +75,5 @@ GitHub Actions at `.github/workflows/ci.yml`. Runs `npm ci`, `npm run build`, `n
 |---------|--------|
 | Google Calendar integration | UI complete; `/api/schedule` not built. Simulates 600ms delay. |
 | Hazard zip lookup | Hardcoded zip ranges. Replace with FEMA API. |
-| `task.why` + `task.guidance` | Null for all tasks — UI falls back to `task.note` and generic copy. |
 | AI FAB | Sparkle button in nav bar is a stub — `console.log('AI input')`. |
 | `intervalDays` override | Lives in localStorage only — `task_records` column exists but sync not verified end-to-end. |
