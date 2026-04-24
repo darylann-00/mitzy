@@ -2,7 +2,10 @@ import { REGION_TASK_ADJUSTMENTS } from "./climateRegion";
 
 // ─── Deterministic card tilt ──────────────────────────────────────────────────
 
-export function stableTiltDeg(id, max = 1.8) {
+// Max rotation keeps cards visually playful without obscuring content
+const MAX_CARD_TILT_DEG = 1.8;
+
+export function stableTiltDeg(id, max = MAX_CARD_TILT_DEG) {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
   const n = ((h >>> 0) % 1000) / 1000; // 0..0.999

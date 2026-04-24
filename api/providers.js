@@ -46,12 +46,13 @@ export default async function handler(req) {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  let taskLabel, taskCat, taskNote, zip, searchQuery;
+  let taskLabel, taskCat, taskNote, zip, searchQuery, maxResults;
   try {
-    ({ taskLabel, taskCat, taskNote, zip, searchQuery } = await req.json());
+    ({ taskLabel, taskCat, taskNote, zip, searchQuery, maxResults } = await req.json());
   } catch {
     return new Response("Invalid JSON", { status: 400 });
   }
+  const resultCount = Math.min(Math.max(parseInt(maxResults, 10) || 6, 1), 10);
 
   if (!taskLabel || !zip) {
     return new Response("Missing taskLabel or zip", { status: 400 });
@@ -86,7 +87,7 @@ export default async function handler(req) {
     },
     body: JSON.stringify({
       textQuery: `${placesQuery} near ${zip}`,
-      maxResultCount: 6,
+      maxResultCount: resultCount,
       languageCode: "en",
     }),
   });
