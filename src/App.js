@@ -167,20 +167,20 @@ function Overlays({
 
 // ─── Root — wires up providers then delegates ──────────────────────────────────
 export default function Mitzy() {
-  const { user, loading: authLoading, sendMagicLink, signInWithGoogle, signOut } = useAuth();
+  const { user, loading: authLoading, authError, sendMagicLink, signInWithGoogle, signOut } = useAuth();
   if (authLoading) return null;
 
   return (
     <ProfileProvider user={user}>
       <TaskProvider user={user}>
-        <MitzyApp user={user} signOut={signOut} sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} />
+        <MitzyApp user={user} authError={authError} signOut={signOut} sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} />
       </TaskProvider>
     </ProfileProvider>
   );
 }
 
 // ─── Inner app — consumes contexts ─────────────────────────────────────────────
-function MitzyApp({ user, signOut, sendMagicLink, signInWithGoogle }) {
+function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle }) {
   const { profile, taskLibrary, updateProfile, region, loading: profileLoading, syncError: profileSyncError } = useProfileContext();
   const { activeTasks, taskState, setTaskState, setDisabledTasks, markDone, markNotApplicable, markNeeded, setIntervalOverride, nextUpcomingTask, loading: tasksLoading, syncError: tasksSyncError } = useTaskContext();
 
@@ -267,7 +267,7 @@ function MitzyApp({ user, signOut, sendMagicLink, signInWithGoogle }) {
   // ─── Onboarding gates ──────────────────────────────────────────────────────
   if (!profileDone) return <SlimOnboarding onComplete={handleSlimOnboardingComplete} />;
   if (!onboarded)   return <PrioritySetup taskLib={taskLibrary} region={region} onComplete={handlePrioritySetupComplete} />;
-  if (!user)        return <LoginGate sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} />;
+  if (!user)        return <LoginGate sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} authError={authError} />;
 
   // ─── Task detail screen ────────────────────────────────────────────────────
   if (selectedTask) {
