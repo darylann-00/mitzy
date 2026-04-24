@@ -115,7 +115,6 @@ Four-dot 2×2 grid (red/orange/green/yellow) + "mitzy" in Righteous. App icon: f
 | Skip | maybe later |
 | Help me | Let's do it |
 | You / You view | Profile |
->>>>>>> 15a4178 (docs: update CONTEXT.md — Google Calendar integration complete)
 
 ---
 
