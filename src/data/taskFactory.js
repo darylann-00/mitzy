@@ -112,6 +112,7 @@ export function carTasks(carString) {
     id: id("car-reg"), cat: "car", label: n("renew registration"),
     intervalDays: 365, windowDays: 45, reminderLeadDays: 60,
     stakes: "high", hardDeadline: true, activeMonths: null, seasonalLabel: null,
+    priority: true,
     assistType: "deadline", diyable: false, timeToComplete: "30 minutes",
     minAge: null, maxAge: null, oneTime: false,
     note: "Check your registration sticker for expiration date.",
@@ -145,6 +146,7 @@ export function carTasks(carString) {
     id: id("car-batt"), cat: "car", label: n("test 12V battery"),
     intervalDays: 365, windowDays: 21, reminderLeadDays: 30,
     stakes: "high", hardDeadline: false, activeMonths: null, seasonalLabel: null,
+    priority: true,
     assistType: "providers", diyable: false, timeToComplete: "15 minutes",
     searchQuery: "auto parts store battery test",
     minAge: null, maxAge: null, oneTime: false,
@@ -157,6 +159,7 @@ export function carTasks(carString) {
     id: id("car-brakes"), cat: "car", label: n("brake inspection"),
     intervalDays: ev ? 730 : 365, windowDays: 21, reminderLeadDays: 30,
     stakes: "high", hardDeadline: false, activeMonths: null, seasonalLabel: null,
+    priority: true,
     assistType: "providers", diyable: false, timeToComplete: "Tech visit",
     searchQuery: "brake inspection auto repair",
     minAge: null, maxAge: null, oneTime: false,
@@ -221,7 +224,7 @@ export function kidTasks(kid) {
   const slug = name.toLowerCase().replace(/\s+/g, "-");
   const tasks = [];
 
-  tasks.push(T(`k-health-${slug}`, "health", `${name}: annual health visit`, 365, 30, "high",   null,         [], "script",   "Annual well-child visit."));
+  tasks.push({ ...T(`k-health-${slug}`, "health", `${name}: annual health visit`, 365, 30, "high",   null,         [], "script",   "Annual well-child visit."), priority: true });
   tasks.push(T(`k-dent-${slug}`,   "health", `${name}: dental cleaning`,     180, 21, "medium", null,         [], "script",   "Every 6 months."));
   tasks.push(T(`k-eye-${slug}`,    "health", `${name}: eye exam`,            365, 30, "medium", null,         [], "script",   "Annually."));
 
@@ -229,11 +232,11 @@ export function kidTasks(kid) {
     tasks.push(T(`k-emerg-${slug}`,  "school", `${name}: update emergency contacts`, 365, 14, "high",   [7,8,9],   [], "script",    "Update at school start."));
     tasks.push(T(`k-hform-${slug}`,  "school", `${name}: submit health form`,        365, 21, "high",   [7,8,9],   [], "script",    "Required annually."));
     tasks.push(T(`k-supply-${slug}`, "school", `${name}: restock school supplies`,   365, 21, "low",    [7,8],     [], "guidance",  "Check school supply list."));
-    tasks.push(T(`k-winter-${slug}`, "school", `${name}: plan winter break coverage`,365, 30, "high",   [10,11],   [], "providers", "Winter break is typically 2 weeks in December."));
+    tasks.push({ ...T(`k-winter-${slug}`, "school", `${name}: plan winter break coverage`,365, 30, "high",   [10,11],   [], "providers", "Winter break is typically 2 weeks in December."), priority: true });
   }
 
   if (age >= 4 && age < 16) {
-    tasks.push(T(`k-camp-${slug}`,   "school", `${name}: summer camp signup`,       365, 90, "high",   [11,12,1,2], [], "deadline",  "Popular camps fill months in advance."));
+    tasks.push({ ...T(`k-camp-${slug}`,   "school", `${name}: summer camp signup`,       365, 90, "high",   [11,12,1,2], [], "deadline",  "Popular camps fill months in advance."), priority: true });
     tasks.push(T(`k-spring-${slug}`, "school", `${name}: spring break coverage`,    365, 45, "high",   [1,2,3],     [], "providers", "Spring break is typically late March."));
   }
 
@@ -257,14 +260,14 @@ export function petTasks(pet) {
   const senior = age >= 7;
   const tasks  = [];
 
-  tasks.push({ ...T(`p-vet-${slug}`,     "pet", `${name}: vet wellness visit`,         senior ? 180 : 365, 21, "high",   null, [], "providers", senior ? `${name} is a senior pet — twice-yearly visits recommended.` : "Annual wellness exam."),    searchQuery: `${type} veterinary clinic` });
+  tasks.push({ ...T(`p-vet-${slug}`,     "pet", `${name}: vet wellness visit`,         senior ? 180 : 365, 21, "high",   null, [], "providers", senior ? `${name} is a senior pet — twice-yearly visits recommended.` : "Annual wellness exam."),    searchQuery: `${type} veterinary clinic`, priority: true });
   tasks.push(T(`p-flea-${slug}`,    "pet", `${name}: flea/tick prevention refill`, 90,  14, "medium", null, [], "guidance",  "Every 3 months. Don't let this lapse."));
   tasks.push(T(`p-license-${slug}`, "pet", `${name}: pet license renewal`,         365, 30, "medium", null, [], "deadline",  "Most municipalities require annual pet licensing."));
   tasks.push({ ...T(`p-dental-${slug}`,  "pet", `${name}: dental cleaning`,             365, 30, "medium", null, [], "providers", "Annual dental cleaning."),                                                                                                                                                                                                              searchQuery: `${type} dental cleaning veterinarian` });
 
   if (type === "dog") {
-    tasks.push(T(`p-hw-${slug}`,    "pet", `${name}: heartworm prevention refill`, 90, 14, "high",   null, [], "guidance",  "Monthly or quarterly. Missing doses creates real risk."));
-    tasks.push({ ...T(`p-vax-${slug}`,   "pet", `${name}: rabies/booster vaccines`,    365, 30, "high",   null, [], "providers", "Rabies legally required in most states."),  searchQuery: "dog veterinary clinic vaccines" });
+    tasks.push({ ...T(`p-hw-${slug}`,    "pet", `${name}: heartworm prevention refill`, 90, 14, "high",   null, [], "guidance",  "Monthly or quarterly. Missing doses creates real risk."), priority: true });
+    tasks.push({ ...T(`p-vax-${slug}`,   "pet", `${name}: rabies/booster vaccines`,    365, 30, "high",   null, [], "providers", "Rabies legally required in most states."),  searchQuery: "dog veterinary clinic vaccines", priority: true });
     tasks.push({ ...T(`p-nails-${slug}`, "pet", `${name}: nail trim`,                   60, 10, "low",    null, [], "providers", "Every 6-8 weeks."),                           searchQuery: "dog groomer nail trim" });
     if (longCoat) {
       tasks.push({ ...T(`p-groom-${slug}`, "pet", `${name}: grooming appointment`, 60, 14, "low", null, [], "providers", "Every 6-8 weeks for long-coat breeds."),              searchQuery: "dog groomer" });
@@ -323,19 +326,6 @@ export function buildTaskLibrary(profile) {
 
 // ─── Priority Tasks ───────────────────────────────────────────────────────────
 
-export const PRIORITY_IDS = [
-  "fin-will", "fin-life", "fin-benef", "h-ins", "h-phys",
-  "h-mammo", "hm-smoke", "hm-fire", "hm-dryer", "car-brakes", "car-batt", "car-reg",
-];
-const PRIORITY_KID_PREFIXES = ["k-health-", "k-camp-", "k-winter-"];
-const PRIORITY_PET_PREFIXES = ["p-vet-", "p-hw-", "p-vax-"];
-const PRIORITY_CAR_PREFIXES = ["car-brakes-", "car-batt-", "car-reg-"];
-
-export function isPriority(id) {
-  return (
-    PRIORITY_IDS.includes(id) ||
-    PRIORITY_KID_PREFIXES.some(p => id.startsWith(p)) ||
-    PRIORITY_PET_PREFIXES.some(p => id.startsWith(p)) ||
-    PRIORITY_CAR_PREFIXES.some(p => id.startsWith(p))
-  );
+export function isPriority(task) {
+  return !!task.priority;
 }
