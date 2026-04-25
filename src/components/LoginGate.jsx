@@ -9,7 +9,7 @@ export function LoginGate({ sendMagicLink, signInWithGoogle, authError }) {
   const [loading,      setLoading]      = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [showEmail,    setShowEmail]    = useState(false);
-  const [err,          setErr]          = useState("");
+  const [err,          setErr]          = useState(authError || "");
   const [cooldownEnds, setCooldownEnds] = useState(0);
   const [now,          setNow]          = useState(() => Date.now());
   const [resending,    setResending]    = useState(false);

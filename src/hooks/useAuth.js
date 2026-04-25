@@ -8,16 +8,25 @@ export function useAuth() {
   const [authError, setAuthError] = useState(() => {
     const p = new URLSearchParams(window.location.search)
     const h = new URLSearchParams(window.location.hash.slice(1))
-    return p.get('error_description') || h.get('error_description') || null
+    const err = p.get('error_description') || h.get('error_description')
+    if (err) {
+      window.history.replaceState(null, '', window.location.pathname)
+    }
+    return err ? decodeURIComponent(err.replace(/\+/g, ' ')) : null
   })
 
   useEffect(() => {
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
         setUser(session?.user ?? null)
+      })
+      .catch((err) => {
+        console.error('Failed to get session:', err)
+        setUser(null)
+      })
+      .finally(() => {
         setLoading(false)
       })
-      .catch(() => setLoading(false))
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
@@ -47,7 +56,7 @@ export function useAuth() {
     },
   })
 
-  const signOut = () => supabase.auth.signOut()
+  const signOut = () => supabase.auth.signOut({ scope: 'local' })
 
   return { user, loading, authError, sendMagicLink, signInWithGoogle, signOut }
 }
