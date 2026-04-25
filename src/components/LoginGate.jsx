@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+const RESEND_COOLDOWN_MS = 30000;
 
 export function LoginGate({ sendMagicLink, signInWithGoogle, authError }) {
   const [email,        setEmail]        = useState("");
@@ -8,6 +10,19 @@ export function LoginGate({ sendMagicLink, signInWithGoogle, authError }) {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [showEmail,    setShowEmail]    = useState(false);
   const [err,          setErr]          = useState("");
+  const [cooldownEnds, setCooldownEnds] = useState(0);
+  const [now,          setNow]          = useState(() => Date.now());
+  const [resending,    setResending]    = useState(false);
+  const [resendErr,    setResendErr]    = useState("");
+
+  useEffect(() => {
+    if (!sent) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [sent]);
+
+  const cooldownLeft = Math.max(0, Math.ceil((cooldownEnds - now) / 1000));
+  const canResend = !resending && cooldownLeft === 0;
 
   const handleGoogle = async () => {
     setErr("");
@@ -30,7 +45,17 @@ export function LoginGate({ sendMagicLink, signInWithGoogle, authError }) {
     setLoading(false);
     if (error) { setErr("Something went wrong. Try again."); return; }
     setSentEmail(clean);
+    setCooldownEnds(Date.now() + RESEND_COOLDOWN_MS);
     setSent(true);
+  };
+
+  const handleResend = async () => {
+    setResendErr("");
+    setResending(true);
+    const { error } = await sendMagicLink(sentEmail);
+    setResending(false);
+    if (error) { setResendErr("Couldn't resend. Try again."); return; }
+    setCooldownEnds(Date.now() + RESEND_COOLDOWN_MS);
   };
 
   return (
@@ -68,9 +93,35 @@ export function LoginGate({ sendMagicLink, signInWithGoogle, authError }) {
             <p style={{ color: "#A8D5B8", fontSize: 16, lineHeight: 1.6, margin: "0 0 16px" }}>
               We sent a link to <strong style={{ color: "#E8F5EE" }}>{sentEmail}</strong>. Tap it to open Mitzy.
             </p>
-            <p style={{ color: "#6BAF88", fontSize: 14, margin: 0 }}>
+            <p style={{ color: "#6BAF88", fontSize: 14, margin: "0 0 24px" }}>
               The link expires in 24 hours.
             </p>
+
+            <button
+              onClick={handleResend}
+              disabled={!canResend}
+              style={{
+                width: "100%", padding: "14px", borderRadius: 12,
+                border: "1.5px solid #2D7A54",
+                background: "transparent",
+                color: canResend ? "#A8D5B8" : "#4A6256",
+                fontSize: 15, fontWeight: 600,
+                fontFamily: "DM Sans, sans-serif",
+                cursor: canResend ? "pointer" : "default",
+              }}
+            >
+              {resending
+                ? "Sending…"
+                : cooldownLeft > 0
+                  ? `Resend in ${cooldownLeft}s`
+                  : "Didn't get it? Resend"}
+            </button>
+
+            {resendErr && (
+              <p style={{ color: "#F77F00", fontSize: 14, margin: "12px 0 0", fontFamily: "DM Sans, sans-serif" }}>
+                {resendErr}
+              </p>
+            )}
           </>
         ) : (
           <>
