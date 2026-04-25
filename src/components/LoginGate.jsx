@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 
 const RESEND_COOLDOWN_MS = 30000;
 
-export function LoginGate({ sendMagicLink, signInWithGoogle, authError }) {
+export function LoginGate({ sendMagicLink, signInWithGoogle, authError, welcomeChoice }) {
   const [email,        setEmail]        = useState("");
   const [sentEmail,    setSentEmail]    = useState("");
   const [sent,         setSent]         = useState(false);
@@ -131,10 +131,12 @@ export function LoginGate({ sendMagicLink, signInWithGoogle, authError }) {
               </div>
             )}
           <h2 style={{ fontFamily: "'Righteous', cursive", color: "#E8F5EE", fontSize: 26, margin: "0 0 8px" }}>
-              Save your setup
+              {welcomeChoice === 'returning' ? 'Welcome back' : 'Save your setup'}
             </h2>
             <p style={{ color: "#A8D5B8", fontSize: 15, lineHeight: 1.6, margin: "0 0 28px" }}>
-              It took a minute to build. Keep it safe across devices.
+              {welcomeChoice === 'returning'
+                ? 'Sign in to load your Mitzy.'
+                : 'It took a minute to build. Keep it safe across devices.'}
             </p>
 
             {/* Google SSO */}

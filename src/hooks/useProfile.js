@@ -3,11 +3,44 @@ import { loadS, saveS, PROFILE_KEY } from "../utils/storage";
 import { buildTaskLibrary } from "../data/taskFactory";
 import { supabase } from "../lib/supabase";
 
-export function useProfile(user) {
+const PROFILE_FIELDS = [
+  'name', 'zip', 'hasHome', 'birthYear', 'gender',
+  'cars', 'hasCar', 'kids', 'hasKids', 'pets', 'hasPets',
+];
+
+function isProfileNonEmpty(p) {
+  if (!p) return false;
+  return PROFILE_FIELDS.some(k => {
+    const v = p[k];
+    if (v == null) return false;
+    if (Array.isArray(v)) return v.length > 0;
+    return true;
+  });
+}
+
+function isServerProfileMeaningful(p) {
+  if (!p) return false;
+  return !!(p.name || p.zip);
+}
+
+function localHasFieldsServerDoesnt(local, server) {
+  return PROFILE_FIELDS.some(k => {
+    const lv = local?.[k];
+    const sv = server?.[k];
+    const lEmpty = lv == null || (Array.isArray(lv) && lv.length === 0);
+    const sEmpty = sv == null || (Array.isArray(sv) && sv.length === 0);
+    return !lEmpty && sEmpty;
+  });
+}
+
+export function useProfile(user, welcomeChoice) {
   const [profile, setProfile] = useState(() => loadS(PROFILE_KEY, {}));
   const [customTasks, setCustomTasks] = useState([]);
   const [loading, setLoading] = useState(!!user);
   const [syncError, setSyncError] = useState(null);
+  const [pendingConflict, setPendingConflict] = useState(null);
+  const [serverProfileChecked, setServerProfileChecked] = useState(false);
+  const [serverProfileExists, setServerProfileExists] = useState(false);
 
   const taskLibrary = useMemo(() => {
     const base = profile.zip ? buildTaskLibrary(profile) : [];
@@ -15,7 +48,11 @@ export function useProfile(user) {
   }, [profile, customTasks]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setServerProfileChecked(false);
+      setServerProfileExists(false);
+      return;
+    }
 
     async function load() {
       setLoading(true);
@@ -27,23 +64,29 @@ export function useProfile(user) {
 
       if (error) { setSyncError(error); setLoading(false); return; }
 
-      if (!data) {
-        // First login — write whatever onboarding collected to Supabase
-        const local = loadS(PROFILE_KEY, {});
-        if (Object.keys(local).length > 0) {
-          const { error: upsertError } = await supabase.from("profiles").upsert({ id: user.id, ...toRow(local) });
-          if (upsertError) { setSyncError(upsertError); setLoading(false); return; }
+      const serverProfile = data ? fromRow(data) : null;
+      const serverHasMeaning = isServerProfileMeaningful(serverProfile);
+      const local = loadS(PROFILE_KEY, {});
+
+      if (serverHasMeaning) {
+        if (welcomeChoice === 'new' && isProfileNonEmpty(local) && localHasFieldsServerDoesnt(local, serverProfile)) {
+          setPendingConflict({ server: serverProfile, local });
+        } else {
+          setProfile(serverProfile);
+          saveS(PROFILE_KEY, serverProfile);
         }
-      } else {
-        const p = fromRow(data);
-        setProfile(p);
-        saveS(PROFILE_KEY, p);
+      } else if (isProfileNonEmpty(local)) {
+        const { error: upsertError } = await supabase.from("profiles").upsert({ id: user.id, ...toRow(local) });
+        if (upsertError) { setSyncError(upsertError); setLoading(false); return; }
       }
+
+      setServerProfileExists(serverHasMeaning);
+      setServerProfileChecked(true);
       setLoading(false);
     }
 
     load();
-  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.id, welcomeChoice]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep localStorage in sync so onboarding and offline still work
   useEffect(() => {
@@ -66,7 +109,28 @@ export function useProfile(user) {
     setCustomTasks(prev => [...prev, task]);
   };
 
-  return { profile, setProfile, taskLibrary, updateProfile, addCustomTask, loading, syncError };
+  const resolveConflict = async (choice) => {
+    if (!pendingConflict) return;
+    const { server, local } = pendingConflict;
+    if (choice === 'use-saved') {
+      setProfile(server);
+      saveS(PROFILE_KEY, server);
+    } else if (choice === 'use-new') {
+      if (user) {
+        const { error } = await supabase.from("profiles").upsert({ id: user.id, ...toRow(local) });
+        if (error) { setSyncError(error); return; }
+      }
+    }
+    setPendingConflict(null);
+  };
+
+  return {
+    profile, setProfile, taskLibrary,
+    updateProfile, addCustomTask,
+    loading, syncError,
+    pendingConflict, resolveConflict,
+    serverProfileChecked, serverProfileExists,
+  };
 }
 
 function toRow(p) {
