@@ -58,6 +58,8 @@ User data is persisted in Supabase (`profiles` + `task_records`). localStorage i
 
 - **Bottom dock** — Fixed nav: `[Today|All|Profile]` pill + sparkle AI FAB circle to the right (always visible, `console.log` stub). White `+` add FAB floats above nav on Today and All tabs.
 
+- **Auth UX** — Supabase Google OAuth (primary) + magic link (fallback). `BrandSplash` (full green background + Memphis shapes + four-dot wordmark) renders during `authLoading` to avoid flash-of-white on PWA cold launches. `LoginGate` normalizes magic-link emails (`trim().toLowerCase()`) at submit so case/whitespace variants resolve to one Supabase auth record. Success screen has a "Resend" button gated by a 30s cooldown (`RESEND_COOLDOWN_MS`) — cooldown starts on first send; restarts on each successful resend; re-enables immediately on error.
+
 ---
 
 ## What's Mocked / Incomplete

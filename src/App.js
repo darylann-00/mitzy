@@ -12,6 +12,7 @@ import { ProfileProvider, useProfileContext } from "./contexts/ProfileContext";
 import { TaskProvider,   useTaskContext }    from "./contexts/TaskContext";
 
 import { LoginGate }      from "./components/LoginGate";
+import { BrandSplash }    from "./components/BrandSplash";
 import { SlimOnboarding } from "./onboarding/SlimOnboarding";
 import { PrioritySetup }  from "./onboarding/PrioritySetup";
 
@@ -168,21 +169,7 @@ function Overlays({
 // ─── Root — wires up providers then delegates ──────────────────────────────────
 export default function Mitzy() {
   const { user, loading: authLoading, authError, sendMagicLink, signInWithGoogle, signOut } = useAuth();
-  if (authLoading) {
-    return (
-      <div style={{
-        minHeight: '100vh', background: '#1A5C3A',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-          <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#D62828' }} />
-          <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#F77F00' }} />
-          <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#06A77D' }} />
-          <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#F4C430' }} />
-        </div>
-      </div>
-    );
-  }
+  if (authLoading) return <BrandSplash />;
 
   return (
     <ProfileProvider user={user}>
