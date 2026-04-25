@@ -2,6 +2,7 @@ import { useState } from "react";
 
 export function LoginGate({ sendMagicLink, signInWithGoogle, authError }) {
   const [email,        setEmail]        = useState("");
+  const [sentEmail,    setSentEmail]    = useState("");
   const [sent,         setSent]         = useState(false);
   const [loading,      setLoading]      = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -22,11 +23,13 @@ export function LoginGate({ sendMagicLink, signInWithGoogle, authError }) {
   };
 
   const handleSubmit = async () => {
-    if (!email.includes("@")) { setErr("Enter a valid email address."); return; }
+    const clean = email.trim().toLowerCase();
+    if (!clean.includes("@")) { setErr("Enter a valid email address."); return; }
     setLoading(true);
-    const { error } = await sendMagicLink(email);
+    const { error } = await sendMagicLink(clean);
     setLoading(false);
     if (error) { setErr("Something went wrong. Try again."); return; }
+    setSentEmail(clean);
     setSent(true);
   };
 
@@ -63,7 +66,7 @@ export function LoginGate({ sendMagicLink, signInWithGoogle, authError }) {
               Check your email
             </h2>
             <p style={{ color: "#A8D5B8", fontSize: 16, lineHeight: 1.6, margin: "0 0 16px" }}>
-              We sent a link to <strong style={{ color: "#E8F5EE" }}>{email}</strong>. Tap it to open Mitzy.
+              We sent a link to <strong style={{ color: "#E8F5EE" }}>{sentEmail}</strong>. Tap it to open Mitzy.
             </p>
             <p style={{ color: "#6BAF88", fontSize: 14, margin: 0 }}>
               The link expires in 24 hours.
