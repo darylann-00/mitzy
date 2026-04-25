@@ -153,6 +153,15 @@ GitHub Actions at `.github/workflows/ci.yml`. Runs `npm ci`, `npm run build`, `n
 
 ---
 
+## Recent Fixes (PR #33)
+
+**Auth flow security & reliability hardening:**
+- PKCE flow enabled on Supabase client (modern OAuth standard for SPAs vs implicit flow)
+- `getSession()` errors handled gracefully (prevents blank-screen deadlock on network issues)
+- OAuth error messages surfaced in LoginGate from URL hash (`error_description` param)
+- Per-user localStorage cleared on sign-out via `clearLocalUserData()` (prevents cross-user data leaks)
+- Sign-out uses `{ scope: 'local' }` instead of global (signing out one device doesn't boot others)
+
 ## Next Priorities
 
 1. ~~Build `/api/schedule` Edge Function~~ — Done ([PR #26](https://github.com/darylann-00/mitzy/pull/26)).
