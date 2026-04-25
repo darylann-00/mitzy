@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "./styles/app.css";
 
-import { loadS, saveS, ONBOARDED_KEY, PROFILE_DONE_KEY, VISIT_COUNT_KEY } from "./utils/storage";
+import { loadS, saveS, ONBOARDED_KEY, PROFILE_DONE_KEY, VISIT_COUNT_KEY, WELCOME_CHOICE_KEY } from "./utils/storage";
 import { detectHazards } from "./utils/hazards";
 import { supabase } from "./lib/supabase";
 
@@ -13,6 +13,7 @@ import { TaskProvider,   useTaskContext }    from "./contexts/TaskContext";
 
 import { LoginGate }      from "./components/LoginGate";
 import { BrandSplash }    from "./components/BrandSplash";
+import { WelcomeGate }    from "./components/WelcomeGate";
 import { SlimOnboarding } from "./onboarding/SlimOnboarding";
 import { PrioritySetup }  from "./onboarding/PrioritySetup";
 
@@ -186,8 +187,9 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle })
   const { activeTasks, taskState, setTaskState, setDisabledTasks, markDone, markNotApplicable, markNeeded, setIntervalOverride, nextUpcomingTask, loading: tasksLoading, syncError: tasksSyncError } = useTaskContext();
 
   // ─── Onboarding state ──────────────────────────────────────────────────────
-  const [profileDone, setProfileDone] = useState(() => loadS(PROFILE_DONE_KEY, false));
-  const [onboarded,   setOnboarded]   = useState(() => loadS(ONBOARDED_KEY, false));
+  const [profileDone,   setProfileDone]   = useState(() => loadS(PROFILE_DONE_KEY, false));
+  const [onboarded,     setOnboarded]     = useState(() => loadS(ONBOARDED_KEY, false));
+  const [welcomeChoice, setWelcomeChoice] = useState(() => loadS(WELCOME_CHOICE_KEY, null));
 
   // ─── UI state ──────────────────────────────────────────────────────────────
   const [view,            setView]            = useState("home");
@@ -265,6 +267,15 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle })
   };
 
   // ─── Onboarding gates ──────────────────────────────────────────────────────
+  if (!welcomeChoice) {
+    return <WelcomeGate onChoose={(choice) => {
+      saveS(WELCOME_CHOICE_KEY, choice);
+      setWelcomeChoice(choice);
+    }} />;
+  }
+  if (welcomeChoice === 'returning' && !user) {
+    return <LoginGate sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} authError={authError} />;
+  }
   if (!profileDone) return <SlimOnboarding onComplete={handleSlimOnboardingComplete} />;
   if (!onboarded)   return <PrioritySetup taskLib={taskLibrary} region={region} onComplete={handlePrioritySetupComplete} />;
   if (!user)        return <LoginGate sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} authError={authError} />;
