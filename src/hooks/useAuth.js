@@ -8,7 +8,11 @@ export function useAuth() {
   const [authError, setAuthError] = useState(() => {
     const p = new URLSearchParams(window.location.search)
     const h = new URLSearchParams(window.location.hash.slice(1))
-    return p.get('error_description') || h.get('error_description') || null
+    const err = p.get('error_description') || h.get('error_description')
+    if (err) {
+      window.history.replaceState(null, '', window.location.pathname)
+    }
+    return err ? decodeURIComponent(err.replace(/\+/g, ' ')) : null
   })
 
   useEffect(() => {
