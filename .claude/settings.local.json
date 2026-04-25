@@ -23,7 +23,9 @@
       "Bash(vercel:*)",
       "Bash(npm test *)",
       "Bash(npm i *)",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(npm ci *)",
+      "Bash(gh pr create --title 'feat\\(onboarding\\): returning-user gate and data-overwrite protection' --body ' *)"
     ]
   }
 }

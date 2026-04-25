@@ -293,11 +293,11 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, w
     }} />;
   }
   if (welcomeChoice === 'returning' && !user) {
-    return <LoginGate sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} authError={authError} />;
+    return <LoginGate sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} authError={authError} welcomeChoice={welcomeChoice} />;
   }
   if (!profileDone) return <SlimOnboarding onComplete={handleSlimOnboardingComplete} />;
   if (!onboarded)   return <PrioritySetup taskLib={taskLibrary} region={region} onComplete={handlePrioritySetupComplete} />;
-  if (!user)        return <LoginGate sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} authError={authError} />;
+  if (!user)        return <LoginGate sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} authError={authError} welcomeChoice={welcomeChoice} />;
 
   // ─── Task detail screen ────────────────────────────────────────────────────
   if (selectedTask) {
