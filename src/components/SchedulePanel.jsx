@@ -1,21 +1,56 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { C } from "../data/constants";
 import { Sheet } from "./Sheet";
 
-// NOTE: The Anthropic API must never be called directly from the frontend.
-// This component currently mocks the calendar integration.
-// Wire real calls through a Vercel Edge Function proxy (/api/schedule).
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+function loadGIS() {
+  return new Promise((resolve) => {
+    if (window.google?.accounts?.oauth2) { resolve(); return; }
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.onload = resolve;
+    document.head.appendChild(script);
+  });
+}
 
 export function SchedulePanel({ task, onSchedule, onClose }) {
   const [date,   setDate]   = useState("");
   const [status, setStatus] = useState(null); // null | "loading" | "success" | "error"
+  const tokenClientRef = useRef(null);
 
   const handleSchedule = async () => {
     if (!date) return;
     setStatus("loading");
     try {
-      // TODO: replace with POST /api/schedule once Edge Function is deployed
-      await new Promise(r => setTimeout(r, 600));
+      await loadGIS();
+
+      const accessToken = await new Promise((resolve, reject) => {
+        tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
+          client_id: GOOGLE_CLIENT_ID,
+          scope: 'https://www.googleapis.com/auth/calendar.events',
+          callback: (resp) => {
+            if (resp.error) { reject(new Error(resp.error)); return; }
+            resolve(resp.access_token);
+          },
+        });
+        // prompt: '' = silent if already consented, consent dialog if not
+        tokenClientRef.current.requestAccessToken({ prompt: '' });
+      });
+
+      const res = await fetch('/api/schedule', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          taskLabel: task.label,
+          taskNote:  task.note || null,
+          date,
+          accessToken,
+        }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+
       setStatus("success");
       setTimeout(() => { onSchedule(date); onClose(); }, 1000);
     } catch {

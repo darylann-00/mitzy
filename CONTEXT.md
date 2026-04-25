@@ -1,6 +1,6 @@
 # Mitzy — Project Context
 
-Use this file to get up to speed at the start of a session.
+Read this file at the start of every session. For UI work also read `design.md`. For state/data work also read `architecture.md`.
 
 ---
 
@@ -25,26 +25,7 @@ A household management PWA. Acts as a personal secretary that already knows what
 | Deployment | Vercel |
 | Fonts | Righteous (display/brand), DM Sans (body) |
 
-User data is persisted in Supabase (`profiles` + `task_records` tables). localStorage is used as a cache/offline layer. Auth is via Supabase — Google OAuth (primary) + magic link (fallback).
-
----
-
-## Project Structure
-
-```
-/src
-  /components       — TaskCard, AssistPanel, SchedulePanel, MarkDoneModal, AddTaskPanel,
-                      TrickleCard, HazardCard, Celebration, Sheet, CategoryIcons
-  /contexts         — ProfileContext, TaskContext
-  /views            — HomeView, AllView, ProfileView, TaskDetailView
-  /data             — constants.js, tasks.js, taskFactory.js
-  /hooks            — useProfile, useTasks, useSession, useProviders
-  /utils            — storage.js, taskLogic.js, assistPrompt.js, hazards.js, climateRegion.js
-  /onboarding       — SlimOnboarding, PrioritySetup
-  /styles/app.css   — Full design system
-/api
-  assist.js         — Vercel Edge Function → Anthropic API proxy
-  providers.js      — Vercel Edge Function → Google Places + Claude synthesis
+User data is persisted in Supabase (`profiles` + `task_records`). localStorage is used as a cache/offline layer. Auth is via Supabase — Google OAuth (primary) + magic link (fallback).
 ```
 
 ---
@@ -77,13 +58,19 @@ User data is persisted in Supabase (`profiles` + `task_records` tables). localSt
 
 - **Bottom dock** — Fixed nav: `[Today|All|Profile]` pill + sparkle AI FAB circle to the right (always visible, `console.log` stub). White `+` add FAB floats above nav on Today and All tabs.
 
+- **Auth UX** — Supabase Google OAuth (primary) + magic link (fallback). `BrandSplash` (full green background + Memphis shapes + four-dot wordmark) renders during `authLoading` to avoid flash-of-white on PWA cold launches. `LoginGate` normalizes magic-link emails (`trim().toLowerCase()`) at submit so case/whitespace variants resolve to one Supabase auth record. Success screen has a "Resend" button gated by a 30s cooldown (`RESEND_COOLDOWN_MS`) — cooldown starts on first send; restarts on each successful resend; re-enables immediately on error.
+
+- **Welcome gate (returning vs new)** — `WelcomeGate` is the first screen on cold launch (before `SlimOnboarding`). Two buttons: "I'm new here" or "I've used Mitzy before". Choice persisted to `WELCOME_CHOICE_KEY` (`mitzy-welcome-v1`). `'returning'` skips onboarding and goes straight to `LoginGate` → server profile loads from Supabase into local state. `'new'` keeps the original onboarding → priority-setup → login flow. If a returning user signs in with no server profile (typo, wrong account), `App.js` flips them to `'new'` and routes through onboarding. Welcome key is included in `USER_KEYS`, so reset/sign-out clears it.
+
+- **Profile conflict modal** — `useProfile` is now server-first. When a user signs in, the hook fetches the Supabase profile before any upsert. If the server has a meaningful profile (name or zip set) AND the user picked `'new'` AND local has fields the server doesn't, `pendingConflict` is set and `<ProfileConflictModal>` overlays the app. Options: "Use my saved setup" (loads server, discards local) or "Replace with new setup" (requires explicit "Yes, replace" confirm before the upsert overwrites the server). Closes the prior silent-overwrite bug where local onboarding data clobbered an existing server profile on sign-in.
+
 ---
 
 ## What's Mocked / Incomplete
 
 | Feature | Status |
 |---------|--------|
-| Google Calendar integration | UI complete; `/api/schedule` Edge Function not built. Simulates 600ms delay. |
+| Google Calendar integration | Built. `/api/schedule` Edge Function creates all-day events with 60-min popup reminder. GIS just-in-time OAuth in `SchedulePanel`. Requires `VITE_GOOGLE_CLIENT_ID` env var + Calendar API enabled in Google Cloud Console. |
 | Hazard zip lookup | Hardcoded zip ranges. Replace with FEMA API. |
 | Knowledge refresh | Stubbed. |
 | `task.why` + `task.guidance` fields | Null for all current tasks — UI falls back to `task.note` and generic copy. |
@@ -140,7 +127,8 @@ Four-dot 2×2 grid (red/orange/green/yellow) + "mitzy" in Righteous. App icon: f
 ## App Flow
 
 ```
-SlimOnboarding → PrioritySetup → App (3-tab nav)
+WelcomeGate → (new) SlimOnboarding → PrioritySetup → LoginGate → App (3-tab nav)
+            → (returning) LoginGate → App
                                    ├─ HomeView
                                    ├─ AllView
                                    ├─ ProfileView
@@ -164,69 +152,33 @@ Three tabs in `BottomDock` (fixed, `#E8F0EC` pill). Sparkle AI FAB sits to the r
 
 ---
 
-## Key Implementation Notes
+## CI
 
-- **State architecture**: `ProfileContext` (`src/contexts/ProfileContext.jsx`) wraps `useProfile` + `useProviders` + `region`. `TaskContext` (`src/contexts/TaskContext.jsx`) wraps `useTasks` + all derived lists (`activeTasks`, `visibleTasks`, `scoredDue`, `focusTasks`, `doneThisWeek`) + helpers (`getStatus`, `getDays`, `getNext`). `TaskProvider` is nested inside `ProfileProvider`. `App.js` = `Mitzy` (providers + auth) → `MitzyApp` (all UI/onboarding logic) → views. Views and `AssistPanel` consume context directly; `MitzyApp` only passes UI callbacks (not domain data) to views.
-- `AppHeader` is exported from `HomeView.jsx` and imported by AllView, ProfileView, TaskDetailView. `HomeHeader` (greeting variant) is used only in HomeView.
-- `task.label` is the display name field (not `task.name`).
-- `getDays(task)` returns positive = days until due, negative = days overdue. Returns `0` for unknown tasks.
-- `formatDueDate(days)` in TaskCard.jsx: `days < -14` → "Hasn't been done in a while"; `-14 ≤ days < 0` → "due X days ago". `subtitle` prop on TaskCard overrides this if provided.
-- `markDone` and `markNeeded` are passed to `AllView` so the explore section can write state without going through `MarkDoneModal`. One-time tasks in the explore section show "Have you done this?" instead of time chips.
-- `TaskAnswerChips` (`src/components/TaskAnswerChips.jsx`) is a shared component used by TrickleCard, PrioritySetup, and AllView's ExploreSection. It handles recurring vs one-time branching, chip constants, and date conversion internally.
-- `handleMarkDone` in App.js calls `markDone`, fires `setCelebration(true)`, immediately calls `setMarkDoneModal(null)` — modal closes on done, confetti fires separately.
-- `focusTasks` and `doneThisWeek` are computed in App.js and passed to HomeView. `focusTasks` = top 3 scored non-ok/unknown tasks.
-- Task dependencies: `dependsOn: "parent-id"` hides a task until the parent has `lastDone` set. Enforced via `isDependencySatisfied()` in `activeTasks` filter. Dependency-gated tasks are also hidden during PrioritySetup.
-- Per-car tasks are generated by `carTasks(carString)` in `taskFactory.js`. EV detection skips oil/transmission/emissions tasks and adds EV battery check.
-- `task.searchQuery` — optional field on tasks with `assistType: "providers"`. When set, sent to `/api/providers` and used as the Google Places text query instead of `task.label`. Critical for auto-generated tasks like `"Max: vet wellness visit"` (searchQuery: `"dog veterinary clinic"`) and `"Civic: oil change"` (searchQuery: `"oil change"`).
-- `isWindowActive(task, region)` in `taskLogic.js` — `region` comes from `getClimateRegion(zip)` in `climateRegion.js`. `REGION_TASK_ADJUSTMENTS` maps `region → task.id → { seasonStart, activeMonths }` overrides. `seasonStart: false` or `activeMonths: []` disables a task for that region.
-- `YouView.jsx` exists in the repo but is unused — `ProfileView.jsx` is the active file.
+GitHub Actions at `.github/workflows/ci.yml`. Runs `npm ci`, `npm run build`, `npm test -- --watchAll=false` on push to main and all PRs.
 
 ---
 
-## CI
+## Recent Fixes (PR #33)
 
-GitHub Actions workflow at `.github/workflows/ci.yml`. Runs `npm ci`, `npm run build`, and `npm test -- --watchAll=false` on push to main and all PRs. `gh` token requires `repo` and `read:org` scopes for Claude Code's CI monitoring panel to work.
+**Auth flow security & reliability hardening:**
+- PKCE flow enabled on Supabase client (modern OAuth standard for SPAs vs implicit flow)
+- `getSession()` errors handled gracefully (prevents blank-screen deadlock on network issues)
+- OAuth error messages surfaced in LoginGate from URL hash (`error_description` param)
+- Per-user localStorage cleared on sign-out via `clearLocalUserData()` (prevents cross-user data leaks)
+- Sign-out uses `{ scope: 'local' }` instead of global (signing out one device doesn't boot others)
 
-## Where We Are
+## Next Priorities
 
-All screens built and working. A security/reliability audit was completed and all critical/high issues are resolved (see below).
+1. ~~Build `/api/schedule` Edge Function~~ — Done ([PR #26](https://github.com/darylann-00/mitzy/pull/26)).
+2. Wire up the AI FAB — sparkle button in `BottomDock` is a no-op; needs a design decision (global assist? home-screen shortcut?).
+3. Replace hardcoded hazard zip ranges in `hazards.js` with FEMA API.
+4. Zip error message copy in onboarding (deferred).
 
-**Next feature work (in priority order):**
-1. Build `/api/schedule` Edge Function (was #2 — `task.why`/`task.guidance` now complete).
-2. Build `/api/schedule` Edge Function — Google Calendar integration UI is complete, backend stub at `SchedulePanel.jsx` uses `setTimeout` mock.
-3. Wire up the AI FAB — sparkle button in `BottomDock` is a no-op; needs a design decision (global assist? home-screen shortcut?).
-4. Replace hardcoded hazard zip ranges in `hazards.js` with FEMA API.
-5. Remaining onboarding polish: zip error message copy (#12 — deferred).
+## Known Gaps / Mocked
 
-`task.why` and `task.guidance` are now filled in for all tasks. The 6 `EM_UNIVERSAL` and 13 `EM_HAZARD` tasks were converted from `T()` factory calls to full inline objects to support the fields. `GOOGLE_PLACES_API_KEY` confirmed already present in Vercel (Production + Preview) — stale context note removed.
-
-**Security/reliability fixes applied:**
-- `useTasks` + `useProfile`: Supabase migration upsert now checks for errors; `markDone`/`markScheduled`/`markNotApplicable`/`updateProfile` roll back local state on failed upsert. Both hooks return `loading` + `syncError`.
-- CORS: removed wildcard `*` from `/api/assist` and `/api/providers`. Now origin-allowlisted via `ALLOWED_ORIGIN` env var (set to `https://mitzy.io` in Vercel production).
-- `AssistPanel`: `inlineMarkdown` escapes `<`/`>` before applying bold/link transforms — blocks HTML injection from Claude output.
-- `App.js`: `handleReset` checks Supabase delete errors before clearing localStorage. Derived task lists (`visibleTasks`, `scoredDue`, `focusTasks`, `doneThisWeek`) wrapped in `useMemo`.
-- `useSession`: added `.catch()` to `detectHazards` promise.
-- `storage.js`: `cleanupOldKeys()` removes orphaned `mitzy-*` keys from old schema versions, called on startup in `index.js`.
-- Deleted unused `YouView.jsx`.
-
-**Task intervals** — All intervals in `src/data/tasks.js` have been audited against standard safety guidance. Three were corrected to monthly (30d): `hm-smoke` (NFPA 72), `hm-fire` (NFPA 10 §7.2.1), `hm-gfci` (UL/manufacturer standards). All others are correct.
-
-**Prescription trickle flow** — `h-scrip` gates behind "Do you take regular prescriptions?" (yes/no). Yes leads to "How often?" — Monthly (30d) / Every 3 months (90d) / It varies (45d) — which sets a per-user `intervalDays` override stored in `taskState`. No marks the task `notApplicable`. `taskStatus`, `taskScore`, `nextDueStr`, `getDays`, `getNext`, `getScore` all prefer `taskState[id].intervalDays` over the task-level default when present. The `trickleSteps` field on a task definition triggers `SteppedFlow` in `TrickleCard`; other tasks are unaffected. `intervalDays` override lives in localStorage only — Supabase `task_records` doesn't have this column yet.
-
-**Onboarding polish (partial)** — `PrioritySetup` now shows an intro screen before the first task slide: exact task count + "about 2 minutes" estimate. `SlimOnboarding` tracks `editingCar`/`editingKid`/`editingPet` state — tapping a list item to edit now shows "Editing your [X]" above the input fields, clearing confusion with delete. Zip error copy (#12) was deferred.
-
-**Onboarding edit-then-Next bug fixed** — `editCar`/`editPet` remove the item from the array immediately on click (to pre-fill the form), then rely on `commitCar`/`commitPet` being called to add it back. If the user clicked Next without completing the selection flow, the item was silently dropped. Fixed: the car Next button now commits if all 3 fields are filled, or restores the original if abandoned. The pet "Let's go" button now commits if all required fields are set (editing a dog is treated as complete without re-selecting coat). Kids were already handled correctly.
-
-**Per-task frequency override** — Frequency pill in `TaskDetailView` is tappable. Opens an inline picker with preset chips (up to 4 below default + default, generated from `FREQ_CANDIDATES`) plus a Custom option (number + days/months/years dropdown). Chips never suggest intervals longer than the recommended default — Custom is the only path to go longer. Selecting any option saves to `taskState[id].intervalDays` via `setIntervalOverride` in `useTasks`. A yellow warning banner shows persistently below the dates card when `effectiveInterval > task.intervalDays` (user is going less frequent than default). Frequency pill text turns green when an override is active. `effectiveInterval = entry?.intervalDays ?? task.intervalDays` drives all display. Override is synced to Supabase `task_records.interval_days` (migration: `supabase/migrations/20260423_add_interval_days_to_task_records.sql` — already applied).
-
-**Birth year instead of age** — Profile stores `birthYear` (4-digit year) instead of raw age for the user, kids, and pets. Age is calculated at runtime via `getAge(birthYear) = currentYear - birthYear` in `taskFactory.js` and `assistPrompt.js`. Onboarding inputs ask "Birth year (e.g. 1988)" with appropriate min/max. Display shows "born XXXX" in kid/pet lists. Supabase `profiles` table `age` column is reused (no migration needed — value stored is now a year integer). `PROFILE_KEY` bumped to `mitzy-pro-v7`. `TaskDetailView` also got UX fixes: click-outside closes the date picker, frequency picker has a close button, toggle clicks use `setX(true)` directly instead of `setX(v => !v)`.
-
-**Trickle rotation queue** — Trickle card now shows on a 5-day time-driven cadence (was once per calendar day). A persistent rotation queue (`TRICKLE_QUEUE_KEY = "mitzy-tq-v6"`) cycles through all unknown tasks in priority order; answered tasks fall off naturally, dismissed/ignored tasks stay in rotation. Clock starts when a card is surfaced — dismiss/answer/ignore all behave identically for cadence purposes. `dismissTrickle` and `answerTrickle` now just hide the card; date + queue are saved at surfacing time.
-
-**AllView filter persistence** — `activeCategory` and `dueOnly` lifted from AllView local state to App.js. Filters survive tab switches (Today → Profile → All retains the selected category and toggle state).
-
-**"Recently" chip clarity** — Label changed from `'Recently'` to `'Recently (last month)'` in `CHIPS_GENERAL` (`TaskAnswerChips.jsx`) to eliminate ambiguity about the 30-day mapping.
-
-**Custom frequency input validation** — Set button in the frequency picker (`TaskDetailView`) is now disabled and grayed out when `customNum` is empty, `0`, or negative. Red error hint "Enter a number greater than 0" appears after the user types an invalid value (not on open). Prevents silent creation of invalid schedules.
-
-**Reliability fixes** — `PRIORITY_IDS` list removed; tasks now carry `priority: true` on their definition objects (`tasks.js` + generated tasks in `taskFactory.js`). `isPriority(task)` checks `task.priority` directly. `DEFAULT_REGION` in `climateRegion.js` changed from `"midwest"` to `null` — unrecognized zip codes get no seasonal adjustment instead of wrong midwest windows. `/api/providers` accepts optional `maxResults` in request body (clamped 1–10, defaults to 6). `stableTiltDeg` magic number extracted as `MAX_CARD_TILT_DEG = 1.8`.
+| Feature | Status |
+|---------|--------|
+| Google Calendar integration | Built. `/api/schedule` Edge Function + GIS just-in-time OAuth in `SchedulePanel`. Requires `VITE_GOOGLE_CLIENT_ID` + Calendar API enabled in Google Cloud Console. |
+| Hazard zip lookup | Hardcoded zip ranges. Replace with FEMA API. |
+| AI FAB | Sparkle button in nav bar is a stub — `console.log('AI input')`. |
+| `intervalDays` override | Lives in localStorage only — `task_records` column exists but sync not verified end-to-end. |
