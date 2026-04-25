@@ -15,9 +15,14 @@ export function useAuth() {
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
         setUser(session?.user ?? null)
+      })
+      .catch((err) => {
+        console.error('Failed to get session:', err)
+        setUser(null)
+      })
+      .finally(() => {
         setLoading(false)
       })
-      .catch(() => setLoading(false))
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
