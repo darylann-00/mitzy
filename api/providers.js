@@ -1,3 +1,5 @@
+import { requireUser } from './_auth.js';
+
 export const config = { runtime: "edge" };
 
 // ALLOWED_ORIGIN: set to your production domain in Vercel env vars (e.g. "https://mitzy.app").
@@ -8,7 +10,7 @@ function corsHeaders(req) {
   const match   = allowed && origin === allowed ? origin : null;
   return {
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'content-type',
+    'Access-Control-Allow-Headers': 'content-type, authorization',
     ...(match ? { 'Access-Control-Allow-Origin': match } : {}),
   };
 }
@@ -44,6 +46,14 @@ export default async function handler(req) {
   }
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
+  }
+
+  const { error } = await requireUser(req);
+  if (error) {
+    return new Response(error.statusText || 'Unauthorized', {
+      status: error.status,
+      headers: corsHeaders(req)
+    });
   }
 
   let taskLabel, taskCat, taskNote, zip, searchQuery, maxResults;
