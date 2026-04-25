@@ -170,26 +170,35 @@ function Overlays({
 // ─── Root — wires up providers then delegates ──────────────────────────────────
 export default function Mitzy() {
   const { user, loading: authLoading, authError, sendMagicLink, signInWithGoogle, signOut } = useAuth();
+  const [welcomeChoice, setWelcomeChoice] = useState(() => loadS(WELCOME_CHOICE_KEY, null));
+
   if (authLoading) return <BrandSplash />;
 
   return (
-    <ProfileProvider user={user}>
+    <ProfileProvider user={user} welcomeChoice={welcomeChoice}>
       <TaskProvider user={user}>
-        <MitzyApp user={user} authError={authError} signOut={signOut} sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} />
+        <MitzyApp
+          user={user}
+          authError={authError}
+          signOut={signOut}
+          sendMagicLink={sendMagicLink}
+          signInWithGoogle={signInWithGoogle}
+          welcomeChoice={welcomeChoice}
+          setWelcomeChoice={setWelcomeChoice}
+        />
       </TaskProvider>
     </ProfileProvider>
   );
 }
 
 // ─── Inner app — consumes contexts ─────────────────────────────────────────────
-function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle }) {
+function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, welcomeChoice, setWelcomeChoice }) {
   const { profile, taskLibrary, updateProfile, region, loading: profileLoading, syncError: profileSyncError } = useProfileContext();
   const { activeTasks, taskState, setTaskState, setDisabledTasks, markDone, markNotApplicable, markNeeded, setIntervalOverride, nextUpcomingTask, loading: tasksLoading, syncError: tasksSyncError } = useTaskContext();
 
   // ─── Onboarding state ──────────────────────────────────────────────────────
-  const [profileDone,   setProfileDone]   = useState(() => loadS(PROFILE_DONE_KEY, false));
-  const [onboarded,     setOnboarded]     = useState(() => loadS(ONBOARDED_KEY, false));
-  const [welcomeChoice, setWelcomeChoice] = useState(() => loadS(WELCOME_CHOICE_KEY, null));
+  const [profileDone, setProfileDone] = useState(() => loadS(PROFILE_DONE_KEY, false));
+  const [onboarded,   setOnboarded]   = useState(() => loadS(ONBOARDED_KEY, false));
 
   // ─── UI state ──────────────────────────────────────────────────────────────
   const [view,            setView]            = useState("home");
