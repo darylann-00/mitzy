@@ -22,6 +22,7 @@ import { AssistPanel }   from "./components/AssistPanel";
 import { SchedulePanel } from "./components/SchedulePanel";
 import { MarkDoneModal } from "./components/MarkDoneModal";
 import { AddTaskPanel }  from "./components/AddTaskPanel";
+import { ProfileConflictModal } from "./components/ProfileConflictModal";
 
 import { HomeView }       from "./views/HomeView";
 import { AllView }        from "./views/AllView";
@@ -153,7 +154,7 @@ function Overlays({
   scheduleTask, onScheduleClose,
   addingTask, onAddClose,
 }) {
-  const { addCustomTask } = useProfileContext();
+  const { addCustomTask, pendingConflict, resolveConflict } = useProfileContext();
   const { markScheduled } = useTaskContext();
 
   return (
@@ -163,6 +164,7 @@ function Overlays({
       {assistTask    && <AssistPanel task={assistTask} onClose={onAssistClose} />}
       {scheduleTask  && <SchedulePanel task={scheduleTask} onSchedule={(d) => markScheduled(scheduleTask.id, d)} onClose={onScheduleClose} />}
       {addingTask    && <AddTaskPanel onAdd={addCustomTask} onClose={onAddClose} />}
+      {pendingConflict && <ProfileConflictModal onResolve={resolveConflict} />}
     </>
   );
 }
