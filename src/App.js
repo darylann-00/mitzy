@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./styles/app.css";
 
 import { loadS, saveS, ONBOARDED_KEY, PROFILE_DONE_KEY, VISIT_COUNT_KEY, WELCOME_CHOICE_KEY } from "./utils/storage";
@@ -195,7 +195,7 @@ export default function Mitzy() {
 
 // ─── Inner app — consumes contexts ─────────────────────────────────────────────
 function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, welcomeChoice, setWelcomeChoice }) {
-  const { profile, taskLibrary, updateProfile, region, loading: profileLoading, syncError: profileSyncError } = useProfileContext();
+  const { profile, taskLibrary, updateProfile, region, loading: profileLoading, syncError: profileSyncError, serverProfileChecked, serverProfileExists } = useProfileContext();
   const { activeTasks, taskState, setTaskState, setDisabledTasks, markDone, markNotApplicable, markNeeded, setIntervalOverride, nextUpcomingTask, loading: tasksLoading, syncError: tasksSyncError } = useTaskContext();
 
   // ─── Onboarding state ──────────────────────────────────────────────────────
@@ -215,6 +215,14 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, w
 
   // ─── Session (trickle + hazards) ───────────────────────────────────────────
   const { trickleTask, dismissTrickle, answerTrickle, pendingHazards, setPendingHazards } = useSession({ onboarded, profile, activeTasks, taskState });
+
+  // ─── Returning user with no server profile → drop into new-user onboarding ─
+  useEffect(() => {
+    if (welcomeChoice === 'returning' && user && serverProfileChecked && !serverProfileExists) {
+      saveS(WELCOME_CHOICE_KEY, 'new');
+      setWelcomeChoice('new');
+    }
+  }, [welcomeChoice, user, serverProfileChecked, serverProfileExists, setWelcomeChoice]);
 
   // ─── Onboarding handlers ───────────────────────────────────────────────────
   const handleSlimOnboardingComplete = (p) => {
