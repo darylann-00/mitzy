@@ -80,7 +80,7 @@ function TaskSlide({ task, onAnswer, onNeeded }) {
 }
 
 export function PrioritySetup({ taskLib, region, onComplete }) {
-  const priorityTasks = taskLib.filter(t => isPriority(t.id) && isDependencySatisfied(t, {}) && isWindowActive(t, region)).slice(0, 12);
+  const priorityTasks = taskLib.filter(t => isPriority(t) && isDependencySatisfied(t, {}) && isWindowActive(t, region)).slice(0, 12);
   const [started,    setStarted]    = useState(false);
   const [index,      setIndex]      = useState(0);
   const [selections, setSelections] = useState({});

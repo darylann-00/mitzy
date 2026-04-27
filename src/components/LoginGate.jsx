@@ -1,12 +1,28 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-export function LoginGate({ sendMagicLink, signInWithGoogle }) {
+const RESEND_COOLDOWN_MS = 30000;
+
+export function LoginGate({ sendMagicLink, signInWithGoogle, authError, welcomeChoice }) {
   const [email,        setEmail]        = useState("");
+  const [sentEmail,    setSentEmail]    = useState("");
   const [sent,         setSent]         = useState(false);
   const [loading,      setLoading]      = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [showEmail,    setShowEmail]    = useState(false);
-  const [err,          setErr]          = useState("");
+  const [err,          setErr]          = useState(authError || "");
+  const [cooldownEnds, setCooldownEnds] = useState(0);
+  const [now,          setNow]          = useState(() => Date.now());
+  const [resending,    setResending]    = useState(false);
+  const [resendErr,    setResendErr]    = useState("");
+
+  useEffect(() => {
+    if (!sent) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [sent]);
+
+  const cooldownLeft = Math.max(0, Math.ceil((cooldownEnds - now) / 1000));
+  const canResend = !resending && cooldownLeft === 0;
 
   const handleGoogle = async () => {
     setErr("");
@@ -22,12 +38,24 @@ export function LoginGate({ sendMagicLink, signInWithGoogle }) {
   };
 
   const handleSubmit = async () => {
-    if (!email.includes("@")) { setErr("Enter a valid email address."); return; }
+    const clean = email.trim().toLowerCase();
+    if (!clean.includes("@")) { setErr("Enter a valid email address."); return; }
     setLoading(true);
-    const { error } = await sendMagicLink(email);
+    const { error } = await sendMagicLink(clean);
     setLoading(false);
     if (error) { setErr("Something went wrong. Try again."); return; }
+    setSentEmail(clean);
+    setCooldownEnds(Date.now() + RESEND_COOLDOWN_MS);
     setSent(true);
+  };
+
+  const handleResend = async () => {
+    setResendErr("");
+    setResending(true);
+    const { error } = await sendMagicLink(sentEmail);
+    setResending(false);
+    if (error) { setResendErr("Couldn't resend. Try again."); return; }
+    setCooldownEnds(Date.now() + RESEND_COOLDOWN_MS);
   };
 
   return (
@@ -63,19 +91,52 @@ export function LoginGate({ sendMagicLink, signInWithGoogle }) {
               Check your email
             </h2>
             <p style={{ color: "#A8D5B8", fontSize: 16, lineHeight: 1.6, margin: "0 0 16px" }}>
-              We sent a link to <strong style={{ color: "#E8F5EE" }}>{email}</strong>. Tap it to open Mitzy.
+              We sent a link to <strong style={{ color: "#E8F5EE" }}>{sentEmail}</strong>. Tap it to open Mitzy.
             </p>
-            <p style={{ color: "#6BAF88", fontSize: 14, margin: 0 }}>
+            <p style={{ color: "#6BAF88", fontSize: 14, margin: "0 0 24px" }}>
               The link expires in 24 hours.
             </p>
+
+            <button
+              onClick={handleResend}
+              disabled={!canResend}
+              style={{
+                width: "100%", padding: "14px", borderRadius: 12,
+                border: "1.5px solid #2D7A54",
+                background: "transparent",
+                color: canResend ? "#A8D5B8" : "#4A6256",
+                fontSize: 15, fontWeight: 600,
+                fontFamily: "DM Sans, sans-serif",
+                cursor: canResend ? "pointer" : "default",
+              }}
+            >
+              {resending
+                ? "Sending…"
+                : cooldownLeft > 0
+                  ? `Resend in ${cooldownLeft}s`
+                  : "Didn't get it? Resend"}
+            </button>
+
+            {resendErr && (
+              <p style={{ color: "#F77F00", fontSize: 14, margin: "12px 0 0", fontFamily: "DM Sans, sans-serif" }}>
+                {resendErr}
+              </p>
+            )}
           </>
         ) : (
           <>
-            <h2 style={{ fontFamily: "'Righteous', cursive", color: "#E8F5EE", fontSize: 26, margin: "0 0 8px" }}>
-              Save your setup
+            {authError && (
+              <div style={{ background: '#7B1A1A', borderRadius: 10, padding: '12px 14px', marginBottom: 20, color: '#FFB3B3', fontSize: 13, fontFamily: 'DM Sans, sans-serif', lineHeight: 1.5 }}>
+                Sign-in failed: {authError}
+              </div>
+            )}
+          <h2 style={{ fontFamily: "'Righteous', cursive", color: "#E8F5EE", fontSize: 26, margin: "0 0 8px" }}>
+              {welcomeChoice === 'returning' ? 'Welcome back' : 'Save your setup'}
             </h2>
             <p style={{ color: "#A8D5B8", fontSize: 15, lineHeight: 1.6, margin: "0 0 28px" }}>
-              It took a minute to build. Keep it safe across devices.
+              {welcomeChoice === 'returning'
+                ? 'Sign in to load your Mitzy.'
+                : 'It took a minute to build. Keep it safe across devices.'}
             </p>
 
             {/* Google SSO */}

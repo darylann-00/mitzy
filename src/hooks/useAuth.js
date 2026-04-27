@@ -1,18 +1,42 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { clearLocalUserData } from '../utils/storage'
 
 export function useAuth() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [authError, setAuthError] = useState(() => {
+    const p = new URLSearchParams(window.location.search)
+    const h = new URLSearchParams(window.location.hash.slice(1))
+    const err = p.get('error_description') || h.get('error_description')
+    if (err) {
+      window.history.replaceState(null, '', window.location.pathname)
+    }
+    return err ? decodeURIComponent(err.replace(/\+/g, ' ')) : null
+  })
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        setUser(session?.user ?? null)
+      })
+      .catch((err) => {
+        console.error('Failed to get session:', err)
+        setUser(null)
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        clearLocalUserData()
+        setUser(null)
+        window.location.reload()
+        return
+      }
       setUser(session?.user ?? null)
       setLoading(false)
-    })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
     })
 
     return () => subscription.unsubscribe()
@@ -32,7 +56,7 @@ export function useAuth() {
     },
   })
 
-  const signOut = () => supabase.auth.signOut()
+  const signOut = () => supabase.auth.signOut({ scope: 'local' })
 
-  return { user, loading, sendMagicLink, signInWithGoogle, signOut }
+  return { user, loading, authError, sendMagicLink, signInWithGoogle, signOut }
 }

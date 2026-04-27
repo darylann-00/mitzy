@@ -32,6 +32,8 @@ export function useTasks(user) {
             task_id:        taskId,
             last_done:      localState[taskId]?.lastDone      ?? null,
             scheduled_date: localState[taskId]?.scheduledDate ?? null,
+            interval_days:  localState[taskId]?.intervalDays  ?? null,
+            needed:         localState[taskId]?.needed        ?? false,
             disabled:       localDisabled[taskId]             ?? false,
           }));
           const { error: upsertError } = await supabase.from("task_records").upsert(rows);
@@ -41,10 +43,12 @@ export function useTasks(user) {
         const state    = {};
         const disabled = {};
         for (const row of data) {
-          if (row.last_done || row.scheduled_date) {
+          if (row.last_done || row.scheduled_date || row.interval_days || row.needed) {
             state[row.task_id] = {
               lastDone:      row.last_done,
               scheduledDate: row.scheduled_date,
+              ...(row.interval_days ? { intervalDays: row.interval_days } : {}),
+              ...(row.needed       ? { needed: true }                      : {}),
             };
           }
           if (row.disabled) {
@@ -76,6 +80,7 @@ export function useTasks(user) {
     if (user) {
       const { error } = await supabase.from("task_records").upsert({
         user_id: user.id, task_id: id, last_done: iso, scheduled_date: null,
+        ...(intervalDays ? { interval_days: intervalDays } : {}),
       });
       if (error) { setTaskState(s => ({ ...s, [id]: prev })); return { error }; }
     }
@@ -104,12 +109,26 @@ export function useTasks(user) {
     }
   };
 
-  const markNeeded = (id) => {
-    setTaskState(prev => ({ ...prev, [id]: { ...prev[id], needed: true } }));
+  const markNeeded = async (id) => {
+    const prev = taskState[id];
+    setTaskState(s => ({ ...s, [id]: { ...s[id], needed: true } }));
+    if (user) {
+      const { error } = await supabase.from("task_records").upsert({
+        user_id: user.id, task_id: id, needed: true,
+      });
+      if (error) setTaskState(s => ({ ...s, [id]: prev }));
+    }
   };
 
-  const setIntervalOverride = (id, intervalDays) => {
-    setTaskState(prev => ({ ...prev, [id]: { ...prev[id], intervalDays } }));
+  const setIntervalOverride = async (id, intervalDays) => {
+    const prev = taskState[id];
+    setTaskState(s => ({ ...s, [id]: { ...s[id], intervalDays } }));
+    if (user) {
+      const { error } = await supabase.from("task_records").upsert({
+        user_id: user.id, task_id: id, interval_days: intervalDays,
+      });
+      if (error) setTaskState(s => ({ ...s, [id]: prev }));
+    }
   };
 
   return { taskState, setTaskState, disabledTasks, setDisabledTasks, markDone, markScheduled, markNotApplicable, markNeeded, setIntervalOverride, loading, syncError };
