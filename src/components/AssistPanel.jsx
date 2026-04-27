@@ -1,4 +1,7 @@
 import { useState, useEffect, useMemo, memo } from "react";
+import ReactMarkdown from "react-markdown";
+import rehypeSanitize from "rehype-sanitize";
+import remarkGfm from "remark-gfm";
 import { saveS, ASSIST_CACHE_PREFIX, ASSIST_CACHE_TTL } from "../utils/storage";
 import { buildAssistPrompt } from "../utils/assistPrompt";
 import { useProfileContext } from "../contexts/ProfileContext";
@@ -35,153 +38,80 @@ function PulseLoader({ messages }) {
   );
 }
 
-// ─── Render inline markdown (bold + auto-linked URLs) ─────────────────────────
-function inlineMarkdown(text) {
-  if (!text) return '';
-  // Escape HTML tags first to block injection from Claude output
-  const escaped = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  return escaped
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/(https?:\/\/[^\s"<>]+)/g, (rawUrl) => {
-      const decoded = rawUrl.replace(/&amp;/g, '&');
-      try {
-        new URL(decoded);
-        const safeHref = decoded.replace(/&/g, '&amp;');
-        return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer" style="color:#1A5C3A;text-decoration:underline">${decoded}</a>`;
-      } catch {
-        return rawUrl;
-      }
-    });
+// ─── Render inline markdown (bold + auto-linked URLs) ────────────────────────
+function ReactMarkdownInline({ children }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      rehypePlugins={[rehypeSanitize]}
+      components={{
+        p: ({ node, ...props }) => <span {...props} />,
+        a: ({ node, ...props }) => (
+          <a {...props} target="_blank" rel="noopener noreferrer" style={{ color: '#1A5C3A', textDecoration: 'underline' }} />
+        ),
+      }}
+    >
+      {children}
+    </ReactMarkdown>
+  );
 }
-
-// Keep old name as alias so blurb rendering still works
-const boldMarkdown = inlineMarkdown;
 
 // ─── Render markdown blocks (headers, bullets, numbered lists, tables, hr) ────
 function MarkdownBlock({ text }) {
   if (!text) return null;
-  const lines = text.split('\n');
-  const elements = [];
-  let i = 0;
-
-  while (i < lines.length) {
-    const line = lines[i];
-
-    // Blank line
-    if (!line.trim()) { i++; continue; }
-
-    // Horizontal rule --- or ===
-    if (/^[-=]{3,}\s*$/.test(line)) {
-      elements.push(<hr key={i} style={{ border:'none', borderTop:'1px solid #EAE4DA', margin:'12px 0' }} />);
-      i++; continue;
-    }
-
-    // ## Heading
-    if (/^#{1,3}\s/.test(line)) {
-      const content = line.replace(/^#{1,3}\s+/, '');
-      elements.push(
-        <div key={i} style={{ fontWeight:700, color:'#1C2B22', fontSize:14, fontFamily:'DM Sans, sans-serif', marginTop:14, marginBottom:4 }}
-          dangerouslySetInnerHTML={{ __html: boldMarkdown(content) }} />
-      );
-      i++; continue;
-    }
-
-    // Table — collect header + separator + rows
-    if (/^\|.+\|/.test(line) && i + 1 < lines.length && /^\|[-| :]+\|/.test(lines[i + 1])) {
-      const headers = line.split('|').filter((_, idx, arr) => idx > 0 && idx < arr.length - 1).map(h => h.trim());
-      i += 2; // skip header + separator
-      const rows = [];
-      while (i < lines.length && /^\|.+\|/.test(lines[i])) {
-        rows.push(lines[i].split('|').filter((_, idx, arr) => idx > 0 && idx < arr.length - 1).map(c => c.trim()));
-        i++;
-      }
-      elements.push(
-        <div key={`table-${i}`} style={{ overflowX:'auto', marginBottom:10 }}>
-          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12, fontFamily:'DM Sans, sans-serif' }}>
-            <thead>
-              <tr>
-                {headers.map((h, j) => (
-                  <th key={j} style={{ textAlign:'left', padding:'6px 8px', borderBottom:'2px solid #EAE4DA', color:'#1C2B22', fontWeight:700, whiteSpace:'nowrap' }}
-                    dangerouslySetInnerHTML={{ __html: boldMarkdown(h) }} />
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, ri) => (
-                <tr key={ri} style={{ borderBottom:'1px solid #F0EDE4' }}>
-                  {row.map((cell, ci) => (
-                    <td key={ci} style={{ padding:'6px 8px', color:'#4A6256', verticalAlign:'top' }}
-                      dangerouslySetInnerHTML={{ __html: boldMarkdown(cell) }} />
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      );
-      continue;
-    }
-
-    // Bullet list — collect consecutive bullet lines (hyphen, em-dash, en-dash, asterisk)
-    if (/^[\s]*[-–—*]\s/.test(line)) {
-      const items = [];
-      while (i < lines.length && /^[\s]*[-–—*]\s/.test(lines[i])) {
-        items.push(lines[i].replace(/^[\s]*[-–—*]\s+/, ''));
-        i++;
-      }
-      elements.push(
-        <ul key={`ul-${i}`} style={{ margin:'4px 0 8px 0', paddingLeft:18 }}>
-          {items.map((item, j) => (
-            <li key={j} style={{ fontSize:13, color:'#1C2B22', lineHeight:1.7, fontFamily:'DM Sans, sans-serif', marginBottom:2 }}
-              dangerouslySetInnerHTML={{ __html: boldMarkdown(item) }} />
-          ))}
-        </ul>
-      );
-      continue;
-    }
-
-    // Numbered list — collect items and any dash sub-bullets that follow each
-    if (/^\s*\d+\.\s/.test(line)) {
-      const items = [];
-      while (i < lines.length && /^\s*\d+\.\s/.test(lines[i])) {
-        const itemText = lines[i].replace(/^\s*\d+\.\s+/, '');
-        i++;
-        const subItems = [];
-        while (i < lines.length && (lines[i].trim() === '' || /^\s*[-–—*]\s/.test(lines[i]))) {
-          if (lines[i].trim() !== '') subItems.push(lines[i].replace(/^\s*[-–—*]\s+/, ''));
-          i++;
-        }
-        items.push({ text: itemText, subItems });
-      }
-      elements.push(
-        <ol key={`ol-${i}`} style={{ margin:'4px 0 8px 0', paddingLeft:20 }}>
-          {items.map((item, j) => (
-            <li key={j} style={{ fontSize:13, color:'#1C2B22', lineHeight:1.7, fontFamily:'DM Sans, sans-serif', marginBottom: item.subItems.length ? 6 : 2 }}>
-              <span dangerouslySetInnerHTML={{ __html: boldMarkdown(item.text) }} />
-              {item.subItems.length > 0 && (
-                <ul style={{ margin:'2px 0 0 0', paddingLeft:16 }}>
-                  {item.subItems.map((sub, k) => (
-                    <li key={k} style={{ fontSize:12, color:'#4A6256', lineHeight:1.6, fontFamily:'DM Sans, sans-serif', marginBottom:1 }}
-                      dangerouslySetInnerHTML={{ __html: boldMarkdown(sub) }} />
-                  ))}
-                </ul>
-              )}
-            </li>
-          ))}
-        </ol>
-      );
-      continue;
-    }
-
-    // Regular paragraph
-    elements.push(
-      <p key={i} style={{ fontSize:13, color:'#1C2B22', lineHeight:1.7, fontFamily:'DM Sans, sans-serif', margin:'0 0 14px 0' }}
-        dangerouslySetInnerHTML={{ __html: boldMarkdown(line) }} />
-    );
-    i++;
-  }
-
-  return <div>{elements}</div>;
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      rehypePlugins={[rehypeSanitize]}
+      components={{
+        h1: ({ node, ...props }) => (
+          <div {...props} style={{ fontWeight: 700, color: '#1C2B22', fontSize: 14, fontFamily: 'DM Sans, sans-serif', marginTop: 14, marginBottom: 4 }} />
+        ),
+        h2: ({ node, ...props }) => (
+          <div {...props} style={{ fontWeight: 700, color: '#1C2B22', fontSize: 14, fontFamily: 'DM Sans, sans-serif', marginTop: 14, marginBottom: 4 }} />
+        ),
+        h3: ({ node, ...props }) => (
+          <div {...props} style={{ fontWeight: 700, color: '#1C2B22', fontSize: 14, fontFamily: 'DM Sans, sans-serif', marginTop: 14, marginBottom: 4 }} />
+        ),
+        p: ({ node, ...props }) => (
+          <p {...props} style={{ fontSize: 13, color: '#1C2B22', lineHeight: 1.7, fontFamily: 'DM Sans, sans-serif', margin: '0 0 14px 0' }} />
+        ),
+        ul: ({ node, ...props }) => (
+          <ul {...props} style={{ margin: '4px 0 8px 0', paddingLeft: 18 }} />
+        ),
+        li: ({ node, ...props }) => (
+          <li {...props} style={{ fontSize: 13, color: '#1C2B22', lineHeight: 1.7, fontFamily: 'DM Sans, sans-serif', marginBottom: 2 }} />
+        ),
+        ol: ({ node, ...props }) => (
+          <ol {...props} style={{ margin: '4px 0 8px 0', paddingLeft: 20 }} />
+        ),
+        table: ({ node, ...props }) => (
+          <div style={{ overflowX: 'auto', marginBottom: 10 }}>
+            <table {...props} style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, fontFamily: 'DM Sans, sans-serif' }} />
+          </div>
+        ),
+        thead: ({ node, ...props }) => <thead {...props} />,
+        tbody: ({ node, ...props }) => <tbody {...props} />,
+        tr: ({ node, isHeader, ...props }) => (
+          <tr {...props} style={{ borderBottom: isHeader ? '2px solid #EAE4DA' : '1px solid #F0EDE4' }} />
+        ),
+        th: ({ node, ...props }) => (
+          <th {...props} style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '2px solid #EAE4DA', color: '#1C2B22', fontWeight: 700, whiteSpace: 'nowrap' }} />
+        ),
+        td: ({ node, ...props }) => (
+          <td {...props} style={{ padding: '6px 8px', color: '#4A6256', verticalAlign: 'top' }} />
+        ),
+        hr: ({ node, ...props }) => (
+          <hr {...props} style={{ border: 'none', borderTop: '1px solid #EAE4DA', margin: '12px 0' }} />
+        ),
+        a: ({ node, ...props }) => (
+          <a {...props} target="_blank" rel="noopener noreferrer" style={{ color: '#1A5C3A', textDecoration: 'underline' }} />
+        ),
+      }}
+    >
+      {text}
+    </ReactMarkdown>
+  );
 }
 
 // ─── Company card (national services — no address/phone/hours) ────────────────
@@ -204,7 +134,7 @@ function CompanyCard({ company: c }) {
           </a>
         )}
       </div>
-      {c.blurb && <div style={{ fontSize:13, color:'#4A6256', lineHeight:1.5, fontFamily:'DM Sans, sans-serif' }} dangerouslySetInnerHTML={{ __html: boldMarkdown(c.blurb) }} />}
+      {c.blurb && <div style={{ fontSize:13, color:'#4A6256', lineHeight:1.5, fontFamily:'DM Sans, sans-serif' }}><ReactMarkdownInline>{c.blurb}</ReactMarkdownInline></div>}
     </div>
   );
 }
@@ -249,7 +179,7 @@ function ProviderCard({ provider: p, isSaved, onSave }) {
           </div>
         )}
       </div>
-      {p.blurb && <div style={{ fontSize:13, color:'#4A6256', marginBottom:8, lineHeight:1.5, fontFamily:'DM Sans, sans-serif' }} dangerouslySetInnerHTML={{ __html: boldMarkdown(p.blurb) }} />}
+      {p.blurb && <div style={{ fontSize:13, color:'#4A6256', marginBottom:8, lineHeight:1.5, fontFamily:'DM Sans, sans-serif' }}><ReactMarkdownInline>{p.blurb}</ReactMarkdownInline></div>}
       {isSaved && p.notes && <div style={{ fontSize:12, color:'#4A6256', fontStyle:'italic', marginBottom:8, fontFamily:'DM Sans, sans-serif' }}>{p.notes}</div>}
       <div style={{ display:'flex', gap:12, flexWrap:'wrap', marginBottom:8 }}>
         {p.priceRange && <span style={{ fontSize:12, color:'#4A6256', fontFamily:'DM Sans, sans-serif' }}>{p.priceRange}</span>}
