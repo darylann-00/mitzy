@@ -11,6 +11,7 @@ function corsHeaders(req) {
   return {
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'content-type, authorization',
+    'Vary': 'Origin',
     ...(match ? { 'Access-Control-Allow-Origin': match } : {}),
   };
 }
@@ -43,6 +44,14 @@ export default async function handler(req) {
     return new Response("Missing prompt", { status: 400 });
   }
 
+  if (typeof prompt !== 'string') {
+    return new Response("Invalid prompt", { status: 400 });
+  }
+
+  if (prompt.length > 8000) {
+    return new Response("Prompt too large", { status: 413 });
+  }
+
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return new Response("API key not configured", { status: 500 });
@@ -64,7 +73,8 @@ export default async function handler(req) {
 
   if (!anthropicRes.ok) {
     const err = await anthropicRes.text();
-    return new Response(`Anthropic error: ${err}`, { status: 502 });
+    console.error(`Anthropic error: ${err}`);
+    return new Response("Service error", { status: 502 });
   }
 
   const data = await anthropicRes.json();
