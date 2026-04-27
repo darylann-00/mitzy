@@ -135,7 +135,7 @@ export function LoginGate({ sendMagicLink, signInWithGoogle, authError, welcomeC
             </h2>
             <p style={{ color: "#A8D5B8", fontSize: 15, lineHeight: 1.6, margin: "0 0 28px" }}>
               {welcomeChoice === 'returning'
-                ? 'Sign in to load your Mitzy.'
+                ? 'Sign in to pick up where you left off.'
                 : 'It took a minute to build. Keep it safe across devices.'}
             </p>
 
