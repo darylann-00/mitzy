@@ -11,6 +11,7 @@ function corsHeaders(req) {
   return {
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'content-type, authorization',
+    'Vary': 'Origin',
     ...(match ? { 'Access-Control-Allow-Origin': match } : {}),
   };
 }
@@ -68,6 +69,18 @@ export default async function handler(req) {
     return new Response("Missing taskLabel or zip", { status: 400 });
   }
 
+  // Validate string fields — must be string or undefined, max 200 chars
+  for (const [name, value] of Object.entries({ taskLabel, taskCat, taskNote, searchQuery })) {
+    if (value !== undefined && (typeof value !== 'string' || value.length > 200)) {
+      return new Response("Invalid input", { status: 400 });
+    }
+  }
+
+  // Validate zip — must be 5-digit string
+  if (typeof zip !== 'string' || !/^\d{5}$/.test(zip)) {
+    return new Response("Invalid zip", { status: 400 });
+  }
+
   const placesQuery = searchQuery || taskLabel;
 
   const placesKey   = process.env.GOOGLE_PLACES_API_KEY;
@@ -104,7 +117,8 @@ export default async function handler(req) {
 
   if (!placesRes.ok) {
     const err = await placesRes.text();
-    return new Response(`Places API error: ${err}`, { status: 502 });
+    console.error(`Places API error: ${err}`);
+    return new Response("Service error", { status: 502 });
   }
 
   const placesData = await placesRes.json();
@@ -176,7 +190,8 @@ Return ONLY a JSON array (no markdown, no explanation), one object per place, in
 
   if (!anthropicRes.ok) {
     const err = await anthropicRes.text();
-    return new Response(`Anthropic error: ${err}`, { status: 502 });
+    console.error(`Anthropic error: ${err}`);
+    return new Response("Service error", { status: 502 });
   }
 
   const anthropicData = await anthropicRes.json();
