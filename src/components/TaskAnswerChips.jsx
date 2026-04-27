@@ -90,16 +90,27 @@ export function TaskAnswerChips({
           <div style={{ fontSize: 11, color: '#ffffff', fontWeight: 700, marginBottom: 5, fontFamily: 'DM Sans, sans-serif' }}>
             Or pick an exact date:
           </div>
-          <input
-            type="date"
-            max={today}
-            value={exactDate}
-            onChange={e => {
-              setExactDate(e.target.value);
-              if (e.target.value) { onDone(e.target.value); setExactDate(''); }
-            }}
-            style={dateInputStyle}
-          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              type="date"
+              max={today}
+              value={exactDate}
+              onChange={e => setExactDate(e.target.value)}
+              style={dateInputStyle}
+            />
+            {exactDate && (
+              <button
+                onClick={() => { onDone(exactDate); setExactDate(''); }}
+                style={{
+                  flex: '0 0 auto', padding: '4px 10px', fontSize: 12, fontWeight: 700,
+                  borderRadius: 6, border: 'none', background: '#F4C430', color: '#7a5900',
+                  cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', height: 28,
+                }}
+              >
+                Use
+              </button>
+            )}
+          </div>
         </>
       )}
       {onSkip && (
