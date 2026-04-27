@@ -1,3 +1,6 @@
+import { requireUser } from './_auth.js';
+import { assistLimiter } from './_ratelimit.js';
+
 export const config = { runtime: "edge" };
 
 // ALLOWED_ORIGIN: set to your production domain in Vercel env vars (e.g. "https://mitzy.app").
@@ -8,7 +11,8 @@ function corsHeaders(req) {
   const match   = allowed && origin === allowed ? origin : null;
   return {
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'content-type',
+    'Access-Control-Allow-Headers': 'content-type, authorization',
+    'Vary': 'Origin',
     ...(match ? { 'Access-Control-Allow-Origin': match } : {}),
   };
 }
@@ -22,6 +26,25 @@ export default async function handler(req) {
     return new Response("Method not allowed", { status: 405 });
   }
 
+  const { userId, error } = await requireUser(req);
+  if (error) {
+    return new Response(error.statusText || 'Unauthorized', {
+      status: error.status,
+      headers: corsHeaders(req)
+    });
+  }
+
+  const { success, reset } = await assistLimiter.limit(userId);
+  if (!success) {
+    return new Response('Rate limit exceeded', {
+      status: 429,
+      headers: {
+        'Retry-After': String(Math.ceil((reset - Date.now()) / 1000)),
+        ...corsHeaders(req),
+      },
+    });
+  }
+
   let prompt;
   try {
     ({ prompt } = await req.json());
@@ -31,6 +54,14 @@ export default async function handler(req) {
 
   if (!prompt) {
     return new Response("Missing prompt", { status: 400 });
+  }
+
+  if (typeof prompt !== 'string') {
+    return new Response("Invalid prompt", { status: 400 });
+  }
+
+  if (prompt.length > 8000) {
+    return new Response("Prompt too large", { status: 413 });
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -54,7 +85,8 @@ export default async function handler(req) {
 
   if (!anthropicRes.ok) {
     const err = await anthropicRes.text();
-    return new Response(`Anthropic error: ${err}`, { status: 502 });
+    console.error(`Anthropic error: ${err}`);
+    return new Response("Service error", { status: 502 });
   }
 
   const data = await anthropicRes.json();

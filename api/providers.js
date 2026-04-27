@@ -1,3 +1,6 @@
+import { requireUser } from './_auth.js';
+import { providersLimiter } from './_ratelimit.js';
+
 export const config = { runtime: "edge" };
 
 // ALLOWED_ORIGIN: set to your production domain in Vercel env vars (e.g. "https://mitzy.app").
@@ -8,7 +11,8 @@ function corsHeaders(req) {
   const match   = allowed && origin === allowed ? origin : null;
   return {
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'content-type',
+    'Access-Control-Allow-Headers': 'content-type, authorization',
+    'Vary': 'Origin',
     ...(match ? { 'Access-Control-Allow-Origin': match } : {}),
   };
 }
@@ -46,6 +50,25 @@ export default async function handler(req) {
     return new Response("Method not allowed", { status: 405 });
   }
 
+  const { userId, error } = await requireUser(req);
+  if (error) {
+    return new Response(error.statusText || 'Unauthorized', {
+      status: error.status,
+      headers: corsHeaders(req)
+    });
+  }
+
+  const { success, reset } = await providersLimiter.limit(userId);
+  if (!success) {
+    return new Response('Rate limit exceeded', {
+      status: 429,
+      headers: {
+        'Retry-After': String(Math.ceil((reset - Date.now()) / 1000)),
+        ...corsHeaders(req),
+      },
+    });
+  }
+
   let taskLabel, taskCat, taskNote, zip, searchQuery, maxResults;
   try {
     ({ taskLabel, taskCat, taskNote, zip, searchQuery, maxResults } = await req.json());
@@ -56,6 +79,18 @@ export default async function handler(req) {
 
   if (!taskLabel || !zip) {
     return new Response("Missing taskLabel or zip", { status: 400 });
+  }
+
+  // Validate string fields — must be string or undefined, max 200 chars
+  for (const [name, value] of Object.entries({ taskLabel, taskCat, taskNote, searchQuery })) {
+    if (value !== undefined && (typeof value !== 'string' || value.length > 200)) {
+      return new Response("Invalid input", { status: 400 });
+    }
+  }
+
+  // Validate zip — must be 5-digit string
+  if (typeof zip !== 'string' || !/^\d{5}$/.test(zip)) {
+    return new Response("Invalid zip", { status: 400 });
   }
 
   const placesQuery = searchQuery || taskLabel;
@@ -94,7 +129,8 @@ export default async function handler(req) {
 
   if (!placesRes.ok) {
     const err = await placesRes.text();
-    return new Response(`Places API error: ${err}`, { status: 502 });
+    console.error(`Places API error: ${err}`);
+    return new Response("Service error", { status: 502 });
   }
 
   const placesData = await placesRes.json();
@@ -166,7 +202,8 @@ Return ONLY a JSON array (no markdown, no explanation), one object per place, in
 
   if (!anthropicRes.ok) {
     const err = await anthropicRes.text();
-    return new Response(`Anthropic error: ${err}`, { status: 502 });
+    console.error(`Anthropic error: ${err}`);
+    return new Response("Service error", { status: 502 });
   }
 
   const anthropicData = await anthropicRes.json();

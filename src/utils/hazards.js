@@ -1,24 +1,46 @@
-// Maps zip code ranges to relevant natural hazards.
-// Mocked — real implementation will query FEMA API.
+// Maps FEMA NRI hazard codes to our internal hazard keys.
+// FEMA NRI API: https://hazards.fema.gov/nri/api/county?zip={zip}
+// Ratings: "Very Low" | "Low" | "Medium" | "High" | "Very High" | "Not Applicable" | ...
 
-const ZIP_HAZARD_MAP = [
-  { min: 90000, max: 99999, hazards: ["earthquake", "wildfire"] },
-  { min: 97000, max: 97999, hazards: ["earthquake", "wildfire"] },
-  { min: 77000, max: 79999, hazards: ["hurricane", "flood", "tornado"] },
-  { min: 70000, max: 71999, hazards: ["hurricane", "flood"] },
-  { min: 34000, max: 34999, hazards: ["hurricane", "flood"] },
-  { min: 50000, max: 52999, hazards: ["tornado", "winter"] },
-];
+const FEMA_NRI_URL = "https://hazards.fema.gov/nri/api/county";
+
+// FEMA NRI code → our EM_HAZARD key
+const FEMA_TO_HAZARD = {
+  ERQK: "earthquake",
+  HRCN: "hurricane",
+  RFLD: "flood",
+  CFLD: "flood",
+  TRND: "tornado",
+  WFIR: "wildfire",
+  CWAV: "winter",
+  ISTM: "winter",
+};
+
+const HIGH_RISK = new Set(["Medium", "High", "Very High"]);
 
 const DEFAULT_HAZARDS = ["winter"];
 
 export async function detectHazards(zip) {
-  // Simulates async API call
-  await new Promise(r => setTimeout(r, 800));
+  if (!zip || !/^\d{5}$/.test(zip)) return DEFAULT_HAZARDS;
 
-  const zipNum = parseInt(zip, 10);
-  if (isNaN(zipNum)) return DEFAULT_HAZARDS;
+  try {
+    const res = await fetch(`${FEMA_NRI_URL}?zip=${zip}`);
+    if (!res.ok) return DEFAULT_HAZARDS;
 
-  const match = ZIP_HAZARD_MAP.find(r => zipNum >= r.min && zipNum <= r.max);
-  return match ? match.hazards : DEFAULT_HAZARDS;
+    const data = await res.json();
+    const counties = Array.isArray(data) ? data : [data];
+    if (!counties.length) return DEFAULT_HAZARDS;
+
+    const found = new Set();
+    for (const county of counties) {
+      for (const [code, hazardKey] of Object.entries(FEMA_TO_HAZARD)) {
+        const rating = county[`${code}_RISKR`];
+        if (rating && HIGH_RISK.has(rating)) found.add(hazardKey);
+      }
+    }
+
+    return found.size > 0 ? [...found] : DEFAULT_HAZARDS;
+  } catch {
+    return DEFAULT_HAZARDS;
+  }
 }

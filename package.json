@@ -4,8 +4,13 @@
   "private": true,
   "dependencies": {
     "@supabase/supabase-js": "^2.100.1",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.37.0",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.4",
+    "react-markdown": "^10.1.0",
+    "rehype-sanitize": "^6.0.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
@@ -38,19 +43,35 @@
       "plugin:react-hooks/recommended"
     ],
     "parserOptions": {
-      "ecmaFeatures": { "jsx": true },
+      "ecmaFeatures": {
+        "jsx": true
+      },
       "ecmaVersion": "latest",
       "sourceType": "module"
     },
     "settings": {
-      "react": { "version": "detect" }
+      "react": {
+        "version": "detect"
+      }
     },
     "rules": {
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",
       "react/no-unescaped-entities": "off",
-      "no-empty": ["error", { "allowEmptyCatch": true }],
-      "no-unused-vars": ["warn", { "vars": "all", "args": "after-used", "ignoreRestSiblings": true }]
+      "no-empty": [
+        "error",
+        {
+          "allowEmptyCatch": true
+        }
+      ],
+      "no-unused-vars": [
+        "warn",
+        {
+          "vars": "all",
+          "args": "after-used",
+          "ignoreRestSiblings": true
+        }
+      ]
     }
   },
   "browserslist": {

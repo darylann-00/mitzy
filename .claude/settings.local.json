@@ -23,7 +23,12 @@
       "Bash(vercel:*)",
       "Bash(npm test *)",
       "Bash(npm i *)",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(git fetch *)",
+      "Bash(git rebase *)",
+      "Bash(npm ci *)",
+      "Bash(gh pr create --title 'feat\\(onboarding\\): returning-user gate and data-overwrite protection' --body ' *)",
+      "Bash(gh pr create --title 'fix: harden Edge Functions input validation, error masking, and caching' --body ' *)"
     ]
   }
 }

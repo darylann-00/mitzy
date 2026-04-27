@@ -181,4 +181,3 @@ GitHub Actions at `.github/workflows/ci.yml`. Runs `npm ci`, `npm run build`, `n
 | Google Calendar integration | Built. `/api/schedule` Edge Function + GIS just-in-time OAuth in `SchedulePanel`. Requires `VITE_GOOGLE_CLIENT_ID` + Calendar API enabled in Google Cloud Console. |
 | Hazard zip lookup | Hardcoded zip ranges. Replace with FEMA API. |
 | AI FAB | Sparkle button in nav bar is a stub — `console.log('AI input')`. |
-| `intervalDays` override | Lives in localStorage only — `task_records` column exists but sync not verified end-to-end. |
