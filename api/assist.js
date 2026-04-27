@@ -1,4 +1,5 @@
 import { requireUser } from './_auth.js';
+import { assistLimiter } from './_ratelimit.js';
 
 export const config = { runtime: "edge" };
 
@@ -25,11 +26,22 @@ export default async function handler(req) {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  const { error } = await requireUser(req);
+  const { userId, error } = await requireUser(req);
   if (error) {
     return new Response(error.statusText || 'Unauthorized', {
       status: error.status,
       headers: corsHeaders(req)
+    });
+  }
+
+  const { success, reset } = await assistLimiter.limit(userId);
+  if (!success) {
+    return new Response('Rate limit exceeded', {
+      status: 429,
+      headers: {
+        'Retry-After': String(Math.ceil((reset - Date.now()) / 1000)),
+        ...corsHeaders(req),
+      },
     });
   }
 
