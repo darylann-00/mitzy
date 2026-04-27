@@ -5,6 +5,7 @@ import remarkGfm from "remark-gfm";
 import { saveS, ASSIST_CACHE_PREFIX, ASSIST_CACHE_TTL } from "../utils/storage";
 import { buildAssistPrompt } from "../utils/assistPrompt";
 import { useProfileContext } from "../contexts/ProfileContext";
+import { supabase } from "../lib/supabase";
 
 // ─── Pulsing dot loader ────────────────────────────────────────────────────────
 function PulseLoader({ messages }) {
@@ -325,11 +326,16 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
     }
     setStatus('loading');
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('Not authenticated');
+
+      const authHeader = { 'authorization': `Bearer ${token}` };
       let text;
       if (task.assistType === 'providers') {
         const res = await fetch('/api/providers', {
           method: 'POST',
-          headers: { 'content-type': 'application/json' },
+          headers: { 'content-type': 'application/json', ...authHeader },
           body: JSON.stringify({
             taskLabel:   task.label,
             taskCat:     task.cat,
@@ -344,7 +350,7 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
         const prompt = buildAssistPrompt(task, profile);
         const res = await fetch('/api/assist', {
           method: 'POST',
-          headers: { 'content-type': 'application/json' },
+          headers: { 'content-type': 'application/json', ...authHeader },
           body: JSON.stringify({ prompt }),
         });
         if (!res.ok) throw new Error(`${res.status}`);

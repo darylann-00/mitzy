@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./styles/app.css";
 
-import { loadS, saveS, ONBOARDED_KEY, PROFILE_DONE_KEY, VISIT_COUNT_KEY } from "./utils/storage";
+import { loadS, saveS, ONBOARDED_KEY, PROFILE_DONE_KEY, VISIT_COUNT_KEY, WELCOME_CHOICE_KEY } from "./utils/storage";
 import { detectHazards } from "./utils/hazards";
 import { supabase } from "./lib/supabase";
 
@@ -12,6 +12,8 @@ import { ProfileProvider, useProfileContext } from "./contexts/ProfileContext";
 import { TaskProvider,   useTaskContext }    from "./contexts/TaskContext";
 
 import { LoginGate }      from "./components/LoginGate";
+import { BrandSplash }    from "./components/BrandSplash";
+import { WelcomeGate }    from "./components/WelcomeGate";
 import { SlimOnboarding } from "./onboarding/SlimOnboarding";
 import { PrioritySetup }  from "./onboarding/PrioritySetup";
 
@@ -20,6 +22,7 @@ import { AssistPanel }   from "./components/AssistPanel";
 import { SchedulePanel } from "./components/SchedulePanel";
 import { MarkDoneModal } from "./components/MarkDoneModal";
 import { AddTaskPanel }  from "./components/AddTaskPanel";
+import { ProfileConflictModal } from "./components/ProfileConflictModal";
 
 import { HomeView }       from "./views/HomeView";
 import { AllView }        from "./views/AllView";
@@ -151,7 +154,7 @@ function Overlays({
   scheduleTask, onScheduleClose,
   addingTask, onAddClose,
 }) {
-  const { addCustomTask } = useProfileContext();
+  const { addCustomTask, pendingConflict, resolveConflict } = useProfileContext();
   const { markScheduled } = useTaskContext();
 
   return (
@@ -161,27 +164,38 @@ function Overlays({
       {assistTask    && <AssistPanel task={assistTask} onClose={onAssistClose} />}
       {scheduleTask  && <SchedulePanel task={scheduleTask} onSchedule={(d) => markScheduled(scheduleTask.id, d)} onClose={onScheduleClose} />}
       {addingTask    && <AddTaskPanel onAdd={addCustomTask} onClose={onAddClose} />}
+      {pendingConflict && <ProfileConflictModal onResolve={resolveConflict} />}
     </>
   );
 }
 
 // ─── Root — wires up providers then delegates ──────────────────────────────────
 export default function Mitzy() {
-  const { user, loading: authLoading, sendMagicLink, signInWithGoogle, signOut } = useAuth();
-  if (authLoading) return null;
+  const { user, loading: authLoading, authError, sendMagicLink, signInWithGoogle, signOut } = useAuth();
+  const [welcomeChoice, setWelcomeChoice] = useState(() => loadS(WELCOME_CHOICE_KEY, null));
+
+  if (authLoading) return <BrandSplash />;
 
   return (
-    <ProfileProvider user={user}>
+    <ProfileProvider user={user} welcomeChoice={welcomeChoice}>
       <TaskProvider user={user}>
-        <MitzyApp user={user} signOut={signOut} sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} />
+        <MitzyApp
+          user={user}
+          authError={authError}
+          signOut={signOut}
+          sendMagicLink={sendMagicLink}
+          signInWithGoogle={signInWithGoogle}
+          welcomeChoice={welcomeChoice}
+          setWelcomeChoice={setWelcomeChoice}
+        />
       </TaskProvider>
     </ProfileProvider>
   );
 }
 
 // ─── Inner app — consumes contexts ─────────────────────────────────────────────
-function MitzyApp({ user, signOut, sendMagicLink, signInWithGoogle }) {
-  const { profile, taskLibrary, updateProfile, region, loading: profileLoading, syncError: profileSyncError } = useProfileContext();
+function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, welcomeChoice, setWelcomeChoice }) {
+  const { profile, taskLibrary, updateProfile, region, loading: profileLoading, syncError: profileSyncError, serverProfileChecked, serverProfileExists } = useProfileContext();
   const { activeTasks, taskState, setTaskState, setDisabledTasks, markDone, markNotApplicable, markNeeded, setIntervalOverride, nextUpcomingTask, loading: tasksLoading, syncError: tasksSyncError } = useTaskContext();
 
   // ─── Onboarding state ──────────────────────────────────────────────────────
@@ -201,6 +215,14 @@ function MitzyApp({ user, signOut, sendMagicLink, signInWithGoogle }) {
 
   // ─── Session (trickle + hazards) ───────────────────────────────────────────
   const { trickleTask, dismissTrickle, answerTrickle, pendingHazards, setPendingHazards } = useSession({ onboarded, profile, activeTasks, taskState });
+
+  // ─── Returning user with no server profile → drop into new-user onboarding ─
+  useEffect(() => {
+    if (welcomeChoice === 'returning' && user && serverProfileChecked && !serverProfileExists) {
+      saveS(WELCOME_CHOICE_KEY, 'new');
+      setWelcomeChoice('new');
+    }
+  }, [welcomeChoice, user, serverProfileChecked, serverProfileExists, setWelcomeChoice]);
 
   // ─── Onboarding handlers ───────────────────────────────────────────────────
   const handleSlimOnboardingComplete = (p) => {
@@ -250,9 +272,8 @@ function MitzyApp({ user, signOut, sendMagicLink, signInWithGoogle }) {
       ]);
       if (te || pe) return { error: "Couldn't delete your data from the server. Try again." };
     }
-    localStorage.clear();
     await signOut();
-    window.location.reload();
+    // signOut triggers SIGNED_OUT → clearLocalUserData() + reload in useAuth
   };
 
   // ─── Shared overlay props ──────────────────────────────────────────────────
@@ -265,9 +286,18 @@ function MitzyApp({ user, signOut, sendMagicLink, signInWithGoogle }) {
   };
 
   // ─── Onboarding gates ──────────────────────────────────────────────────────
+  if (!welcomeChoice) {
+    return <WelcomeGate onChoose={(choice) => {
+      saveS(WELCOME_CHOICE_KEY, choice);
+      setWelcomeChoice(choice);
+    }} />;
+  }
+  if (welcomeChoice === 'returning' && !user) {
+    return <LoginGate sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} authError={authError} welcomeChoice={welcomeChoice} />;
+  }
   if (!profileDone) return <SlimOnboarding onComplete={handleSlimOnboardingComplete} />;
   if (!onboarded)   return <PrioritySetup taskLib={taskLibrary} region={region} onComplete={handlePrioritySetupComplete} />;
-  if (!user)        return <LoginGate sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} />;
+  if (!user)        return <LoginGate sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} authError={authError} welcomeChoice={welcomeChoice} />;
 
   // ─── Task detail screen ────────────────────────────────────────────────────
   if (selectedTask) {
