@@ -58,5 +58,8 @@ export function useAuth() {
 
   const signOut = () => supabase.auth.signOut({ scope: 'local' })
 
-  return { user, loading, authError, sendMagicLink, signInWithGoogle, signOut }
+  const signInWithPassword = (email, password) =>
+    supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password })
+
+  return { user, loading, authError, sendMagicLink, signInWithGoogle, signInWithPassword, signOut }
 }
