@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { loadS, saveS, PROFILE_KEY } from "../utils/storage";
+import { loadS, saveS, PROFILE_KEY, CUSTOM_TASKS_KEY } from "../utils/storage";
 import { buildTaskLibrary } from "../data/taskFactory";
 import { supabase } from "../lib/supabase";
 
@@ -35,7 +35,7 @@ function localHasFieldsServerDoesnt(local, server) {
 
 export function useProfile(user, welcomeChoice) {
   const [profile, setProfile] = useState(() => loadS(PROFILE_KEY, {}));
-  const [customTasks, setCustomTasks] = useState([]);
+  const [customTasks, setCustomTasks] = useState(() => loadS(CUSTOM_TASKS_KEY, []));
   const [loading, setLoading] = useState(!!user);
   const [syncError, setSyncError] = useState(null);
   const [pendingConflict, setPendingConflict] = useState(null);
@@ -82,6 +82,26 @@ export function useProfile(user, welcomeChoice) {
 
       setServerProfileExists(serverHasMeaning);
       setServerProfileChecked(true);
+
+      const { data: ctData, error: ctError } = await supabase
+        .from("custom_tasks")
+        .select("*")
+        .eq("user_id", user.id);
+
+      if (!ctError) {
+        const serverTasks = (ctData ?? []).map(fromCustomTaskRow);
+        if (serverTasks.length > 0) {
+          setCustomTasks(serverTasks);
+          saveS(CUSTOM_TASKS_KEY, serverTasks);
+        } else {
+          const localTasks = loadS(CUSTOM_TASKS_KEY, []);
+          if (localTasks.length > 0) {
+            const rows = localTasks.map(t => ({ user_id: user.id, ...toCustomTaskRow(t) }));
+            await supabase.from("custom_tasks").upsert(rows, { onConflict: "user_id,task_id" });
+          }
+        }
+      }
+
       setLoading(false);
     }
 
@@ -105,8 +125,40 @@ export function useProfile(user, welcomeChoice) {
     }
   };
 
-  const addCustomTask = (task) => {
-    setCustomTasks(prev => [...prev, task]);
+  const addCustomTask = async (task) => {
+    const next = [...customTasks, task];
+    const prev = customTasks;
+    setCustomTasks(next);
+    saveS(CUSTOM_TASKS_KEY, next);
+    if (user) {
+      const { error } = await supabase
+        .from("custom_tasks")
+        .upsert({ user_id: user.id, ...toCustomTaskRow(task) }, { onConflict: "user_id,task_id" });
+      if (error) {
+        setCustomTasks(prev);
+        saveS(CUSTOM_TASKS_KEY, prev);
+        throw error;
+      }
+    }
+  };
+
+  const removeCustomTask = async (taskId) => {
+    const prev = customTasks;
+    const next = customTasks.filter(t => t.id !== taskId);
+    setCustomTasks(next);
+    saveS(CUSTOM_TASKS_KEY, next);
+    if (user) {
+      const { error } = await supabase
+        .from("custom_tasks")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("task_id", taskId);
+      if (error) {
+        setCustomTasks(prev);
+        saveS(CUSTOM_TASKS_KEY, prev);
+        throw error;
+      }
+    }
   };
 
   const resolveConflict = async (choice) => {
@@ -126,10 +178,54 @@ export function useProfile(user, welcomeChoice) {
 
   return {
     profile, setProfile, taskLibrary,
-    updateProfile, addCustomTask,
+    updateProfile, addCustomTask, removeCustomTask,
     loading, syncError,
     pendingConflict, resolveConflict,
     serverProfileChecked, serverProfileExists,
+  };
+}
+
+function toCustomTaskRow(t) {
+  return {
+    task_id:         t.id,
+    cat:             t.cat,
+    label:           t.label,
+    interval_days:   t.intervalDays   ?? null,
+    window_days:     t.windowDays     ?? null,
+    stakes:          t.stakes         ?? null,
+    active_months:   t.activeMonths   ?? null,
+    assist_type:     t.assistType     ?? null,
+    search_query:    t.searchQuery    ?? null,
+    why:             t.why            ?? null,
+    guidance:        t.guidance       ?? null,
+    one_time:        !!t.oneTime,
+    is_ai_generated: !!t.isAIGenerated,
+    risk_tier:       t.riskTier       ?? null,
+    assumptions:     t.assumptions    ?? null,
+    prompt_text:     t.promptText     ?? null,
+  };
+}
+
+function fromCustomTaskRow(row) {
+  return {
+    id:            row.task_id,
+    cat:           row.cat,
+    label:         row.label,
+    intervalDays:  row.interval_days  ?? undefined,
+    windowDays:    row.window_days    ?? undefined,
+    stakes:        row.stakes         ?? undefined,
+    activeMonths:  row.active_months  ?? undefined,
+    assistType:    row.assist_type    ?? null,
+    searchQuery:   row.search_query   ?? undefined,
+    why:           row.why            ?? undefined,
+    guidance:      row.guidance       ?? undefined,
+    oneTime:       !!row.one_time,
+    isCustom:      true,
+    isAIGenerated: !!row.is_ai_generated,
+    riskTier:      row.risk_tier      ?? undefined,
+    assumptions:   row.assumptions    ?? undefined,
+    promptText:    row.prompt_text    ?? undefined,
+    requires:      [],
   };
 }
 
