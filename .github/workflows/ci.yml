@@ -29,7 +29,6 @@ jobs:
     #   VITE_SUPABASE_ANON_KEY_DEV — anon key for the dev Supabase project
     #   PLAYWRIGHT_TEST_EMAIL      — test user email (same account used for Maestro)
     #   PLAYWRIGHT_TEST_PASSWORD   — test user password
-    if: ${{ secrets.PLAYWRIGHT_TEST_EMAIL != '' }}
     env:
       VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL_DEV }}
       VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY_DEV }}
