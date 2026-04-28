@@ -303,6 +303,10 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
   // ─── Onboarding gates ──────────────────────────────────────────────────────
   const serverConfirmsOnboarded = !!(user && serverProfileChecked && serverProfileExists);
 
+  // Hold on splash until the server profile check resolves — prevents flashing
+  // onboarding screens for returning users whose localStorage is empty/stale.
+  if (user && !serverProfileChecked) return <BrandSplash />;
+
   if (!welcomeChoice) {
     return <WelcomeGate onChoose={(choice) => {
       saveS(WELCOME_CHOICE_KEY, choice);
