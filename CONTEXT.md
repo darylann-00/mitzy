@@ -32,7 +32,7 @@ User data is persisted in Supabase (`profiles` + `task_records`). localStorage i
 
 ## What's Built and Working
 
-- **Onboarding** — `SlimOnboarding`: full-screen green, 3 phases: welcome → 6 question screens (name/age/gender, own/rent, cars, zip, kids, pets) → transition summary. `PrioritySetup`: 12 key tasks, slide transitions, full green screen. Recurring tasks show fuzzy time chips + date picker; one-time tasks show "Have you done this? Yes / Not yet".
+- **Onboarding** — `SlimOnboarding`: full-screen green, 3 phases: welcome → 6 question screens (name/age/gender, own/rent, cars, zip, kids, pets) → transition summary. `PrioritySetup`: 12 key tasks, slide transitions, full green screen. Recurring tasks show fuzzy time chips + date picker (exact date shows a "Use" confirm button to prevent arrow-click from advancing the slide); one-time tasks show "Have you done this? Yes / Not yet".
 
 - **Task library** — 60+ base tasks across 6 categories (home, car, health, finance, emergency, seasonal). Dynamically extended with per-car, per-kid, per-pet, and per-hazard tasks based on profile.
 
