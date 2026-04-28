@@ -28,8 +28,8 @@ test('user opens a task and marks it done', async ({ page }) => {
   await expect(page.getByText('Mark as done').last()).toBeVisible();
 
   // Confirm done
-  await page.getByRole('button', { name: 'done' }).click();
+  await page.getByRole('button', { name: 'done', exact: true }).click();
 
   // Modal closes
-  await expect(page.getByRole('button', { name: 'done' })).not.toBeVisible({ timeout: 5000 });
+  await expect(page.getByRole('button', { name: 'done', exact: true })).not.toBeVisible({ timeout: 5000 });
 });
