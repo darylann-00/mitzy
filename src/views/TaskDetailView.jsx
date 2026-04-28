@@ -71,11 +71,14 @@ export function TaskDetailView({ task, onAssist, onSchedule, onDone, onBack, onM
   const [showCustomInput, setShowCustomInput] = useState(false);
   const customNumRef = useRef(null);
   const dateInputWrapRef = useRef(null);
+  const dateInputRef = useRef(null);
 
   // Close date picker when clicking outside
   useEffect(() => {
     if (!editingLastDone) return;
     const handleClickOutside = e => {
+      // Native date picker navigation keeps focus on the input — don't close while it's active
+      if (dateInputRef.current && document.activeElement === dateInputRef.current) return;
       if (dateInputWrapRef.current && !dateInputWrapRef.current.contains(e.target)) {
         setEditingLastDone(false);
       }
@@ -221,6 +224,7 @@ export function TaskDetailView({ task, onAssist, onSchedule, onDone, onBack, onM
             {editingLastDone && (
               <div ref={dateInputWrapRef} style={{ marginTop:8 }}>
                 <input
+                  ref={dateInputRef}
                   type="date"
                   defaultValue={lastDoneValue}
                   max={new Date().toISOString().slice(0, 10)}
