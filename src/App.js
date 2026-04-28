@@ -270,11 +270,12 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, w
 
   const handleReset = async () => {
     if (user) {
-      const [{ error: te }, { error: pe }] = await Promise.all([
+      const [{ error: te }, { error: pe }, { error: ce }] = await Promise.all([
         supabase.from("task_records").delete().eq("user_id", user.id),
         supabase.from("profiles").delete().eq("id", user.id),
+        supabase.from("custom_tasks").delete().eq("user_id", user.id),
       ]);
-      if (te || pe) return { error: "Couldn't delete your data from the server. Try again." };
+      if (te || pe || ce) return { error: "Couldn't delete your data from the server. Try again." };
     }
     await signOut();
     // signOut triggers SIGNED_OUT → clearLocalUserData() + reload in useAuth
