@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test';
-import { loginWithDevCredentials, seedReturnUser } from './helpers/auth.js';
+import { loginWithDevCredentials, seedReturnUser, mockTaskRecords } from './helpers/auth.js';
 
 test('user opens a task and marks it done', async ({ page }) => {
+  await mockTaskRecords(page);
   await seedReturnUser(page);
   await page.goto('/');
 

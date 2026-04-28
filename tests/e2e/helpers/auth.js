@@ -12,19 +12,27 @@ export async function seedReturnUser(page) {
     localStorage.setItem('mitzy-welcome-v1', JSON.stringify('returning'));
     localStorage.setItem('mitzy-ob-v6',    JSON.stringify(true));
     localStorage.setItem('mitzy-ob-v6-p',  JSON.stringify(true));
+  });
+}
 
-    // Minimal profile so tasks are generated and visible in AllView
-    localStorage.setItem('mitzy-pro-v7', JSON.stringify({
-      name: 'Test', birthYear: '1990', gender: 'prefer-not',
-      hasHome: true, hasCar: false, hasKids: false, hasPets: false,
-      zip: '97201', hazards: [],
-    }));
-
-    // One task overdue (400 days since last done) so it shows in the main list,
-    // not the collapsed "explore" accordion. hm-hvac interval is 90 days.
-    const lastDone = new Date(Date.now() - 400 * 86400000).toISOString();
-    localStorage.setItem('mitzy-v6', JSON.stringify({
-      'hm-hvac': { lastDone, intervalDays: 90 },
-    }));
+// Intercepts the Supabase task_records GET so the test always sees one known
+// overdue task (hm-smoke, requires: []) regardless of the test user's real DB state.
+// Only GETs are intercepted — writes pass through so mark_done can actually save.
+export async function mockTaskRecords(page) {
+  const lastDone = new Date(Date.now() - 400 * 86400000).toISOString();
+  await page.route('**/rest/v1/task_records**', route => {
+    if (route.request().method() !== 'GET') return route.continue();
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([{
+        task_id:        'hm-smoke',
+        last_done:      lastDone,
+        scheduled_date: null,
+        interval_days:  30,
+        needed:         false,
+        disabled:       false,
+      }]),
+    });
   });
 }
