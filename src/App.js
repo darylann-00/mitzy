@@ -229,6 +229,14 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
     }
   }, [welcomeChoice, user, serverProfileChecked, serverProfileExists, setWelcomeChoice]);
 
+  // ─── Heal stale localStorage if server confirms user is already set up ──────
+  useEffect(() => {
+    if (user && serverProfileChecked && serverProfileExists) {
+      if (!profileDone) { saveS(PROFILE_DONE_KEY, true); setProfileDone(true); }
+      if (!onboarded)   { saveS(ONBOARDED_KEY,    true); setOnboarded(true);   }
+    }
+  }, [user, serverProfileChecked, serverProfileExists, profileDone, onboarded]);
+
   // ─── Onboarding handlers ───────────────────────────────────────────────────
   const handleSlimOnboardingComplete = (p) => {
     updateProfile(p);
@@ -293,6 +301,8 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
   };
 
   // ─── Onboarding gates ──────────────────────────────────────────────────────
+  const serverConfirmsOnboarded = !!(user && serverProfileChecked && serverProfileExists);
+
   if (!welcomeChoice) {
     return <WelcomeGate onChoose={(choice) => {
       saveS(WELCOME_CHOICE_KEY, choice);
@@ -302,8 +312,8 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
   if (welcomeChoice === 'returning' && !user) {
     return <LoginGate sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} signInWithPassword={signInWithPassword} authError={authError} welcomeChoice={welcomeChoice} />;
   }
-  if (!profileDone) return <SlimOnboarding onComplete={handleSlimOnboardingComplete} />;
-  if (!onboarded)   return <PrioritySetup taskLib={taskLibrary} region={region} onComplete={handlePrioritySetupComplete} />;
+  if (!profileDone && !serverConfirmsOnboarded) return <SlimOnboarding onComplete={handleSlimOnboardingComplete} />;
+  if (!onboarded   && !serverConfirmsOnboarded) return <PrioritySetup taskLib={taskLibrary} region={region} onComplete={handlePrioritySetupComplete} />;
   if (!user)        return <LoginGate sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} signInWithPassword={signInWithPassword} authError={authError} welcomeChoice={welcomeChoice} />;
 
   // ─── Task detail screen ────────────────────────────────────────────────────
