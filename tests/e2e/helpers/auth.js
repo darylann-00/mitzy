@@ -12,5 +12,19 @@ export async function seedReturnUser(page) {
     localStorage.setItem('mitzy-welcome-v1', JSON.stringify('returning'));
     localStorage.setItem('mitzy-ob-v6',    JSON.stringify(true));
     localStorage.setItem('mitzy-ob-v6-p',  JSON.stringify(true));
+
+    // Minimal profile so tasks are generated and visible in AllView
+    localStorage.setItem('mitzy-pro-v7', JSON.stringify({
+      name: 'Test', birthYear: '1990', gender: 'prefer-not',
+      hasHome: true, hasCar: false, hasKids: false, hasPets: false,
+      zip: '97201', hazards: [],
+    }));
+
+    // One task overdue (400 days since last done) so it shows in the main list,
+    // not the collapsed "explore" accordion. hm-hvac interval is 90 days.
+    const lastDone = new Date(Date.now() - 400 * 86400000).toISOString();
+    localStorage.setItem('mitzy-v6', JSON.stringify({
+      'hm-hvac': { lastDone, intervalDays: 90 },
+    }));
   });
 }
