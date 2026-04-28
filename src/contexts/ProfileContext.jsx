@@ -8,7 +8,7 @@ const ProfileContext = createContext(null);
 export function ProfileProvider({ user, welcomeChoice, children }) {
   const {
     profile, setProfile, taskLibrary,
-    updateProfile, addCustomTask,
+    updateProfile, addCustomTask, removeCustomTask,
     loading, syncError,
     pendingConflict, resolveConflict,
     serverProfileChecked, serverProfileExists,
@@ -19,7 +19,7 @@ export function ProfileProvider({ user, welcomeChoice, children }) {
   return (
     <ProfileContext.Provider value={{
       profile, setProfile, taskLibrary,
-      updateProfile, addCustomTask,
+      updateProfile, addCustomTask, removeCustomTask,
       loading, syncError,
       pendingConflict, resolveConflict,
       serverProfileChecked, serverProfileExists,

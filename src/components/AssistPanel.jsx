@@ -526,6 +526,13 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
             </>
           )}
 
+          {/* AI-generated task disclaimer */}
+          {status === 'done' && task.isAIGenerated && (
+            <div style={{ paddingTop:12, marginTop:8, fontSize:11, fontStyle:'italic', color:'#4A6256', fontFamily:'DM Sans, sans-serif', textAlign:'center', borderTop:'1px solid #EAE4DA' }}>
+              Mitzy's guidance is general — when in doubt, call a pro.
+            </div>
+          )}
+
         </div>
       </div>
 

@@ -1,0 +1,271 @@
+import { requireUser } from './_auth.js';
+import { generateTaskLimiter } from './_ratelimit.js';
+
+export const config = { runtime: "edge" };
+
+function corsHeaders(req) {
+  const allowed = process.env.ALLOWED_ORIGIN || '';
+  const origin  = req.headers.get('origin') || '';
+  const match   = allowed && origin === allowed ? origin : null;
+  return {
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'content-type, authorization',
+    'Vary': 'Origin',
+    ...(match ? { 'Access-Control-Allow-Origin': match } : {}),
+  };
+}
+
+const sanitize = (str) =>
+  str ? String(str).replace(/[\r\n\t]/g, ' ').replace(/[^\x20-\x7E]/g, '').trim() : str;
+const sanitizeZip = (zip) =>
+  zip ? String(zip).replace(/\D/g, '').slice(0, 10) : zip;
+
+const THIS_YEAR = new Date().getFullYear();
+const getAge = (birthYear) => birthYear ? THIS_YEAR - parseInt(birthYear, 10) : null;
+
+async function hashShort(s) {
+  try {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+    return Array.from(new Uint8Array(buf)).slice(0, 4)
+      .map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch {
+    return 'nohash';
+  }
+}
+
+function buildProfileContext(profile) {
+  if (!profile || typeof profile !== 'object') return 'No profile context.';
+  const zip = sanitizeZip(profile.zip);
+  const region = sanitize(profile.region);
+  const carStr = Array.isArray(profile.cars) && profile.cars.length
+    ? profile.cars.map(sanitize).filter(Boolean).join(', ') : '';
+  const kidsStr = Array.isArray(profile.kids) && profile.kids.length
+    ? profile.kids.map(k => `${sanitize(k?.name) || 'child'} age ${getAge(k?.birthYear) ?? '?'}`).join(', ') : '';
+  const petsStr = Array.isArray(profile.pets) && profile.pets.length
+    ? profile.pets.map(p => `${sanitize(p?.name) || 'pet'} (${sanitize(p?.type) || 'pet'}, age ${getAge(p?.birthYear) ?? '?'})`).join(', ') : '';
+  const age = getAge(profile.birthYear);
+
+  const parts = [];
+  if (zip)     parts.push(`zip ${zip}`);
+  if (region)  parts.push(`climate region: ${region}`);
+  if (age)     parts.push(`user age ${age}`);
+  if (carStr)  parts.push(`vehicles: ${carStr}`);
+  if (kidsStr) parts.push(`kids: ${kidsStr}`);
+  if (petsStr) parts.push(`pets: ${petsStr}`);
+  return parts.length ? parts.join('; ') : 'No profile context.';
+}
+
+const SYSTEM_PROMPT = `You are Mitzy's task generator. The user describes a household, vehicle, family, financial, health, or seasonal task they want tracked. Convert it into a single structured task object Mitzy can schedule.
+
+CRITICAL: Return ONLY valid JSON. No markdown code fences. No prose outside the JSON object.
+
+# Step 1: Safety scan
+If the prompt indicates the user is in crisis, in danger, or describing harm, return tier 4 and stop:
+- self_harm: suicide ideation, self-injury, "want to die", "end it all"
+- domestic_violence: abuse by partner/family, fearing for safety at home, "he hits me"
+- child_safety: child abuse, neglect, child in danger
+- mental_health_crisis: acute panic, dissociation, "can't go on", recent loss with suicidal ideation
+
+T4 response shape:
+{
+  "tier": 4,
+  "refusal": {
+    "category": "self_harm" | "domestic_violence" | "child_safety" | "mental_health_crisis",
+    "message": "<empathetic 1–2 sentence message acknowledging their situation and pointing them to help>",
+    "resource": { "label": "<hotline name>", "value": "<phone or url>", "type": "phone" | "url" }
+  }
+}
+
+Resource map:
+- self_harm or mental_health_crisis: 988 Suicide & Crisis Lifeline, value "988", type "phone"
+- domestic_violence: National Domestic Violence Hotline, value "1-800-799-7233", type "phone"
+- child_safety: Childhelp National Child Abuse Hotline, value "1-800-422-4453", type "phone"
+
+# Step 2: Risk tier classification (T1–T3.5)
+- T1 (DIY-friendly): air filters, caulk, gardening, cleaning, simple replacements, watering, basic maintenance
+- T2 (pro recommended, DIY-allowed): faucet swap, ceiling fan install, drywall repair, chimney clean, tall tree pruning, pressure washing roof
+- T3 (pro REQUIRED): gas appliances, fuel systems, electrical panel/rewiring, asbestos/lead, structural changes, anything requiring permits, roof replacement
+- T3.5 (reminder + defer to pro): medical symptoms/screenings, legal matters, fiduciary financial, pet medical beyond routine vaccines, mental health non-crisis (therapy intake), tax filing
+
+HARD-NO list (refuse to generate guidance even if user insists DIY): medication dosing (human or pet), chemical mixing ratios, gas line work, fuel system repair. For these, use T3 with assist_type "guidance_companies" and guidance copy that strictly defers to professionals.
+
+assist_type rules:
+- T1: "guidance"
+- T2: "guidance_companies" (client may silently toggle to "guidance")
+- T3: "guidance_companies" (locked, no DIY toggle)
+- T3.5: "guidance_companies" (with deferral copy in guidance)
+
+# Step 3: Generate fields
+Return shape (success):
+{
+  "tier": 1 | 2 | 3 | 3.5,
+  "task": {
+    "label": "<short imperative, e.g. 'Fertilize orchid'>",
+    "cat": "home" | "car" | "health" | "school" | "finance" | "emergency" | "pet",
+    "intervalDays": <integer or null if oneTime>,
+    "windowDays": <integer; ~20% of intervalDays, min 3, max 30; or 14 for one-time>,
+    "stakes": "low" | "medium" | "high",
+    "activeMonths": <array of 1-12 ints, or null if year-round>,
+    "assistType": "guidance" | "guidance_companies",
+    "searchQuery": "<short query string for finding services; null if assistType=guidance>",
+    "why": "<1–2 sentence plain-English why this matters>",
+    "guidance": "<markdown with ## headers, bullets where natural, under 250 words>",
+    "oneTime": <boolean>,
+    "riskTier": 1 | 2 | 3 | 3.5,
+    "assumptions": [
+      { "key": "<short_snake_case>", "label": "<current chosen value>", "options": ["<option1>", "<option2>", ...] }
+    ]
+  }
+}
+
+Personalize using profile context (vehicles, kids, pets, climate region, age) only when directly relevant to the task. Do not mention profile context in the task otherwise.
+
+For seasonal tasks, set activeMonths matching the user's climate region. For one-time tasks, set intervalDays: null and oneTime: true.
+
+Generate 1–3 assumptions max — only the ones a reasonable user might want to flip. Each assumption's "label" is the current chosen value (must appear in "options"). Examples: { key: "plant_location", label: "Houseplant", options: ["Houseplant", "Garden"] }.
+
+# Parse-failure / out-of-scope path
+If the prompt is too vague to generate a meaningful task (e.g. "uhhh do the thing"), return:
+{
+  "tier": 0,
+  "manual": { "label": "<best guess label>", "cat": "<best guess cat>", "needsManualSetup": true }
+}
+
+# Regenerate path
+If the request includes "regenerate": {key, value}, the user flipped one assumption. Re-derive the affected fields (frequency, season, guidance) and return the full updated task object. Keep label and cat consistent unless the flip changes them fundamentally.`;
+
+export default async function handler(req) {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders(req) });
+  }
+
+  if (req.method !== "POST") {
+    return new Response("Method not allowed", { status: 405 });
+  }
+
+  const { userId, error } = await requireUser(req);
+  if (error) {
+    return new Response(error.statusText || 'Unauthorized', {
+      status: error.status,
+      headers: corsHeaders(req),
+    });
+  }
+
+  const { success, reset } = await generateTaskLimiter.limit(userId);
+  if (!success) {
+    return new Response('Rate limit exceeded', {
+      status: 429,
+      headers: {
+        'Retry-After': String(Math.ceil((reset - Date.now()) / 1000)),
+        ...corsHeaders(req),
+      },
+    });
+  }
+
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    return new Response("Invalid JSON", { status: 400, headers: corsHeaders(req) });
+  }
+
+  const { prompt, profile, existingTaskLabels, regenerate } = body || {};
+
+  if (!prompt || typeof prompt !== 'string') {
+    return new Response("Missing prompt", { status: 400, headers: corsHeaders(req) });
+  }
+  if (prompt.length > 1000) {
+    return new Response("Prompt too large", { status: 413, headers: corsHeaders(req) });
+  }
+  if (existingTaskLabels !== undefined && !Array.isArray(existingTaskLabels)) {
+    return new Response("Invalid existingTaskLabels", { status: 400, headers: corsHeaders(req) });
+  }
+  if (existingTaskLabels && existingTaskLabels.length > 200) {
+    return new Response("Too many existing labels", { status: 413, headers: corsHeaders(req) });
+  }
+  if (regenerate !== undefined && regenerate !== null) {
+    if (typeof regenerate !== 'object'
+      || typeof regenerate.key !== 'string'
+      || typeof regenerate.value !== 'string'
+      || regenerate.key.length > 64
+      || regenerate.value.length > 128) {
+      return new Response("Invalid regenerate", { status: 400, headers: corsHeaders(req) });
+    }
+  }
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return new Response("API key not configured", { status: 500, headers: corsHeaders(req) });
+  }
+
+  const cleanPrompt = sanitize(prompt).slice(0, 1000);
+  const profileCtx = buildProfileContext(profile);
+  const safeLabels = Array.isArray(existingTaskLabels)
+    ? existingTaskLabels.slice(0, 200).map(sanitize).filter(Boolean).slice(0, 200)
+    : [];
+  const labelsLine = safeLabels.length
+    ? `Existing tasks already tracked (avoid exact duplicates): ${safeLabels.join(' | ')}`
+    : 'No existing tasks listed.';
+
+  const regenLine = regenerate
+    ? `\n\nThe user flipped an assumption. Regenerate the task with: ${sanitize(regenerate.key)} = ${sanitize(regenerate.value)}. Re-derive frequency, season, and guidance accordingly.`
+    : '';
+
+  const userMessage = `User prompt: "${cleanPrompt}"
+Profile context: ${profileCtx}
+${labelsLine}${regenLine}`;
+
+  const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 2000,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content: userMessage }],
+    }),
+  });
+
+  if (!anthropicRes.ok) {
+    const err = await anthropicRes.text();
+    console.error(`Anthropic error: ${err}`);
+    return new Response("Service error", { status: 502, headers: corsHeaders(req) });
+  }
+
+  const data = await anthropicRes.json();
+  const text = data.content?.[0]?.text ?? "";
+
+  let parsed = null;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    const match = text.match(/\{[\s\S]*\}/);
+    if (match) {
+      try { parsed = JSON.parse(match[0]); } catch { parsed = null; }
+    }
+  }
+
+  if (!parsed || typeof parsed !== 'object') {
+    return new Response(JSON.stringify({
+      tier: 0,
+      manual: { label: cleanPrompt.slice(0, 80), cat: "home", needsManualSetup: true },
+    }), { status: 200, headers: { "content-type": "application/json", ...corsHeaders(req) } });
+  }
+
+  if (parsed.tier === 4) {
+    const promptHash = await hashShort(cleanPrompt);
+    console.log(JSON.stringify({
+      event: "tier4_trigger",
+      category: parsed.refusal?.category ?? 'unknown',
+      promptHash,
+    }));
+  }
+
+  return new Response(JSON.stringify(parsed), {
+    headers: { "content-type": "application/json", ...corsHeaders(req) },
+  });
+}
