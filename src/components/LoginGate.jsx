@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 
 const RESEND_COOLDOWN_MS = 30000;
+const IS_DEV = import.meta.env.DEV;
 
-export function LoginGate({ sendMagicLink, signInWithGoogle, authError, welcomeChoice }) {
+export function LoginGate({ sendMagicLink, signInWithGoogle, signInWithPassword, authError, welcomeChoice }) {
   const [email,        setEmail]        = useState("");
   const [sentEmail,    setSentEmail]    = useState("");
   const [sent,         setSent]         = useState(false);
@@ -14,6 +15,10 @@ export function LoginGate({ sendMagicLink, signInWithGoogle, authError, welcomeC
   const [now,          setNow]          = useState(() => Date.now());
   const [resending,    setResending]    = useState(false);
   const [resendErr,    setResendErr]    = useState("");
+  const [devEmail,     setDevEmail]     = useState("");
+  const [devPassword,  setDevPassword]  = useState("");
+  const [devErr,       setDevErr]       = useState("");
+  const [devLoading,   setDevLoading]   = useState(false);
 
   useEffect(() => {
     if (!sent) return;
@@ -23,6 +28,15 @@ export function LoginGate({ sendMagicLink, signInWithGoogle, authError, welcomeC
 
   const cooldownLeft = Math.max(0, Math.ceil((cooldownEnds - now) / 1000));
   const canResend = !resending && cooldownLeft === 0;
+
+  const handleDevSignIn = async () => {
+    setDevErr("");
+    if (!devEmail.trim() || !devPassword) { setDevErr("Enter email and password."); return; }
+    setDevLoading(true);
+    const { error } = await signInWithPassword(devEmail, devPassword);
+    setDevLoading(false);
+    if (error) setDevErr(error.message);
+  };
 
   const handleGoogle = async () => {
     setErr("");
@@ -221,6 +235,59 @@ export function LoginGate({ sendMagicLink, signInWithGoogle, authError, welcomeC
               </>
             )}
           </>
+        )}
+        {IS_DEV && (
+          <div style={{ marginTop: 40, borderTop: "1px dashed #2D7A54", paddingTop: 20 }}>
+            <p style={{ color: "#4A6256", fontSize: 11, fontFamily: "DM Sans, sans-serif", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>
+              Dev only
+            </p>
+            <input
+              data-testid="dev-email"
+              type="email"
+              placeholder="test@example.com"
+              value={devEmail}
+              onChange={e => { setDevEmail(e.target.value); setDevErr(""); }}
+              style={{
+                width: "100%", boxSizing: "border-box",
+                padding: "12px 14px", borderRadius: 10, border: "none",
+                fontSize: 15, fontFamily: "DM Sans, sans-serif",
+                background: "#fff", color: "#1C2B22",
+                marginBottom: 8, outline: "none",
+              }}
+            />
+            <input
+              data-testid="dev-password"
+              type="password"
+              placeholder="password"
+              value={devPassword}
+              onChange={e => { setDevPassword(e.target.value); setDevErr(""); }}
+              onKeyDown={e => e.key === "Enter" && handleDevSignIn()}
+              style={{
+                width: "100%", boxSizing: "border-box",
+                padding: "12px 14px", borderRadius: 10, border: "none",
+                fontSize: 15, fontFamily: "DM Sans, sans-serif",
+                background: "#fff", color: "#1C2B22",
+                marginBottom: devErr ? 8 : 12, outline: "none",
+              }}
+            />
+            {devErr && (
+              <p style={{ color: "#F77F00", fontSize: 13, margin: "0 0 10px", fontFamily: "DM Sans, sans-serif" }}>{devErr}</p>
+            )}
+            <button
+              data-testid="dev-sign-in"
+              onClick={handleDevSignIn}
+              disabled={devLoading}
+              style={{
+                width: "100%", padding: "12px", borderRadius: 10, border: "none",
+                background: devLoading ? "#4A6256" : "#2D7A54",
+                color: "#E8F5EE", fontSize: 14, fontWeight: 600,
+                fontFamily: "DM Sans, sans-serif",
+                cursor: devLoading ? "default" : "pointer",
+              }}
+            >
+              {devLoading ? "Signing in…" : "Sign in (dev)"}
+            </button>
+          </div>
         )}
       </div>
     </div>

@@ -171,7 +171,7 @@ function Overlays({
 
 // ─── Root — wires up providers then delegates ──────────────────────────────────
 export default function Mitzy() {
-  const { user, loading: authLoading, authError, sendMagicLink, signInWithGoogle, signOut } = useAuth();
+  const { user, loading: authLoading, authError, sendMagicLink, signInWithGoogle, signInWithPassword, signOut } = useAuth();
   const [welcomeChoice, setWelcomeChoice] = useState(() => loadS(WELCOME_CHOICE_KEY, null));
 
   if (authLoading) return <BrandSplash />;
@@ -185,6 +185,7 @@ export default function Mitzy() {
           signOut={signOut}
           sendMagicLink={sendMagicLink}
           signInWithGoogle={signInWithGoogle}
+          signInWithPassword={signInWithPassword}
           welcomeChoice={welcomeChoice}
           setWelcomeChoice={setWelcomeChoice}
         />
@@ -194,7 +195,7 @@ export default function Mitzy() {
 }
 
 // ─── Inner app — consumes contexts ─────────────────────────────────────────────
-function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, welcomeChoice, setWelcomeChoice }) {
+function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, signInWithPassword, welcomeChoice, setWelcomeChoice }) {
   const { profile, taskLibrary, updateProfile, region, loading: profileLoading, syncError: profileSyncError, serverProfileChecked, serverProfileExists } = useProfileContext();
   const { activeTasks, taskState, setTaskState, setDisabledTasks, markDone, markNotApplicable, markNeeded, setIntervalOverride, nextUpcomingTask, loading: tasksLoading, syncError: tasksSyncError } = useTaskContext();
 
@@ -293,11 +294,11 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, w
     }} />;
   }
   if (welcomeChoice === 'returning' && !user) {
-    return <LoginGate sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} authError={authError} welcomeChoice={welcomeChoice} />;
+    return <LoginGate sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} signInWithPassword={signInWithPassword} authError={authError} welcomeChoice={welcomeChoice} />;
   }
   if (!profileDone) return <SlimOnboarding onComplete={handleSlimOnboardingComplete} />;
   if (!onboarded)   return <PrioritySetup taskLib={taskLibrary} region={region} onComplete={handlePrioritySetupComplete} />;
-  if (!user)        return <LoginGate sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} authError={authError} welcomeChoice={welcomeChoice} />;
+  if (!user)        return <LoginGate sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} signInWithPassword={signInWithPassword} authError={authError} welcomeChoice={welcomeChoice} />;
 
   // ─── Task detail screen ────────────────────────────────────────────────────
   if (selectedTask) {
