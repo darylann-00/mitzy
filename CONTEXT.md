@@ -19,13 +19,13 @@ A household management PWA. Acts as a personal secretary that already knows what
 | Layer | Choice |
 |-------|--------|
 | UI | React 19 (Vite) |
-| State | Custom hooks + localStorage (cache/offline) + Supabase (`profiles`, `task_records`) |
+| State | Custom hooks + localStorage (cache/offline) + Supabase (`profiles`, `task_records`, `custom_tasks`) |
 | API | Vercel Edge Functions |
-| AI | Claude Haiku 4.5 via `/api/assist` proxy |
+| AI | Claude Haiku 4.5 via `/api/assist` + `/api/generate-task` |
 | Deployment | Vercel |
 | Fonts | Righteous (display/brand), DM Sans (body) |
 
-User data is persisted in Supabase (`profiles` + `task_records`). localStorage is used as a cache/offline layer. Auth is via Supabase — Google OAuth (primary) + magic link (fallback).
+User data is persisted in Supabase (`profiles` + `task_records` + `custom_tasks`). localStorage is used as a cache/offline layer. Auth is via Supabase — Google OAuth (primary) + magic link (fallback).
 ```
 
 ---
@@ -56,7 +56,9 @@ User data is persisted in Supabase (`profiles` + `task_records`). localStorage i
 
 - **Hazard detection** — Zip → hazard type → prep tasks. Runs on visit 2+.
 
-- **Bottom dock** — Fixed nav: `[Today|All|Profile]` pill + sparkle AI FAB circle to the right (always visible, `console.log` stub). White `+` add FAB floats above nav on Today and All tabs.
+- **Bottom dock** — Fixed nav: `[Today|All|Profile]` pill + sparkle AI FAB circle to the right (always visible). White `+` add FAB floats above nav on Today and All tabs.
+
+- **AI Task Creator** — Sparkle FAB opens `AITaskCreator` full-screen sheet. User describes a task in plain English → `/api/generate-task` (Haiku 4.5) returns a structured task with category, frequency, guidance, safety tier, and assumption chips. `TaskConfirmCard` shows the draft — label is tap-to-edit, category is a dropdown, frequency opens `FrequencyPicker`, assumption chips cycle their options on tap and re-fire the API (debounced 400ms, AbortController cancels in-flight). T2 tasks show a silent DIY toggle (swaps `assistType`). T3 tasks are locked (no DIY). T4 prompts (crisis indicators) return a refusal screen with a single resource link and no save option. T0 (parse failure) shows a manual fallback form. On save, task is written to localStorage and upserted to `custom_tasks` in Supabase. `useProfile` exposes `addCustomTask` (async, with rollback on error) and `removeCustomTask`. Rate limited at 20 req/hr per user (`rl:gentask` prefix in Upstash). AssistPanel shows a small "Mitzy's guidance is general — when in doubt, call a pro." disclaimer for AI-generated tasks.
 
 - **Auth UX** — Supabase Google OAuth (primary) + magic link (fallback). `BrandSplash` (full green background + Memphis shapes + four-dot wordmark) renders during `authLoading` to avoid flash-of-white on PWA cold launches. `LoginGate` normalizes magic-link emails (`trim().toLowerCase()`) at submit so case/whitespace variants resolve to one Supabase auth record. Success screen has a "Resend" button gated by a 30s cooldown (`RESEND_COOLDOWN_MS`) — cooldown starts on first send; restarts on each successful resend; re-enables immediately on error.
 
@@ -75,7 +77,6 @@ User data is persisted in Supabase (`profiles` + `task_records`). localStorage i
 | Knowledge refresh | Stubbed. |
 | `task.why` + `task.guidance` fields | Null for all current tasks — UI falls back to `task.note` and generic copy. |
 | Provider data | Claude-generated, no verification. |
-| AI FAB | Sparkle button in nav bar is a stub — `console.log('AI input')`. |
 
 ---
 
@@ -132,10 +133,11 @@ WelcomeGate → (new) SlimOnboarding → PrioritySetup → LoginGate → App (3-
                                    ├─ HomeView
                                    ├─ AllView
                                    ├─ ProfileView
-                                   └─ TaskDetailView
-                                       ├─ AssistPanel → /api/assist → Claude
-                                       ├─ SchedulePanel (mocked)
-                                       └─ MarkDoneModal → Celebration confetti
+                                   ├─ TaskDetailView
+                                   │   ├─ AssistPanel → /api/assist → Claude
+                                   │   ├─ SchedulePanel (mocked)
+                                   │   └─ MarkDoneModal → Celebration confetti
+                                   └─ AITaskCreator → /api/generate-task → Claude → custom_tasks
 ```
 
 ---
@@ -170,9 +172,10 @@ GitHub Actions at `.github/workflows/ci.yml`. Runs `npm ci`, `npm run build`, `n
 ## Next Priorities
 
 1. ~~Build `/api/schedule` Edge Function~~ — Done ([PR #26](https://github.com/darylann-00/mitzy/pull/26)).
-2. Wire up the AI FAB — sparkle button in `BottomDock` is a no-op; needs a design decision (global assist? home-screen shortcut?).
+2. ~~Wire up the AI FAB~~ — Done ([PR #45](https://github.com/darylann-00/mitzy/pull/45), pending merge + QA).
 3. Replace hardcoded hazard zip ranges in `hazards.js` with FEMA API.
 4. Zip error message copy in onboarding (deferred).
+5. AI Task Creator V1.5 — multi-task split for prompts like "winterize the house".
 
 ## Known Gaps / Mocked
 
@@ -180,4 +183,4 @@ GitHub Actions at `.github/workflows/ci.yml`. Runs `npm ci`, `npm run build`, `n
 |---------|--------|
 | Google Calendar integration | Built. `/api/schedule` Edge Function + GIS just-in-time OAuth in `SchedulePanel`. Requires `VITE_GOOGLE_CLIENT_ID` + Calendar API enabled in Google Cloud Console. |
 | Hazard zip lookup | Hardcoded zip ranges. Replace with FEMA API. |
-| AI FAB | Sparkle button in nav bar is a stub — `console.log('AI input')`. |
+| AI Task Creator QA | [PR #45](https://github.com/darylann-00/mitzy/pull/45) open. Needs smoke test on preview URL. Preview OAuth redirect requires: (1) remove `VITE_SUPABASE_REDIRECT_URL` from Vercel Preview env, (2) add `https://*.vercel.app` to Supabase allowed redirect URLs. |
