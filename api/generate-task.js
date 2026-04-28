@@ -122,7 +122,7 @@ Personalize using profile context (vehicles, kids, pets, climate region, age) on
 
 For seasonal tasks, set activeMonths matching the user's climate region. For one-time tasks, set intervalDays: null and oneTime: true.
 
-Generate 1–3 assumptions max — only the ones a reasonable user might want to flip. Each assumption's "label" is the current chosen value (must appear in "options"). Examples: { key: "plant_location", label: "Houseplant", options: ["Houseplant", "Garden"] }.
+Generate 1–2 assumptions max — only when flipping the value would meaningfully change intervalDays, activeMonths, riskTier, or the guidance content. If no such assumption exists, return an empty array. Each assumption's "label" is the current chosen value (must appear in "options"). Good example: { key: "plant_location", label: "Houseplant", options: ["Houseplant", "Garden"] } — changes watering frequency. Bad example: { key: "issue_type", options: ["leaking", "broken"] } — both produce the same task, so omit it.
 
 # Parse-failure / out-of-scope path
 If the prompt is too vague to generate a meaningful task (e.g. "uhhh do the thing"), return:
