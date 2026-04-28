@@ -26,6 +26,10 @@ A household management PWA. Acts as a personal secretary that already knows what
 | Fonts | Righteous (display/brand), DM Sans (body) |
 
 User data is persisted in Supabase (`profiles` + `task_records` + `custom_tasks`). localStorage is used as a cache/offline layer. Auth is via Supabase — Google OAuth (primary) + magic link (fallback).
+
+Two Supabase projects:
+- **Production:** `https://uftxbegrnlvlgkbitibp.supabase.co`
+- **Dev:** `https://lrzheitfrltcyvllblmb.supabase.co` — used by Playwright e2e tests and Maestro
 ```
 
 ---
@@ -156,7 +160,11 @@ Three tabs in `BottomDock` (fixed, `#E8F0EC` pill). Sparkle AI FAB sits to the r
 
 ## CI
 
-GitHub Actions at `.github/workflows/ci.yml`. Runs `npm ci`, `npm run build`, `npm test -- --watchAll=false` on push to main and all PRs.
+GitHub Actions at `.github/workflows/ci.yml`. Two jobs on every PR and push to main:
+- **ci** — lint, build, unit tests (placeholder Supabase env, always runs)
+- **e2e** — Playwright acceptance tests against dev Supabase (`lrzheitfrltcyvllblmb`); skips until GitHub repo secrets are set (`VITE_SUPABASE_URL_DEV`, `VITE_SUPABASE_ANON_KEY_DEV`, `PLAYWRIGHT_TEST_EMAIL`, `PLAYWRIGHT_TEST_PASSWORD`). Uploads trace artifacts on failure.
+
+Three baseline e2e tests run on every PR: `sign_in`, `onboarding`, `mark_done`. PRs that touch a user-facing flow should include a feature test for that flow.
 
 ---
 
