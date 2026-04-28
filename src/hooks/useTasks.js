@@ -36,7 +36,7 @@ export function useTasks(user) {
             needed:         localState[taskId]?.needed        ?? false,
             disabled:       localDisabled[taskId]             ?? false,
           }));
-          const { error: upsertError } = await supabase.from("task_records").upsert(rows);
+          const { error: upsertError } = await supabase.from("task_records").upsert(rows, { onConflict: 'user_id,task_id' });
           if (upsertError) { setSyncError(upsertError); setLoading(false); return; }
         }
       } else {
@@ -81,7 +81,7 @@ export function useTasks(user) {
       const { error } = await supabase.from("task_records").upsert({
         user_id: user.id, task_id: id, last_done: iso, scheduled_date: null,
         ...(intervalDays ? { interval_days: intervalDays } : {}),
-      });
+      }, { onConflict: 'user_id,task_id' });
       if (error) { setTaskState(s => ({ ...s, [id]: prev })); return { error }; }
     }
     return {};
@@ -93,7 +93,7 @@ export function useTasks(user) {
     if (user) {
       const { error } = await supabase.from("task_records").upsert({
         user_id: user.id, task_id: id, scheduled_date: date,
-      });
+      }, { onConflict: 'user_id,task_id' });
       if (error) setTaskState(s => ({ ...s, [id]: prev }));
     }
   };
@@ -104,7 +104,7 @@ export function useTasks(user) {
     if (user) {
       const { error } = await supabase.from("task_records").upsert({
         user_id: user.id, task_id: id, disabled: true,
-      });
+      }, { onConflict: 'user_id,task_id' });
       if (error) setDisabledTasks(s => ({ ...s, [id]: prev }));
     }
   };
@@ -115,7 +115,7 @@ export function useTasks(user) {
     if (user) {
       const { error } = await supabase.from("task_records").upsert({
         user_id: user.id, task_id: id, needed: true,
-      });
+      }, { onConflict: 'user_id,task_id' });
       if (error) setTaskState(s => ({ ...s, [id]: prev }));
     }
   };
@@ -126,7 +126,7 @@ export function useTasks(user) {
     if (user) {
       const { error } = await supabase.from("task_records").upsert({
         user_id: user.id, task_id: id, interval_days: intervalDays,
-      });
+      }, { onConflict: 'user_id,task_id' });
       if (error) setTaskState(s => ({ ...s, [id]: prev }));
     }
   };
