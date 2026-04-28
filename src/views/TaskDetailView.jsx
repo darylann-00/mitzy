@@ -73,14 +73,20 @@ export function TaskDetailView({ task, onAssist, onSchedule, onDone, onBack, onM
   const dateInputWrapRef = useRef(null);
   const dateInputRef = useRef(null);
 
+  const commitDateEdit = () => {
+    const val = dateInputRef.current?.value;
+    if (val && onMarkDone) onMarkDone(task, val);
+    setEditingLastDone(false);
+  };
+
   // Close date picker when clicking outside
   useEffect(() => {
     if (!editingLastDone) return;
     const handleClickOutside = e => {
-      // Native date picker navigation keeps focus on the input — don't close while it's active
-      if (dateInputRef.current && document.activeElement === dateInputRef.current) return;
+      // Arrow/spinner clicks keep focus on the input — ignore them
+      if (document.activeElement === dateInputRef.current) return;
       if (dateInputWrapRef.current && !dateInputWrapRef.current.contains(e.target)) {
-        setEditingLastDone(false);
+        commitDateEdit();
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -233,12 +239,8 @@ export function TaskDetailView({ task, onAssist, onSchedule, onDone, onBack, onM
                     border:'1.5px solid #1A5C3A', borderRadius:8, background:'#fff',
                     color:'#1C2B22',
                   }}
-                  onChange={e => {
-                    if (e.target.value && onMarkDone) {
-                      onMarkDone(task, e.target.value);
-                      setEditingLastDone(false);
-                    }
-                  }}
+                  onBlur={commitDateEdit}
+                  onKeyDown={e => { if (e.key === 'Enter') commitDateEdit(); }}
                 />
               </div>
             )}
