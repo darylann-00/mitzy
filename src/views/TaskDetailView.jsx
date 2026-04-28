@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { CAT_META } from "../data/constants";
 import { CAT_ICON_CONFIG } from "../components/CategoryIcons";
+import { MonthCalendar } from "../components/MonthCalendar";
 import { useProfileContext } from "../contexts/ProfileContext";
 import { useTaskContext }    from "../contexts/TaskContext";
 
@@ -70,28 +71,6 @@ export function TaskDetailView({ task, onAssist, onSchedule, onDone, onBack, onM
   const [customUnit, setCustomUnit] = useState('months');
   const [showCustomInput, setShowCustomInput] = useState(false);
   const customNumRef = useRef(null);
-  const dateInputWrapRef = useRef(null);
-  const dateInputRef = useRef(null);
-
-  const commitDateEdit = () => {
-    const val = dateInputRef.current?.value;
-    if (val && onMarkDone) onMarkDone(task, val);
-    setEditingLastDone(false);
-  };
-
-  // Close date picker when clicking outside
-  useEffect(() => {
-    if (!editingLastDone) return;
-    const handleClickOutside = e => {
-      // Arrow/spinner clicks keep focus on the input — ignore them
-      if (document.activeElement === dateInputRef.current) return;
-      if (dateInputWrapRef.current && !dateInputWrapRef.current.contains(e.target)) {
-        commitDateEdit();
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [editingLastDone]);
 
   // Last done / frequency / due next
   const effectiveInterval = entry?.intervalDays ?? task.intervalDays;
@@ -191,6 +170,7 @@ export function TaskDetailView({ task, onAssist, onSchedule, onDone, onBack, onM
             <div style={{ display:'flex', gap:6 }}>
               {/* Last done */}
               <div
+                data-testid="last-done-cell"
                 onClick={() => { setEditingLastDone(true); setEditingFrequency(false); setShowCustomInput(false); setCustomNum(''); }}
                 style={{ flex:'1 1 0', minWidth:0, background:'#FDFAF2', borderRadius:10, padding:'7px 9px', cursor:'pointer', border:`1.5px solid ${editingLastDone ? '#1A5C3A' : '#EAE4DA'}` }}
               >
@@ -228,19 +208,14 @@ export function TaskDetailView({ task, onAssist, onSchedule, onDone, onBack, onM
               )}
             </div>
             {editingLastDone && (
-              <div ref={dateInputWrapRef} style={{ marginTop:8 }}>
-                <input
-                  ref={dateInputRef}
-                  type="date"
-                  defaultValue={lastDoneValue}
-                  max={new Date().toISOString().slice(0, 10)}
-                  style={{
-                    width:'auto', padding:'8px 10px', fontSize:13, fontFamily:'DM Sans, sans-serif',
-                    border:'1.5px solid #1A5C3A', borderRadius:8, background:'#fff',
-                    color:'#1C2B22',
+              <div style={{ marginTop:8 }}>
+                <MonthCalendar
+                  value={lastDoneValue}
+                  onChange={iso => {
+                    if (onMarkDone) onMarkDone(task, iso);
+                    setEditingLastDone(false);
                   }}
-                  onBlur={commitDateEdit}
-                  onKeyDown={e => { if (e.key === 'Enter') commitDateEdit(); }}
+                  max={new Date().toISOString().slice(0, 10)}
                 />
               </div>
             )}

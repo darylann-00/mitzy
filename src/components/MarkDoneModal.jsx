@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { MonthCalendar } from "./MonthCalendar";
 
 export function MarkDoneModal({ task, onDone, onClose }) {
   const [dateStr,   setDateStr]   = useState(new Date().toISOString().split('T')[0]);
@@ -32,13 +33,13 @@ export function MarkDoneModal({ task, onDone, onClose }) {
             <div style={{ fontSize:12, color:'#4A6256', marginBottom:6, fontWeight:600, fontFamily:'DM Sans, sans-serif' }}>
               Date completed
             </div>
-            <input
-              type="date"
-              max={new Date().toISOString().split('T')[0]}
-              value={dateStr}
-              onChange={e => setDateStr(e.target.value)}
-              style={{ marginBottom:16 }}
-            />
+            <div style={{ marginBottom:16 }}>
+              <MonthCalendar
+                value={dateStr}
+                onChange={setDateStr}
+                max={new Date().toISOString().split('T')[0]}
+              />
+            </div>
           </>
         )}
 

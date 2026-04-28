@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { MonthCalendar } from "./MonthCalendar";
 
 export const CHIPS_GENERAL = [
   { key: 'recently',   label: 'Recently (last month)',  days: 30  },
@@ -35,7 +36,6 @@ function chipDate(task, chip) {
 //   labelStyle     — style overrides for the question label
 //   chipStyle      — style overrides for each chip button
 //   chipGridStyle  — style overrides for the chip container
-//   dateInputStyle — style overrides for the date input
 export function TaskAnswerChips({
   task,
   onDone,
@@ -46,7 +46,6 @@ export function TaskAnswerChips({
   labelStyle,
   chipStyle,
   chipGridStyle,
-  dateInputStyle,
 }) {
   const [exactDate, setExactDate] = useState('');
   const today = new Date().toISOString().split('T')[0];
@@ -97,30 +96,14 @@ export function TaskAnswerChips({
       </div>
       {showDatePicker && (
         <>
-          <div style={{ fontSize: 11, color: '#ffffff', fontWeight: 700, marginBottom: 5, fontFamily: 'DM Sans, sans-serif' }}>
+          <div style={{ fontSize: 11, color: '#ffffff', fontWeight: 700, marginBottom: 8, fontFamily: 'DM Sans, sans-serif' }}>
             Or pick an exact date:
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <input
-              type="date"
-              max={today}
-              value={exactDate}
-              onChange={e => setExactDate(e.target.value)}
-              style={dateInputStyle}
-            />
-            {exactDate && (
-              <button
-                onClick={() => { onDone(exactDate); setExactDate(''); }}
-                style={{
-                  flex: '0 0 auto', padding: '4px 10px', fontSize: 12, fontWeight: 700,
-                  borderRadius: 6, border: 'none', background: '#F4C430', color: '#7a5900',
-                  cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', height: 28,
-                }}
-              >
-                Use
-              </button>
-            )}
-          </div>
+          <MonthCalendar
+            value={exactDate}
+            onChange={iso => { onDone(iso); setExactDate(''); }}
+            max={today}
+          />
         </>
       )}
       {onSkip && (
