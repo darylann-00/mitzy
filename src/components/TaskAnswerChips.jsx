@@ -14,6 +14,16 @@ export const CHIPS_HEALTH = [
   { key: 'never',      label: 'Never / not sure',   needed: true },
 ];
 
+// For seasonal tasks (e.g. flu vaccine in fall), "last year" means the previous
+// occurrence of that season — not a flat 400 days, which exceeds annual intervals.
+function chipDate(task, chip) {
+  if (chip.key === 'last-year' && task.seasonStart) {
+    const prevYear = new Date().getFullYear() - 1;
+    return new Date(prevYear, task.seasonStart - 1, 15).toISOString();
+  }
+  return new Date(Date.now() - chip.days * 86400000).toISOString();
+}
+
 // Shared answer UI for both recurring and one-time tasks.
 //
 // Props:
@@ -78,7 +88,7 @@ export function TaskAnswerChips({
             style={{ ...baseChip, ...chipStyle }}
             onClick={() => chip.needed
               ? (onNeeded && onNeeded())
-              : onDone(new Date(Date.now() - chip.days * 86400000).toISOString())
+              : onDone(chipDate(task, chip))
             }
           >
             {chip.label}
