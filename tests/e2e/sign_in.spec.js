@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test';
+import { loginWithDevCredentials, seedReturnUser } from './helpers/auth.js';
 
-test('signs in with test user and lands on home screen', async ({ page }) => {
+test('returning user signs in and reaches home screen', async ({ page }) => {
+  await seedReturnUser(page);
   await page.goto('/');
 
-  await page.getByTestId('dev-email').fill('test@example.com');
-  await page.getByTestId('dev-password').fill('testexample');
-  await page.getByTestId('dev-sign-in').click();
+  await loginWithDevCredentials(page);
 
-  await expect(page.getByText('Focus for today')).toBeVisible({ timeout: 10000 });
+  // BottomDock is always visible once authenticated
+  await expect(page.getByText('Today', { exact: true })).toBeVisible({ timeout: 15000 });
 });

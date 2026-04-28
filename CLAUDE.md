@@ -7,6 +7,10 @@ Before starting any work, always read context.md. Also read design.md for UI wor
 When I say 'wrap it up', push changes from this session to prod and update context.md. In context.md, only update existing sections in-place — rewrite the relevant sentence/row/bullet to reflect current state. Do not append what changed, what was fixed, or what was added this session. If something was completed, remove it from next priorities; if a status changed, edit the existing line. The file should read as a snapshot of now, not a history of changes.
 Before ending a session, summarize what changed and any decisions made
 
+## Testing
+
+Playwright e2e tests live in `tests/e2e/`. Three baseline tests run on every PR (sign_in, onboarding, mark_done). When a PR touches a user-facing flow that doesn't have a test yet, add one in the same PR. If the flow already has a test, update it. Tests use the dev Supabase project (`lrzheitfrltcyvllblmb`) and the shared helpers in `tests/e2e/helpers/auth.js`.
+
 ## Guardrails
 
 Don't refactor things that aren't broken without asking while working on a ticket
