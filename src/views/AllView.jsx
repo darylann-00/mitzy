@@ -5,6 +5,7 @@ import { TaskAnswerChips } from "../components/TaskAnswerChips";
 import { AppHeader } from "./HomeView";
 import { useProfileContext } from "../contexts/ProfileContext";
 import { useTaskContext }    from "../contexts/TaskContext";
+import { isWindowActive }    from "../utils/taskLogic";
 
 // ─── Group divider (Memphis dots) ──────────────────────────────────────────────
 function GroupDivider() {
@@ -172,7 +173,7 @@ function ExploreSection({ tasks, markDone, markNeeded }) {
 
 // ─── AllView ───────────────────────────────────────────────────────────────────
 export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCategory, dueOnly, setDueOnly }) {
-  const { providerHistory } = useProfileContext();
+  const { providerHistory, region } = useProfileContext();
   const { activeTasks, getStatus, getDays, markDone, markNeeded } = useTaskContext();
 
   // Which categories are actually present in tasks
@@ -188,8 +189,9 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
   const knownFiltered   = filtered.filter(t => getStatus(t) !== 'unknown');
   const unknownFiltered = filtered.filter(t => getStatus(t) === 'unknown');
 
-  // Sort known tasks by score (due first)
+  // Sort known tasks by score (due first), treating out-of-season as "ok"
   const sortScore = (t) => {
+    if (!isWindowActive(t, region)) return 1;
     const s = getStatus(t);
     if (s === 'due' || s === 'confirm') return 3;
     if (s === 'coming-up' || s === 'scheduled') return 2;
@@ -197,10 +199,15 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
   };
   const sorted = [...knownFiltered].sort((a, b) => sortScore(b) - sortScore(a));
 
-  // Three groups
-  const needsAttention = sorted.filter(t => ['due', 'needed', 'confirm'].includes(getStatus(t)));
-  const comingUp       = sorted.filter(t => ['coming-up', 'scheduled'].includes(getStatus(t)));
-  const allGood        = sorted.filter(t => getStatus(t) === 'ok');
+  // Three groups — out-of-season tasks always land in allGood
+  const needsAttention = sorted.filter(t => isWindowActive(t, region) && ['due', 'needed', 'confirm'].includes(getStatus(t)));
+  const comingUp       = sorted.filter(t => isWindowActive(t, region) && ['coming-up', 'scheduled'].includes(getStatus(t)));
+  const allGood        = sorted.filter(t => !isWindowActive(t, region) || getStatus(t) === 'ok');
+
+  const seasonSubtitle = (t) => {
+    if (isWindowActive(t, region)) return undefined;
+    return t.seasonalLabel ? `Coming up in ${t.seasonalLabel}` : 'Out of season';
+  };
 
   // Due-only mode collapses to just needsAttention
   const showComingUp = !dueOnly;
@@ -314,6 +321,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
                 onSelect={onSelectTask}
                 onDone={onDoneTask}
                 showCategoryIcon
+                subtitle={seasonSubtitle(task)}
               />
             ))}
           </>
