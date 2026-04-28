@@ -14,3 +14,9 @@ export const providersLimiter = new Ratelimit({
   limiter: Ratelimit.slidingWindow(20, '1 h'),
   prefix: 'rl:providers',
 });
+
+export const generateTaskLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(20, '1 h'),
+  prefix: 'rl:gentask',
+});

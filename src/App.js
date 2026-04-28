@@ -22,6 +22,7 @@ import { AssistPanel }   from "./components/AssistPanel";
 import { SchedulePanel } from "./components/SchedulePanel";
 import { MarkDoneModal } from "./components/MarkDoneModal";
 import { AddTaskPanel }  from "./components/AddTaskPanel";
+import { AITaskCreator } from "./components/AITaskCreator";
 import { ProfileConflictModal } from "./components/ProfileConflictModal";
 
 import { HomeView }       from "./views/HomeView";
@@ -153,6 +154,7 @@ function Overlays({
   assistTask, onAssistClose,
   scheduleTask, onScheduleClose,
   addingTask, onAddClose,
+  aiCreatorOpen, onAiCreatorClose,
 }) {
   const { addCustomTask, pendingConflict, resolveConflict } = useProfileContext();
   const { markScheduled } = useTaskContext();
@@ -164,6 +166,7 @@ function Overlays({
       {assistTask    && <AssistPanel task={assistTask} onClose={onAssistClose} />}
       {scheduleTask  && <SchedulePanel task={scheduleTask} onSchedule={(d) => markScheduled(scheduleTask.id, d)} onClose={onScheduleClose} />}
       {addingTask    && <AddTaskPanel onAdd={addCustomTask} onClose={onAddClose} />}
+      {aiCreatorOpen && <AITaskCreator onClose={onAiCreatorClose} />}
       {pendingConflict && <ProfileConflictModal onResolve={resolveConflict} />}
     </>
   );
@@ -210,6 +213,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, w
   const [scheduleTask,    setScheduleTask]    = useState(null);
   const [markDoneModal,   setMarkDoneModal]   = useState(null);
   const [addingTask,      setAddingTask]      = useState(false);
+  const [aiCreatorOpen,   setAiCreatorOpen]   = useState(false);
   const [activeCategory,  setActiveCategory]  = useState('all');
   const [dueOnly,         setDueOnly]         = useState(false);
 
@@ -283,6 +287,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, w
     assistTask, onAssistClose: () => setAssistTask(null),
     scheduleTask, onScheduleClose: () => setScheduleTask(null),
     addingTask, onAddClose: () => setAddingTask(false),
+    aiCreatorOpen, onAiCreatorClose: () => setAiCreatorOpen(false),
   };
 
   // ─── Onboarding gates ──────────────────────────────────────────────────────
@@ -368,7 +373,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, w
       )}
 
       <FABGroup showAdd={view === 'home' || view === 'all'} onAdd={() => setAddingTask(true)} />
-      <BottomDock view={view} setView={setView} onAI={() => {}} />
+      <BottomDock view={view} setView={setView} onAI={() => setAiCreatorOpen(true)} />
     </div>
   );
 }
