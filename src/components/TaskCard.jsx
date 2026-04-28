@@ -29,7 +29,7 @@ export function TaskCard({ task, status, days, onSelect, onDone, showCategoryIco
   const dueText  = subtitle !== undefined ? subtitle : formatDueDate(days);
 
   return (
-    <div style={{
+    <div data-testid="task-card" style={{
       background: '#FFFFFF',
       borderRadius: 14,
       padding: '13px 12px 13px 0',
