@@ -56,8 +56,7 @@ test('date picker month arrows do not close picker', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Mark as done' })).toBeVisible({ timeout: 5000 });
 
   // Click the "Last done" cell to open the calendar
-  const lastDoneCell = page.locator('div').filter({ has: page.getByText('Last done') }).first();
-  await lastDoneCell.click();
+  await page.getByTestId('last-done-cell').click();
 
   // Calendar should appear
   const calendar = page.getByTestId('month-calendar');
