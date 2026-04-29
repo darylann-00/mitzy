@@ -152,40 +152,33 @@ export function SchedulePanel({ task, onSchedule, onClose }) {
         {/* Body */}
         <div style={{
           flex: 1, overflowY: 'auto',
-          padding: '16px 16px 28px',
-          display: 'flex', flexDirection: 'column', gap: 12,
+          padding: '18px 20px 32px',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
         }}>
-          {/* Calendar wrapped in a card — fit-content so it doesn't leave dead space */}
-          <div style={{
-            background: C.card,
-            border: `1px solid ${C.cardBorder}`,
-            borderRadius: 14,
-            padding: '12px 12px 8px',
-            alignSelf: 'center',
-          }}>
-            <MonthCalendar
-              value={date}
-              onChange={setDate}
-              min={todayIso}
-            />
-          </div>
+          {/* Calendar */}
+          <MonthCalendar
+            value={date}
+            onChange={setDate}
+            min={todayIso}
+          />
 
           {/* Hint */}
           <div style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            fontSize: 11, color: C.muted, lineHeight: 1.5,
+            display: 'flex', alignItems: 'center', gap: 6,
+            fontSize: 12, color: C.muted, lineHeight: 1.5,
+            alignSelf: 'stretch',
           }}>
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0 }}>
-              <circle cx="6" cy="6" r="5" stroke={C.muted} strokeWidth="1.2"/>
-              <line x1="6" y1="4" x2="6" y2="7" stroke={C.muted} strokeWidth="1.2" strokeLinecap="round"/>
-              <circle cx="6" cy="8.5" r="0.6" fill={C.muted}/>
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ flexShrink: 0 }}>
+              <circle cx="6.5" cy="6.5" r="5.5" stroke={C.muted} strokeWidth="1.2"/>
+              <line x1="6.5" y1="4.5" x2="6.5" y2="7.5" stroke={C.muted} strokeWidth="1.2" strokeLinecap="round"/>
+              <circle cx="6.5" cy="9" r="0.65" fill={C.muted}/>
             </svg>
             A 60-min reminder will be added automatically.
           </div>
 
           {/* Status messages */}
           {status === 'loading' && (
-            <div style={{ fontSize: 14, color: C.muted }}>
+            <div style={{ fontFamily: "'Righteous', cursive", fontSize: 14, color: C.muted, alignSelf: 'stretch' }}>
               Adding to calendar…
             </div>
           )}
@@ -193,7 +186,7 @@ export function SchedulePanel({ task, onSchedule, onClose }) {
             <div style={{
               display: 'flex', alignItems: 'center', gap: 7,
               background: C.brandLight, borderRadius: 10, padding: '10px 14px',
-              fontSize: 14, fontWeight: 600, color: C.brand,
+              fontSize: 14, fontWeight: 600, color: C.brand, alignSelf: 'stretch',
             }}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <polyline points="3,8 7,12 13,4" stroke={C.brand} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -204,7 +197,7 @@ export function SchedulePanel({ task, onSchedule, onClose }) {
           {status === 'error' && (
             <div style={{
               background: '#FDE8E8', borderRadius: 10, padding: '10px 14px',
-              fontSize: 13, color: C.red,
+              fontSize: 13, color: C.red, alignSelf: 'stretch',
             }}>
               Couldn't connect to Google Calendar. Try again.
             </div>
