@@ -1,6 +1,5 @@
 import { useState, useRef } from "react";
 import { C } from "../data/constants";
-import { Sheet } from "./Sheet";
 import { MonthCalendar } from "./MonthCalendar";
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -16,9 +15,35 @@ function loadGIS() {
   });
 }
 
+// ── Calendar icon tile ────────────────────────────────────────────────────────
+function CalendarTile() {
+  return (
+    <div style={{
+      width: 38, height: 38, borderRadius: 10,
+      background: C.brand,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      flexShrink: 0,
+    }}>
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <rect x="2" y="3" width="16" height="14" rx="3"
+          fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.9)" strokeWidth="1.5"/>
+        <line x1="2"    y1="8"  x2="18"   y2="8"  stroke="rgba(255,255,255,0.9)" strokeWidth="1.5"/>
+        <line x1="6.5"  y1="3"  x2="6.5"  y2="8"  stroke="rgba(255,255,255,0.9)" strokeWidth="1.5"/>
+        <line x1="13.5" y1="3"  x2="13.5" y2="8"  stroke="rgba(255,255,255,0.9)" strokeWidth="1.5"/>
+        <rect x="5.5" y="11" width="3" height="3" rx="1" fill="rgba(255,255,255,0.9)"/>
+        <rect x="11"  y="11" width="3" height="3" rx="1" fill="rgba(255,255,255,0.5)"/>
+      </svg>
+    </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 export function SchedulePanel({ task, onSchedule, onClose }) {
-  const today = new Date().toISOString().split('T')[0];
-  const [date,   setDate]   = useState(today);
+  const today = new Date();
+  const pad   = (n) => String(n).padStart(2, '0');
+  const todayIso = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+
+  const [date,   setDate]   = useState(todayIso);
   const [status, setStatus] = useState(null); // null | "loading" | "success" | "error"
   const tokenClientRef = useRef(null);
 
@@ -53,72 +78,159 @@ export function SchedulePanel({ task, onSchedule, onClose }) {
       if (!res.ok) throw new Error(await res.text());
 
       setStatus("success");
-      setTimeout(() => { onSchedule(date); onClose(); }, 1200);
+      setTimeout(() => { onSchedule(date); onClose(); }, 1000);
     } catch {
       setStatus("error");
     }
   };
 
   return (
-    <Sheet onClose={onClose} title="Schedule it 📅">
-      <div style={{ fontFamily: 'DM Sans, sans-serif' }}>
-        <div style={{ fontSize: 14, color: C.ink, fontWeight: 600, marginBottom: 4 }}>
-          {task.label}
-        </div>
-        <div style={{ fontSize: 13, color: C.muted, marginBottom: 20, lineHeight: 1.5 }}>
-          Mitzy adds this to your Google Calendar with a reminder.
+    /* ── Backdrop ── */
+    <div
+      style={{
+        position: 'fixed', inset: 0,
+        background: 'rgba(26,26,46,0.6)',
+        zIndex: 500,
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+      }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      {/* ── Sheet ── */}
+      <div
+        className="sUp"
+        style={{
+          background: C.bg,
+          width: '100%', maxWidth: 640,
+          borderRadius: '24px 24px 0 0',
+          overflow: 'hidden',
+          maxHeight: '88vh',
+          display: 'flex', flexDirection: 'column',
+        }}
+      >
+        {/* Drag handle */}
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 0' }}>
+          <div style={{ width: 32, height: 4, borderRadius: 999, background: C.cardBorder }} />
         </div>
 
-        <div style={{ fontSize: 12, color: C.muted, fontWeight: 600, marginBottom: 8 }}>
-          Pick a date
-        </div>
-        <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'center' }}>
-          <MonthCalendar
-            value={date}
-            onChange={setDate}
-            min={today}
-          />
-        </div>
-
-        {status === "loading" && (
-          <div style={{ fontSize: 14, color: C.muted, textAlign: 'center', marginBottom: 12 }}>
-            Adding to calendar…
+        {/* Header */}
+        <div style={{
+          padding: '14px 16px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          borderBottom: `1px solid ${C.cardBorder}`,
+          flexShrink: 0,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <CalendarTile />
+            <div>
+              <div style={{
+                fontFamily: "'Righteous', 'Trebuchet MS', cursive",
+                fontSize: 19, color: C.ink, lineHeight: 1.1,
+              }}>
+                Schedule it
+              </div>
+              <div style={{ fontSize: 12, color: C.muted, marginTop: 1 }}>
+                {task.label}
+              </div>
+            </div>
           </div>
-        )}
-        {status === "success" && (
-          <div style={{ fontSize: 14, color: C.green, textAlign: 'center', fontWeight: 600, marginBottom: 12 }}>
-            Done! Check your calendar ✓
-          </div>
-        )}
-        {status === "error" && (
-          <div style={{ fontSize: 13, color: C.red, textAlign: 'center', marginBottom: 12 }}>
-            Calendar connection issue — try again
-          </div>
-        )}
-
-        {!status && (
           <button
-            onClick={handleSchedule}
-            disabled={!date}
+            onClick={onClose}
             style={{
-              width: '100%',
-              padding: '14px',
-              fontSize: 15,
-              fontWeight: 700,
-              fontFamily: 'DM Sans, sans-serif',
-              background: date ? C.brand : C.surface,
-              color: date ? C.brandLight : C.muted,
-              border: 'none',
-              borderRadius: 14,
-              cursor: date ? 'pointer' : 'default',
-              boxShadow: date ? '0 4px 12px rgba(26,92,58,0.25)' : 'none',
-              transition: 'background 0.2s, box-shadow 0.2s',
+              background: C.cardBorder, border: 'none', borderRadius: 8,
+              width: 28, height: 28, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
             }}
           >
-            add to calendar →
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <line x1="1" y1="1" x2="11" y2="11" stroke={C.muted} strokeWidth="1.8" strokeLinecap="round"/>
+              <line x1="11" y1="1" x2="1" y2="11" stroke={C.muted} strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
           </button>
-        )}
+        </div>
+
+        {/* Body */}
+        <div style={{
+          flex: 1, overflowY: 'auto',
+          padding: '16px 16px 28px',
+          display: 'flex', flexDirection: 'column', gap: 12,
+        }}>
+          {/* Calendar wrapped in a card */}
+          <div style={{
+            background: C.card,
+            border: `1px solid ${C.cardBorder}`,
+            borderRadius: 14,
+            padding: '12px 12px 8px',
+          }}>
+            <MonthCalendar
+              value={date}
+              onChange={setDate}
+              min={todayIso}
+            />
+          </div>
+
+          {/* Hint */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            fontSize: 11, color: C.muted, lineHeight: 1.5,
+          }}>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0 }}>
+              <circle cx="6" cy="6" r="5" stroke={C.muted} strokeWidth="1.2"/>
+              <line x1="6" y1="4" x2="6" y2="7" stroke={C.muted} strokeWidth="1.2" strokeLinecap="round"/>
+              <circle cx="6" cy="8.5" r="0.6" fill={C.muted}/>
+            </svg>
+            A 60-min reminder will be added automatically.
+          </div>
+
+          {/* Status messages */}
+          {status === 'loading' && (
+            <div style={{ fontSize: 14, color: C.muted }}>
+              Adding to calendar…
+            </div>
+          )}
+          {status === 'success' && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 7,
+              background: C.brandLight, borderRadius: 10, padding: '10px 14px',
+              fontSize: 14, fontWeight: 600, color: C.brand,
+            }}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <polyline points="3,8 7,12 13,4" stroke={C.brand} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Done! Check your calendar.
+            </div>
+          )}
+          {status === 'error' && (
+            <div style={{
+              background: '#FDE8E8', borderRadius: 10, padding: '10px 14px',
+              fontSize: 13, color: C.red,
+            }}>
+              Couldn't connect to Google Calendar. Try again.
+            </div>
+          )}
+
+          {/* CTA */}
+          {!status && (
+            <button
+              className="pb"
+              onClick={handleSchedule}
+              disabled={!date}
+              style={{
+                width: '100%', padding: 14,
+                borderRadius: 13, border: 'none',
+                background: date ? C.brand : C.cardBorder,
+                color: date ? C.brandLight : C.muted,
+                fontSize: 14, fontWeight: 700,
+                fontFamily: 'DM Sans, sans-serif',
+                cursor: date ? 'pointer' : 'default',
+                transition: 'background 0.15s, color 0.15s',
+              }}
+            >
+              Add to calendar →
+            </button>
+          )}
+        </div>
       </div>
-    </Sheet>
+    </div>
   );
 }
