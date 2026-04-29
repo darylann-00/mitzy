@@ -56,7 +56,7 @@ function FourDots({ size = 7 }) {
   );
 }
 
-export function TaskDetailView({ task, onAssist, onSchedule, onDone, onBack, onMarkDone, onSetIntervalOverride }) {
+export function TaskDetailView({ task, onAssist, onSchedule, onDone, onBack, onMarkDone, onSetIntervalOverride, onMarkNotApplicable, onRemove }) {
   const { providerHistory } = useProfileContext();
   const { taskState, getStatus } = useTaskContext();
   const savedProvider = providerHistory[task.id];
@@ -70,6 +70,7 @@ export function TaskDetailView({ task, onAssist, onSchedule, onDone, onBack, onM
   const [customNum, setCustomNum] = useState('');
   const [customUnit, setCustomUnit] = useState('months');
   const [showCustomInput, setShowCustomInput] = useState(false);
+  const [confirmDismiss, setConfirmDismiss] = useState(false);
   const customNumRef = useRef(null);
 
   // Last done / frequency / due next
@@ -427,6 +428,57 @@ export function TaskDetailView({ task, onAssist, onSchedule, onDone, onBack, onM
             <span style={{ fontSize:15, fontWeight:700, color:'#fff', fontFamily:'DM Sans, sans-serif' }}>Mark as done</span>
           </button>
         </div>
+
+        {/* Dismiss / remove row */}
+        {!confirmDismiss ? (
+          <button
+            onClick={() => setConfirmDismiss(true)}
+            style={{
+              marginTop:10, width:'100%', background:'none', border:'none',
+              padding:'6px 0', cursor:'pointer', textAlign:'center',
+            }}
+          >
+            <span style={{ fontSize:12, color:'#4A6256', fontFamily:'DM Sans, sans-serif', textDecoration:'underline', textDecorationColor:'#C8D9D1' }}>
+              {task.isCustom ? 'Remove this task' : 'Not applicable for me'}
+            </span>
+          </button>
+        ) : (
+          <div style={{
+            marginTop:10, background:'#FFF8E1', border:'1px solid #F4C430',
+            borderRadius:12, padding:'11px 14px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:10,
+          }}>
+            <span style={{ fontSize:12, color:'#1C2B22', fontFamily:'DM Sans, sans-serif', flex:1, lineHeight:1.4 }}>
+              {task.isCustom
+                ? 'This task will be deleted.'
+                : "This task will be hidden. You can reset it from Profile if needed."}
+            </span>
+            <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+              <button
+                onClick={() => setConfirmDismiss(false)}
+                style={{
+                  padding:'6px 12px', borderRadius:8, fontSize:12, fontWeight:700,
+                  fontFamily:'DM Sans, sans-serif', border:'1.5px solid #EAE4DA',
+                  background:'#fff', color:'#4A6256', cursor:'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (task.isCustom) onRemove?.(task.id);
+                  else onMarkNotApplicable?.(task.id);
+                }}
+                style={{
+                  padding:'6px 12px', borderRadius:8, fontSize:12, fontWeight:700,
+                  fontFamily:'DM Sans, sans-serif', border:'none',
+                  background:'#D62828', color:'#fff', cursor:'pointer',
+                }}
+              >
+                {task.isCustom ? 'Delete' : 'Hide'}
+              </button>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

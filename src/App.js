@@ -156,7 +156,7 @@ function Overlays({
   addingTask, onAddClose,
   aiCreatorOpen, onAiCreatorClose,
 }) {
-  const { addCustomTask, pendingConflict, resolveConflict } = useProfileContext();
+  const { addCustomTask, removeCustomTask, pendingConflict, resolveConflict } = useProfileContext();
   const { markScheduled } = useTaskContext();
 
   return (
@@ -332,6 +332,8 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
           onDone={setMarkDoneModal}
           onMarkDone={(task, dateStr) => markDone(task.id, dateStr)}
           onSetIntervalOverride={(id, days) => setIntervalOverride(id, days)}
+          onMarkNotApplicable={(id) => { markNotApplicable(id); setSelectedTask(null); }}
+          onRemove={(id) => { removeCustomTask(id); setSelectedTask(null); }}
           onBack={() => setSelectedTask(null)}
         />
       </>
