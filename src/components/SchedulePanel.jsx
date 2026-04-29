@@ -1,19 +1,8 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { C } from "../data/constants";
 import { MonthCalendar } from "./MonthCalendar";
-
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-
-function loadGIS() {
-  return new Promise((resolve) => {
-    if (window.google?.accounts?.oauth2) { resolve(); return; }
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.onload = resolve;
-    document.head.appendChild(script);
-  });
-}
+import { getCalendarToken } from "../lib/googleCalendar";
+import { useCalendarContext } from "../contexts/CalendarContext";
 
 // ── Calendar icon tile ────────────────────────────────────────────────────────
 function CalendarTile() {
@@ -43,29 +32,24 @@ export function SchedulePanel({ task, onSchedule, onClose }) {
   const pad   = (n) => String(n).padStart(2, '0');
   const todayIso = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
 
+  const { accessToken, setAccessToken } = useCalendarContext();
   const [date,   setDate]   = useState(todayIso);
   const [time,   setTime]   = useState(null);    // null = all-day; else "HH:MM"
-  const [showTime, setShowTime] = useState(false);
   const [status, setStatus] = useState(null); // null | "loading" | "success" | "error"
-  const tokenClientRef = useRef(null);
 
   const handleSchedule = async () => {
     if (!date) return;
     setStatus("loading");
     try {
-      await loadGIS();
-
-      const accessToken = await new Promise((resolve, reject) => {
-        tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
-          client_id: GOOGLE_CLIENT_ID,
-          scope: 'https://www.googleapis.com/auth/calendar.events',
-          callback: (resp) => {
-            if (resp.error) { reject(new Error(resp.error)); return; }
-            resolve(resp.access_token);
-          },
-        });
-        tokenClientRef.current.requestAccessToken({ prompt: '' });
-      });
+      // Reuse the session-wide token from startup if we have it. Otherwise try
+      // silent first (returns instantly if user already consented this session
+      // on another device), then fall back to the consent popup.
+      let token = accessToken;
+      if (!token) {
+        try { token = await getCalendarToken({ silent: true }); }
+        catch { token = await getCalendarToken({ silent: false }); }
+        setAccessToken(token);
+      }
 
       const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
@@ -77,7 +61,7 @@ export function SchedulePanel({ task, onSchedule, onClose }) {
           taskNote:  task.note || null,
           date,
           ...(time ? { time, timeZone } : {}),
-          accessToken,
+          accessToken: token,
         }),
       });
       if (!res.ok) throw new Error(await res.text());

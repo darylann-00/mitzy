@@ -10,6 +10,7 @@ import { useSession } from "./hooks/useSession";
 
 import { ProfileProvider, useProfileContext } from "./contexts/ProfileContext";
 import { TaskProvider,   useTaskContext }    from "./contexts/TaskContext";
+import { CalendarProvider }                  from "./contexts/CalendarContext";
 
 import { LoginGate }      from "./components/LoginGate";
 import { BrandSplash }    from "./components/BrandSplash";
@@ -182,6 +183,7 @@ export default function Mitzy() {
   return (
     <ProfileProvider user={user} welcomeChoice={welcomeChoice}>
       <TaskProvider user={user}>
+        <CalendarProvider user={user}>
         <MitzyApp
           user={user}
           authError={authError}
@@ -192,6 +194,7 @@ export default function Mitzy() {
           welcomeChoice={welcomeChoice}
           setWelcomeChoice={setWelcomeChoice}
         />
+        </CalendarProvider>
       </TaskProvider>
     </ProfileProvider>
   );
