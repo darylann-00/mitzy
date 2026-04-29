@@ -156,7 +156,7 @@ function Overlays({
   addingTask, onAddClose,
   aiCreatorOpen, onAiCreatorClose,
 }) {
-  const { addCustomTask, removeCustomTask, pendingConflict, resolveConflict } = useProfileContext();
+  const { addCustomTask, pendingConflict, resolveConflict } = useProfileContext();
   const { markScheduled } = useTaskContext();
 
   return (
@@ -199,7 +199,7 @@ export default function Mitzy() {
 
 // ─── Inner app — consumes contexts ─────────────────────────────────────────────
 function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, signInWithPassword, welcomeChoice, setWelcomeChoice }) {
-  const { profile, taskLibrary, updateProfile, region, loading: profileLoading, syncError: profileSyncError, serverProfileChecked, serverProfileExists } = useProfileContext();
+  const { profile, taskLibrary, updateProfile, removeCustomTask, region, loading: profileLoading, syncError: profileSyncError, serverProfileChecked, serverProfileExists } = useProfileContext();
   const { activeTasks, taskState, setTaskState, setDisabledTasks, markDone, markNotApplicable, markNeeded, setIntervalOverride, nextUpcomingTask, loading: tasksLoading, syncError: tasksSyncError } = useTaskContext();
 
   // ─── Onboarding state ──────────────────────────────────────────────────────
