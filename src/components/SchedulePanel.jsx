@@ -1,6 +1,13 @@
 import { useState, useRef } from "react";
 import { C } from "../data/constants";
 import { Sheet } from "./Sheet";
+import { MonthCalendar } from "./MonthCalendar";
+
+function todayIso() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
@@ -16,7 +23,7 @@ function loadGIS() {
 }
 
 export function SchedulePanel({ task, onSchedule, onClose }) {
-  const [date,   setDate]   = useState("");
+  const [date,   setDate]   = useState(todayIso);
   const [status, setStatus] = useState(null); // null | "loading" | "success" | "error"
   const tokenClientRef = useRef(null);
 
@@ -61,7 +68,9 @@ export function SchedulePanel({ task, onSchedule, onClose }) {
   return (
     <Sheet onClose={onClose} title="Schedule it 📅">
       <div style={{ fontSize: 14, color: C.muted, marginBottom: 16 }}>{task.label}</div>
-      <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ marginBottom: 14 }} />
+      <div style={{ marginBottom: 14 }}>
+        <MonthCalendar value={date} onChange={setDate} />
+      </div>
       <div style={{ fontSize: 13, color: C.muted, marginBottom: 16, lineHeight: 1.6 }}>
         Mitzy adds this to your Google Calendar with a reminder.
       </div>
