@@ -100,7 +100,7 @@ export function SchedulePanel({ task, onSchedule, onClose }) {
         className="sUp"
         style={{
           background: C.bg,
-          width: '100%', maxWidth: 640,
+          width: '100%', maxWidth: 360,
           borderRadius: '24px 24px 0 0',
           overflow: 'hidden',
           maxHeight: '88vh',
