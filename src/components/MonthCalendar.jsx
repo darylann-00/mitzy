@@ -120,7 +120,7 @@ export function MonthCalendar({ value, onChange, max, min }) {
         borderRadius: 12,
         padding: 10,
         background: '#fff',
-        width: 240,
+        width: 260,
         fontFamily: 'DM Sans, sans-serif',
       }}
     >
