@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { C } from "../data/constants";
 import { Sheet } from "./Sheet";
+import { MonthCalendar } from "./MonthCalendar";
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
@@ -16,7 +17,8 @@ function loadGIS() {
 }
 
 export function SchedulePanel({ task, onSchedule, onClose }) {
-  const [date,   setDate]   = useState("");
+  const today = new Date().toISOString().split('T')[0];
+  const [date,   setDate]   = useState(today);
   const [status, setStatus] = useState(null); // null | "loading" | "success" | "error"
   const tokenClientRef = useRef(null);
 
@@ -35,7 +37,6 @@ export function SchedulePanel({ task, onSchedule, onClose }) {
             resolve(resp.access_token);
           },
         });
-        // prompt: '' = silent if already consented, consent dialog if not
         tokenClientRef.current.requestAccessToken({ prompt: '' });
       });
 
@@ -52,7 +53,7 @@ export function SchedulePanel({ task, onSchedule, onClose }) {
       if (!res.ok) throw new Error(await res.text());
 
       setStatus("success");
-      setTimeout(() => { onSchedule(date); onClose(); }, 1000);
+      setTimeout(() => { onSchedule(date); onClose(); }, 1200);
     } catch {
       setStatus("error");
     }
@@ -60,24 +61,64 @@ export function SchedulePanel({ task, onSchedule, onClose }) {
 
   return (
     <Sheet onClose={onClose} title="Schedule it 📅">
-      <div style={{ fontSize: 14, color: C.muted, marginBottom: 16 }}>{task.label}</div>
-      <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ marginBottom: 14 }} />
-      <div style={{ fontSize: 13, color: C.muted, marginBottom: 16, lineHeight: 1.6 }}>
-        Mitzy adds this to your Google Calendar with a reminder.
+      <div style={{ fontFamily: 'DM Sans, sans-serif' }}>
+        <div style={{ fontSize: 14, color: C.ink, fontWeight: 600, marginBottom: 4 }}>
+          {task.label}
+        </div>
+        <div style={{ fontSize: 13, color: C.muted, marginBottom: 20, lineHeight: 1.5 }}>
+          Mitzy adds this to your Google Calendar with a reminder.
+        </div>
+
+        <div style={{ fontSize: 12, color: C.muted, fontWeight: 600, marginBottom: 8 }}>
+          Pick a date
+        </div>
+        <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'center' }}>
+          <MonthCalendar
+            value={date}
+            onChange={setDate}
+            min={today}
+          />
+        </div>
+
+        {status === "loading" && (
+          <div style={{ fontSize: 14, color: C.muted, textAlign: 'center', marginBottom: 12 }}>
+            Adding to calendar…
+          </div>
+        )}
+        {status === "success" && (
+          <div style={{ fontSize: 14, color: C.green, textAlign: 'center', fontWeight: 600, marginBottom: 12 }}>
+            Done! Check your calendar ✓
+          </div>
+        )}
+        {status === "error" && (
+          <div style={{ fontSize: 13, color: C.red, textAlign: 'center', marginBottom: 12 }}>
+            Calendar connection issue — try again
+          </div>
+        )}
+
+        {!status && (
+          <button
+            onClick={handleSchedule}
+            disabled={!date}
+            style={{
+              width: '100%',
+              padding: '14px',
+              fontSize: 15,
+              fontWeight: 700,
+              fontFamily: 'DM Sans, sans-serif',
+              background: date ? C.brand : C.surface,
+              color: date ? C.brandLight : C.muted,
+              border: 'none',
+              borderRadius: 14,
+              cursor: date ? 'pointer' : 'default',
+              boxShadow: date ? '0 4px 12px rgba(26,92,58,0.25)' : 'none',
+              transition: 'background 0.2s, box-shadow 0.2s',
+            }}
+          >
+            add to calendar →
+          </button>
+        )}
       </div>
-      {status === "loading" && <div className="mf" style={{ fontSize: 14, color: C.muted }}>Adding to calendar...</div>}
-      {status === "success" && <div className="mf" style={{ fontSize: 14, color: C.mint }}>Done! Check your calendar ✓</div>}
-      {status === "error"   && <div className="mf" style={{ fontSize: 14, color: C.coral }}>Calendar connection issue</div>}
-      {!status && (
-        <button
-          className="pb"
-          onClick={handleSchedule}
-          disabled={!date}
-          style={{ width: "100%", padding: "14px", fontSize: 16, background: date ? C.coral : "#E0D8D0", color: C.white, border: "none", borderRadius: 14, fontWeight: 700, boxShadow: date ? "0 4px 12px rgba(255,92,92,0.3)" : "none" }}
-        >
-          add to calendar →
-        </button>
-      )}
     </Sheet>
   );
 }
