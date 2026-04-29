@@ -175,7 +175,7 @@ function ExploreSection({ tasks, markDone, markNeeded }) {
 // ─── AllView ───────────────────────────────────────────────────────────────────
 export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCategory, dueOnly, setDueOnly, onMatchConfirm, onMatchDismiss }) {
   const { providerHistory, region } = useProfileContext();
-  const { activeTasks, getStatus, getDays, markDone, markNeeded } = useTaskContext();
+  const { activeTasks, getStatus, getDays, markDone, markNeeded, taskState } = useTaskContext();
   const { pendingCalendarMatches } = useCalendarContext();
 
   // Which categories are actually present in tasks
@@ -279,7 +279,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
               return (
                 <TaskCard
                   key={task.id}
-                  task={{ ...task, scheduledDate: task.scheduledDate }}
+                  task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate }}
                   status={getStatus(task)}
                   days={getDays(task)}
                   hasSavedProvider={!!providerHistory[task.id]}
@@ -288,8 +288,8 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
                   showCategoryIcon
                   subtitle={getStatus(task) === 'needed' ? '' : undefined}
                   pendingMatch={match}
-                  onMatchConfirm={() => onMatchConfirm(task.id, match.eventDate)}
-                  onMatchDismiss={() => onMatchDismiss(task.id)}
+                  onMatchConfirm={match ? () => onMatchConfirm(task.id, match.eventDate) : undefined}
+                  onMatchDismiss={match ? () => onMatchDismiss(task.id) : undefined}
                 />
               );
             })}
@@ -305,7 +305,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
               return (
                 <TaskCard
                   key={task.id}
-                  task={{ ...task, scheduledDate: task.scheduledDate }}
+                  task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate }}
                   status={getStatus(task)}
                   days={getDays(task)}
                   hasSavedProvider={!!providerHistory[task.id]}
@@ -313,8 +313,8 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
                   onDone={onDoneTask}
                   showCategoryIcon
                   pendingMatch={match}
-                  onMatchConfirm={() => onMatchConfirm(task.id, match.eventDate)}
-                  onMatchDismiss={() => onMatchDismiss(task.id)}
+                  onMatchConfirm={match ? () => onMatchConfirm(task.id, match.eventDate) : undefined}
+                  onMatchDismiss={match ? () => onMatchDismiss(task.id) : undefined}
                 />
               );
             })}
@@ -330,7 +330,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
               return (
                 <TaskCard
                   key={task.id}
-                  task={{ ...task, scheduledDate: task.scheduledDate }}
+                  task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate }}
                   status={getStatus(task)}
                   days={getDays(task)}
                   hasSavedProvider={!!providerHistory[task.id]}
@@ -339,8 +339,8 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
                   showCategoryIcon
                   subtitle={seasonSubtitle(task)}
                   pendingMatch={match}
-                  onMatchConfirm={() => onMatchConfirm(task.id, match.eventDate)}
-                  onMatchDismiss={() => onMatchDismiss(task.id)}
+                  onMatchConfirm={match ? () => onMatchConfirm(task.id, match.eventDate) : undefined}
+                  onMatchDismiss={match ? () => onMatchDismiss(task.id) : undefined}
                 />
               );
             })}

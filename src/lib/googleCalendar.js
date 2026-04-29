@@ -35,6 +35,11 @@ function loadGIS() {
  * @returns {Promise<string>} access token
  */
 export function getCalendarToken({ silent = true } = {}) {
+  // Test hook — Playwright can preset window.__MITZY_FAKE_CAL_TOKEN__ to skip
+  // real Google Identity Services. Production paths never set this.
+  if (typeof window !== 'undefined' && window.__MITZY_FAKE_CAL_TOKEN__) {
+    return Promise.resolve(window.__MITZY_FAKE_CAL_TOKEN__);
+  }
   if (!GOOGLE_CLIENT_ID) return Promise.reject(new Error('no_client_id'));
 
   return loadGIS().then(() => new Promise((resolve, reject) => {

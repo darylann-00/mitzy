@@ -65,6 +65,10 @@ export function TaskDetailView({ task, onAssist, onSchedule, onDone, onBack, onM
   const meta     = CAT_META[task.cat] || CAT_META.home;
   const iconCfg  = CAT_ICON_CONFIG[task.cat] || CAT_ICON_CONFIG.home;
   const isOverdue = status === 'due' || status === 'confirm';
+  const scheduledDate = entry?.scheduledDate ? new Date(entry.scheduledDate) : null;
+  const scheduledStr = scheduledDate
+    ? scheduledDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : null;
   const [editingLastDone, setEditingLastDone] = useState(false);
   const [editingFrequency, setEditingFrequency] = useState(false);
   const [customNum, setCustomNum] = useState('');
@@ -159,6 +163,20 @@ export function TaskDetailView({ task, onAssist, onSchedule, onDone, onBack, onM
               <div style={{ fontSize:13, fontWeight:700, color:'#1C2B22', fontFamily:'DM Sans, sans-serif' }}>{savedProvider.name}</div>
               {savedProvider.notes && <div style={{ fontSize:12, color:'#4A6256', fontStyle:'italic', fontFamily:'DM Sans, sans-serif' }}>{savedProvider.notes}</div>}
             </div>
+          </div>
+        )}
+
+        {/* Scheduled chip */}
+        {scheduledStr && (
+          <div data-testid="scheduled-chip" style={{
+            display:'inline-flex', alignItems:'center', gap:6,
+            background:'rgba(244, 196, 48, 0.15)',
+            border:'1px solid #F4C430',
+            borderRadius:8, padding:'5px 10px', marginBottom:10,
+            fontSize:12, fontWeight:600, color:'#1C2B22',
+            fontFamily:'DM Sans, sans-serif',
+          }}>
+            <span>📅 Scheduled: {scheduledStr}</span>
           </div>
         )}
 

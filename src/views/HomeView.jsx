@@ -210,7 +210,7 @@ export function HomeView({
   onMatchDismiss,
 }) {
   const { profile, providerHistory } = useProfileContext();
-  const { focusTasks, doneThisWeek, getStatus, getDays } = useTaskContext();
+  const { focusTasks, doneThisWeek, getStatus, getDays, taskState } = useTaskContext();
   const { pendingCalendarMatches } = useCalendarContext();
 
   return (
@@ -241,7 +241,7 @@ export function HomeView({
               return (
                 <TaskCard
                   key={task.id}
-                  task={{ ...task, scheduledDate: task.scheduledDate }}
+                  task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate }}
                   status={getStatus(task)}
                   days={getDays(task)}
                   hasSavedProvider={!!providerHistory[task.id]}
@@ -250,8 +250,8 @@ export function HomeView({
                   showCategoryIcon
                   subtitle={getStatus(task) === 'needed' ? '' : undefined}
                   pendingMatch={match}
-                  onMatchConfirm={() => onMatchConfirm(task.id, match.eventDate)}
-                  onMatchDismiss={() => onMatchDismiss(task.id)}
+                  onMatchConfirm={match ? () => onMatchConfirm(task.id, match.eventDate) : undefined}
+                  onMatchDismiss={match ? () => onMatchDismiss(task.id) : undefined}
                 />
               );
             })}
