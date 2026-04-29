@@ -10,7 +10,7 @@ import { useSession } from "./hooks/useSession";
 
 import { ProfileProvider, useProfileContext } from "./contexts/ProfileContext";
 import { TaskProvider,   useTaskContext }    from "./contexts/TaskContext";
-import { CalendarProvider }                  from "./contexts/CalendarContext";
+import { CalendarProvider, useCalendarContext } from "./contexts/CalendarContext";
 
 import { LoginGate }      from "./components/LoginGate";
 import { BrandSplash }    from "./components/BrandSplash";
@@ -203,7 +203,8 @@ export default function Mitzy() {
 // ─── Inner app — consumes contexts ─────────────────────────────────────────────
 function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, signInWithPassword, welcomeChoice, setWelcomeChoice }) {
   const { profile, taskLibrary, updateProfile, removeCustomTask, region, loading: profileLoading, syncError: profileSyncError, serverProfileChecked, serverProfileExists } = useProfileContext();
-  const { activeTasks, taskState, setTaskState, setDisabledTasks, markDone, markNotApplicable, markNeeded, setIntervalOverride, nextUpcomingTask, loading: tasksLoading, syncError: tasksSyncError } = useTaskContext();
+  const { activeTasks, taskState, setTaskState, setDisabledTasks, markDone, markNotApplicable, markNeeded, setIntervalOverride, markScheduled, nextUpcomingTask, loading: tasksLoading, syncError: tasksSyncError } = useTaskContext();
+  const { pendingCalendarMatches, dismissMatch } = useCalendarContext();
 
   // ─── Onboarding state ──────────────────────────────────────────────────────
   const [profileDone, setProfileDone] = useState(() => loadS(PROFILE_DONE_KEY, false));
@@ -293,6 +294,16 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
     // signOut triggers SIGNED_OUT → clearLocalUserData() + reload in useAuth
   };
 
+  // ─── Calendar match handlers ───────────────────────────────────────────────
+  const handleMatchConfirm = async (taskId, eventDate) => {
+    await markScheduled(taskId, eventDate);
+    dismissMatch(taskId);
+  };
+
+  const handleMatchDismiss = (taskId) => {
+    dismissMatch(taskId);
+  };
+
   // ─── Shared overlay props ──────────────────────────────────────────────────
   const overlayProps = {
     celebration, onCelebrationDone: () => setCelebration(false),
@@ -370,6 +381,8 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
           onTrickleAssist={setAssistTask}
           onHazardAccept={handleHazardAccept}
           onHazardDismiss={() => setPendingHazards(null)}
+          onMatchConfirm={handleMatchConfirm}
+          onMatchDismiss={handleMatchDismiss}
         />
       )}
 
@@ -381,6 +394,8 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
           setActiveCategory={setActiveCategory}
           dueOnly={dueOnly}
           setDueOnly={setDueOnly}
+          onMatchConfirm={handleMatchConfirm}
+          onMatchDismiss={handleMatchDismiss}
         />
       )}
 
