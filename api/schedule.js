@@ -27,21 +27,46 @@ export default async function handler(req) {
     return new Response("Invalid JSON", { status: 400 });
   }
 
-  const { taskLabel, taskNote, date, accessToken } = body;
+  const { taskLabel, taskNote, date, time, timeZone, accessToken } = body;
   if (!taskLabel || !date || !accessToken) {
     return new Response("Missing required fields", { status: 400 });
   }
+  if (time && !timeZone) {
+    return new Response("timeZone required when time is provided", { status: 400 });
+  }
 
-  // Google Calendar all-day events require exclusive end date (day after)
-  const endDate = new Date(date);
-  endDate.setUTCDate(endDate.getUTCDate() + 1);
-  const endDateStr = endDate.toISOString().split('T')[0];
+  let start, end;
+  if (time) {
+    // Timed event: 60-minute duration. Send naive local datetime + timeZone;
+    // Google interprets it in the supplied zone.
+    const [h, m] = time.split(':').map(Number);
+    const pad = (n) => String(n).padStart(2, '0');
+    const startLocal = `${date}T${pad(h)}:${pad(m)}:00`;
+    let endDateStr = date;
+    let endH = h + 1;
+    if (endH >= 24) {
+      endH -= 24;
+      const next = new Date(`${date}T00:00:00Z`);
+      next.setUTCDate(next.getUTCDate() + 1);
+      endDateStr = next.toISOString().split('T')[0];
+    }
+    const endLocal = `${endDateStr}T${pad(endH)}:${pad(m)}:00`;
+    start = { dateTime: startLocal, timeZone };
+    end   = { dateTime: endLocal,   timeZone };
+  } else {
+    // All-day event: exclusive end date (day after).
+    const endDate = new Date(date);
+    endDate.setUTCDate(endDate.getUTCDate() + 1);
+    const endDateStr = endDate.toISOString().split('T')[0];
+    start = { date };
+    end   = { date: endDateStr };
+  }
 
   const event = {
     summary: taskLabel,
     ...(taskNote ? { description: taskNote } : {}),
-    start: { date },
-    end:   { date: endDateStr },
+    start,
+    end,
     reminders: {
       useDefault: false,
       overrides:  [{ method: 'popup', minutes: 60 }],
