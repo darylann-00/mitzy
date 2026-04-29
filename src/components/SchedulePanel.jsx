@@ -155,12 +155,13 @@ export function SchedulePanel({ task, onSchedule, onClose }) {
           padding: '16px 16px 28px',
           display: 'flex', flexDirection: 'column', gap: 12,
         }}>
-          {/* Calendar wrapped in a card */}
+          {/* Calendar wrapped in a card — fit-content so it doesn't leave dead space */}
           <div style={{
             background: C.card,
             border: `1px solid ${C.cardBorder}`,
             borderRadius: 14,
             padding: '12px 12px 8px',
+            alignSelf: 'center',
           }}>
             <MonthCalendar
               value={date}
