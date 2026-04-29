@@ -286,7 +286,7 @@ export function petTasks(pet) {
 
 export function buildTaskLibrary(profile) {
   const flags = [];
-  if (profile.hasHome) flags.push("home");
+  if (profile.hasHome) flags.push("home", "homeowner");
   if (profile.hasCar)  flags.push("car");
   if (getAge(profile.birthYear) >= 40) flags.push("40plus");
 
