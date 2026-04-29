@@ -24,8 +24,9 @@ function getFrequencyPresets(defaultDays) {
 
 const ASSIST_SUBTITLES = {
   providers: (task) => {
-    const meta = CAT_META[task.cat];
-    return `Find a local ${meta?.label?.toLowerCase() || 'service'} near you`;
+    return task.providerLabel
+      ? `Find a local ${task.providerLabel} near you`
+      : 'Find local help near you';
   },
   script:   () => 'Help me make the call',
   deadline: () => 'Show me the key dates and links',
