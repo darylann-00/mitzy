@@ -199,7 +199,7 @@ export default function Mitzy() {
 
 // ─── Inner app — consumes contexts ─────────────────────────────────────────────
 function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, signInWithPassword, welcomeChoice, setWelcomeChoice }) {
-  const { profile, taskLibrary, updateProfile, region, loading: profileLoading, syncError: profileSyncError, serverProfileChecked, serverProfileExists } = useProfileContext();
+  const { profile, taskLibrary, updateProfile, removeCustomTask, region, loading: profileLoading, syncError: profileSyncError, serverProfileChecked, serverProfileExists } = useProfileContext();
   const { activeTasks, taskState, setTaskState, setDisabledTasks, markDone, markNotApplicable, markNeeded, setIntervalOverride, nextUpcomingTask, loading: tasksLoading, syncError: tasksSyncError } = useTaskContext();
 
   // ─── Onboarding state ──────────────────────────────────────────────────────
@@ -332,6 +332,8 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
           onDone={setMarkDoneModal}
           onMarkDone={(task, dateStr) => markDone(task.id, dateStr)}
           onSetIntervalOverride={(id, days) => setIntervalOverride(id, days)}
+          onMarkNotApplicable={(id) => { markNotApplicable(id); setSelectedTask(null); }}
+          onRemove={(id) => { removeCustomTask(id); setSelectedTask(null); }}
           onBack={() => setSelectedTask(null)}
         />
       </>
