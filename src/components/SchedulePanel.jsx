@@ -44,6 +44,8 @@ export function SchedulePanel({ task, onSchedule, onClose }) {
   const todayIso = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
 
   const [date,   setDate]   = useState(todayIso);
+  const [time,   setTime]   = useState(null);    // null = all-day; else "HH:MM"
+  const [showTime, setShowTime] = useState(false);
   const [status, setStatus] = useState(null); // null | "loading" | "success" | "error"
   const tokenClientRef = useRef(null);
 
@@ -65,6 +67,8 @@ export function SchedulePanel({ task, onSchedule, onClose }) {
         tokenClientRef.current.requestAccessToken({ prompt: '' });
       });
 
+      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
       const res = await fetch('/api/schedule', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -72,6 +76,7 @@ export function SchedulePanel({ task, onSchedule, onClose }) {
           taskLabel: task.label,
           taskNote:  task.note || null,
           date,
+          ...(time ? { time, timeZone } : {}),
           accessToken,
         }),
       });
@@ -162,6 +167,48 @@ export function SchedulePanel({ task, onSchedule, onClose }) {
             min={todayIso}
           />
 
+          {/* Time picker */}
+          <div style={{ alignSelf: 'stretch', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+              <div style={{
+                fontSize: 12, fontWeight: 600, color: C.muted,
+                textTransform: 'uppercase', letterSpacing: 0.4,
+              }}>
+                Time (optional)
+              </div>
+              {time && (
+                <button
+                  onClick={() => setTime(null)}
+                  style={{
+                    background: 'transparent', border: 'none', padding: 0,
+                    fontFamily: 'DM Sans, sans-serif',
+                    fontSize: 12, color: C.muted, cursor: 'pointer',
+                  }}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <input
+              type="time"
+              value={time || ''}
+              onChange={(e) => setTime(e.target.value || null)}
+              aria-label="Event time"
+              style={{
+                padding: '10px 12px',
+                borderRadius: 10,
+                border: `1px solid ${C.cardBorder}`,
+                background: C.card,
+                color: C.ink,
+                fontFamily: 'DM Sans, sans-serif',
+                fontSize: 14,
+                cursor: 'pointer',
+              }}
+            />
+          </div>
+
           {/* Hint */}
           <div style={{
             display: 'flex', alignItems: 'center', gap: 6,
@@ -173,7 +220,9 @@ export function SchedulePanel({ task, onSchedule, onClose }) {
               <line x1="6.5" y1="4.5" x2="6.5" y2="7.5" stroke={C.muted} strokeWidth="1.2" strokeLinecap="round"/>
               <circle cx="6.5" cy="9" r="0.65" fill={C.muted}/>
             </svg>
-            A 60-min reminder will be added automatically.
+            {time
+              ? '60-min event with a popup reminder.'
+              : 'A 60-min reminder will be added automatically.'}
           </div>
 
           {/* Status messages */}
