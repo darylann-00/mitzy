@@ -1,7 +1,12 @@
-import { createContext, useContext, useMemo, useCallback } from "react";
+import { createContext, useContext, useMemo, useCallback, useState, useEffect } from "react";
 import { useTasks } from "../hooks/useTasks";
 import { useProfileContext } from "./ProfileContext";
 import { taskStatus, taskScore, nextDueStr, isWindowActive, isDependencySatisfied } from "../utils/taskLogic";
+import { loadS, saveS, FOCUS_SEEN_KEY } from "../utils/storage";
+
+const FOCUS_SUPPRESS_AFTER_DAYS = 7;
+const FOCUS_SUPPRESS_FOR_DAYS   = 7;
+const todayStr = () => new Date().toISOString().slice(0, 10);
 
 const TaskContext = createContext(null);
 
@@ -35,9 +40,49 @@ export function TaskProvider({ user, children }) {
       return sb - sa;
     }), [visibleTasks, taskState]);
 
-  const focusTasks = useMemo(() =>
-    scoredDue.filter(t => taskStatus(t, taskState) !== "unknown").slice(0, 3),
-    [scoredDue, taskState]);
+  const [focusSeen, setFocusSeen] = useState(() => loadS(FOCUS_SEEN_KEY, {}));
+
+  const focusTasks = useMemo(() => {
+    const today = todayStr();
+    return scoredDue
+      .filter(t => {
+        if (taskStatus(t, taskState) === "unknown") return false;
+        const entry = focusSeen[t.id];
+        return !(entry?.suppressUntil && entry.suppressUntil > today);
+      })
+      .slice(0, 3);
+  }, [scoredDue, taskState, focusSeen]);
+
+  useEffect(() => {
+    const today = todayStr();
+    setFocusSeen(prev => {
+      const next = { ...prev };
+      let changed = false;
+      focusTasks.forEach(t => {
+        const currentLastDone = taskState[t.id]?.lastDone ?? null;
+        const entry = next[t.id];
+        if (!entry || entry.lastDoneSeen !== currentLastDone) {
+          // New to focus or just completed — reset tracking
+          next[t.id] = { firstSeen: today, lastDoneSeen: currentLastDone, suppressUntil: null };
+          changed = true;
+        } else if (entry.suppressUntil && entry.suppressUntil <= today) {
+          // Suppression window expired — give a fresh cycle
+          next[t.id] = { firstSeen: today, lastDoneSeen: currentLastDone, suppressUntil: null };
+          changed = true;
+        } else if (!entry.suppressUntil) {
+          const daysSeen = Math.floor((Date.now() - new Date(entry.firstSeen)) / 86400000);
+          if (daysSeen >= FOCUS_SUPPRESS_AFTER_DAYS) {
+            const suppressUntil = new Date(Date.now() + FOCUS_SUPPRESS_FOR_DAYS * 86400000)
+              .toISOString().slice(0, 10);
+            next[t.id] = { ...entry, suppressUntil };
+            changed = true;
+          }
+        }
+      });
+      if (changed) saveS(FOCUS_SEEN_KEY, next);
+      return changed ? next : prev;
+    });
+  }, [focusTasks, taskState]);
 
   const doneThisWeek = useMemo(() =>
     Object.values(taskState).filter(entry => {
