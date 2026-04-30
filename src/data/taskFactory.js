@@ -236,7 +236,7 @@ export function kidTasks(kid) {
   }
 
   if (age >= 4 && age < 16) {
-    tasks.push({ ...T(`k-camp-${slug}`,   "school", `${name}: summer camp signup`,       365, 90, "high",   [11,12,1,2], [], "deadline",  "Popular camps fill months in advance."), priority: true });
+    tasks.push({ ...T(`k-camp-${slug}`,   "school", `${name}: summer camp signup`,       365, 90, "high",   [1,2,3,4,5], [], "deadline",  "Popular camps fill months in advance."), priority: true });
     tasks.push(T(`k-spring-${slug}`, "school", `${name}: spring break coverage`,    365, 45, "high",   [1,2,3],     [], "providers", "Spring break is typically late March."));
   }
 
