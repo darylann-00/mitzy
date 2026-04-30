@@ -96,14 +96,16 @@ export function TaskAnswerChips({
       </div>
       {showDatePicker && (
         <>
-          <div style={{ fontSize: 11, color: '#ffffff', fontWeight: 700, marginBottom: 8, fontFamily: 'DM Sans, sans-serif' }}>
+          <div style={{ fontSize: 11, color: '#4A6256', fontWeight: 700, marginBottom: 8, fontFamily: 'DM Sans, sans-serif' }}>
             Or pick an exact date:
           </div>
-          <MonthCalendar
-            value={exactDate}
-            onChange={iso => { onDone(iso); setExactDate(''); }}
-            max={today}
-          />
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <MonthCalendar
+              value={exactDate}
+              onChange={iso => { onDone(iso); setExactDate(''); }}
+              max={today}
+            />
+          </div>
         </>
       )}
       {onSkip && (
@@ -115,7 +117,7 @@ export function TaskAnswerChips({
             padding: 0, marginTop: 6, textDecoration: 'underline', opacity: 0.7,
           }}
         >
-          Doesn't apply to me
+          N/A — doesn't apply to me
         </button>
       )}
     </>

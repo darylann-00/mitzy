@@ -73,7 +73,7 @@ function Toggle({ on, onToggle, label }) {
 }
 
 // ─── Explore section ───────────────────────────────────────────────────────────
-function ExploreSection({ tasks, markDone, markNeeded }) {
+function ExploreSection({ tasks, markDone, markNeeded, markNotApplicable }) {
   const [open,     setOpen]     = useState(false);
   const [expanded, setExpanded] = useState(null);
 
@@ -86,6 +86,11 @@ function ExploreSection({ tasks, markDone, markNeeded }) {
 
   const handleNeeded = (task) => {
     markNeeded(task.id);
+    setExpanded(null);
+  };
+
+  const handleNA = (task) => {
+    markNotApplicable(task.id);
     setExpanded(null);
   };
 
@@ -156,6 +161,7 @@ function ExploreSection({ tasks, markDone, markNeeded }) {
                     task={task}
                     onDone={(iso) => handleDone(task, iso)}
                     onNeeded={() => handleNeeded(task)}
+                    onSkip={!task.oneTime ? () => handleNA(task) : undefined}
                     showDatePicker={!task.oneTime}
                     labelStyle={{ fontSize:12, fontWeight:700, color:'#4A6256', marginBottom:10 }}
                     chipGridStyle={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:7, marginBottom:10 }}
@@ -175,7 +181,7 @@ function ExploreSection({ tasks, markDone, markNeeded }) {
 // ─── AllView ───────────────────────────────────────────────────────────────────
 export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCategory, dueOnly, setDueOnly, onMatchConfirm, onMatchDismiss }) {
   const { providerHistory, region } = useProfileContext();
-  const { activeTasks, getStatus, getDays, markDone, markNeeded, taskState } = useTaskContext();
+  const { activeTasks, getStatus, getDays, markDone, markNeeded, markNotApplicable, taskState } = useTaskContext();
   const { pendingCalendarMatches } = useCalendarContext();
 
   // Which categories are actually present in tasks
@@ -347,7 +353,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
           </>
         )}
 
-        <ExploreSection tasks={unknownFiltered} markDone={markDone} markNeeded={markNeeded} />
+        <ExploreSection tasks={unknownFiltered} markDone={markDone} markNeeded={markNeeded} markNotApplicable={markNotApplicable} />
 
       </div>
     </div>
