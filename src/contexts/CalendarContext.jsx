@@ -14,6 +14,9 @@ export function CalendarProvider({ user, children }) {
   const { activeTasks } = useTaskContext();
   const [accessToken, setAccessToken] = useState(null);
   const [pendingCalendarMatches, setPendingCalendarMatches] = useState([]);
+  // Track taskIds the user has confirmed or dismissed this session so the
+  // pipeline (which re-runs whenever activeTasks changes) doesn't re-surface them.
+  const handledTaskIdsRef = useRef(new Set());
   const ranForUserRef = useRef(null);
 
   // Silent token request on sign-in. If denied, we swallow — calendar matching
@@ -22,6 +25,7 @@ export function CalendarProvider({ user, children }) {
     if (!user) {
       setAccessToken(null);
       setPendingCalendarMatches([]);
+      handledTaskIdsRef.current = new Set();
       ranForUserRef.current = null;
       return;
     }
@@ -73,7 +77,8 @@ export function CalendarProvider({ user, children }) {
         if (!matchRes.ok) return;
         const { matches } = await matchRes.json();
         if (cancelled || !Array.isArray(matches)) return;
-        setPendingCalendarMatches(matches);
+        const fresh = matches.filter(m => !handledTaskIdsRef.current.has(m.taskId));
+        setPendingCalendarMatches(fresh);
       } catch {
         // non-essential; fail quietly
       }
@@ -83,6 +88,7 @@ export function CalendarProvider({ user, children }) {
   }, [accessToken, user, activeTasks]);
 
   const dismissMatch = (taskId) => {
+    handledTaskIdsRef.current.add(taskId);
     setPendingCalendarMatches(prev => prev.filter(m => m.taskId !== taskId));
   };
 
