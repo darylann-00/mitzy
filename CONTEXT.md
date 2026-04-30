@@ -48,7 +48,9 @@ Two Supabase projects:
 
 - **ProfileView** — Sections: Home, Car, Kids, Pets, Health, Saved providers, Account. Health section shows/edits: Name, Birth year, Gender, Insurance provider. Gender chips match onboarding style; "prefer not to say" is hidden in view mode. Account section shows signed-in email + logout button. Reset deletes Supabase rows + clears localStorage.
 
-- **TaskDetailView** — Green header, meta pills, "Why it matters" + "How to do it" cards, Assist button, calendar + mark done.
+- **TaskDetailView** — Green header, meta pills, "Why it matters" + "How to do it" cards, Assist button, calendar + mark done. Shows yellow "Scheduled: [date]" chip when a task has a scheduled date.
+
+- **Google Calendar matching (Phase 1 + 2)** — On sign-in, silently requests `calendar.events` OAuth scope via Google Identity Services (GIS). Fetches the user's upcoming calendar events via `/api/calendar-events`, then runs a Claude Haiku match against active tasks via `/api/calendar-match`. When a match is found (confidence ≥ threshold), an inline yellow confirmation chip appears on the task card: "📅 Found: [event title] — yours?" with Yes / Not mine buttons. Confirming saves `scheduled_date` to `task_records` in Supabase and shows a yellow scheduled chip on the card. Dismissing removes the chip for the session. Handled task IDs are tracked in a ref so the pipeline (which re-runs on task state changes) never re-surfaces confirmed or dismissed matches. All calendar features are non-blocking — if OAuth is denied or any API call fails, the app continues silently. `window.__MITZY_FAKE_CAL_TOKEN__` test hook short-circuits GIS for Playwright tests.
 
 - **AssistPanel** — Full-screen overlay. Provider/script/deadline/guidance/guidance_companies modes. Caches 7 days (currently v12). Provider mode passes `task.searchQuery` (if set) to `/api/providers` so Places queries are task-appropriate rather than using the raw label. Provider cards show condensed weekly hours (Claude-formatted from Places `weekdayDescriptions`), review count under star rating, address links to Google Maps, blurbs with **bold** key phrases. `guidance_companies` mode returns JSON with guidance markdown + top 3 national companies (no aggregators); renders `MarkdownBlock` + `CompanyCard` rows with external link icon. `MarkdownBlock` handles ##headers, bullets, numbered lists with nested sub-bullets, tables, horizontal rules, bold, and auto-linked URLs. `PulseLoader` cycles through 3 contextual messages per `assistType` every 2.5s; providers uses `task.searchQuery || task.label` for specificity.
 
@@ -76,7 +78,7 @@ Two Supabase projects:
 
 | Feature | Status |
 |---------|--------|
-| Google Calendar integration | Built. `/api/schedule` Edge Function creates all-day events with 60-min popup reminder. GIS just-in-time OAuth in `SchedulePanel`. Requires `VITE_GOOGLE_CLIENT_ID` env var + Calendar API enabled in Google Cloud Console. |
+| Google Calendar integration | Fully built. Phase 1: silent OAuth at startup, Haiku event-task matching via `/api/calendar-events` + `/api/calendar-match`. Phase 2: inline confirmation chips on task cards, `scheduled_date` persisted to Supabase. `/api/schedule` Edge Function creates all-day events. Requires `VITE_GOOGLE_CLIENT_ID` + Calendar API enabled in Google Cloud Console. |
 | Hazard zip lookup | Hardcoded zip ranges. Replace with FEMA API. |
 | Knowledge refresh | Stubbed. |
 | `task.why` + `task.guidance` fields | Null for all current tasks — UI falls back to `task.note` and generic copy. |
@@ -168,27 +170,16 @@ Three baseline e2e tests run on every PR: `sign_in`, `onboarding`, `mark_done`. 
 
 ---
 
-## Recent Fixes (PR #33)
-
-**Auth flow security & reliability hardening:**
-- PKCE flow enabled on Supabase client (modern OAuth standard for SPAs vs implicit flow)
-- `getSession()` errors handled gracefully (prevents blank-screen deadlock on network issues)
-- OAuth error messages surfaced in LoginGate from URL hash (`error_description` param)
-- Per-user localStorage cleared on sign-out via `clearLocalUserData()` (prevents cross-user data leaks)
-- Sign-out uses `{ scope: 'local' }` instead of global (signing out one device doesn't boot others)
-
 ## Next Priorities
 
-1. ~~Build `/api/schedule` Edge Function~~ — Done ([PR #26](https://github.com/darylann-00/mitzy/pull/26)).
-2. ~~Wire up the AI FAB~~ — Done ([PR #45](https://github.com/darylann-00/mitzy/pull/45), pending merge + QA).
-3. Replace hardcoded hazard zip ranges in `hazards.js` with FEMA API.
-4. Zip error message copy in onboarding (deferred).
-5. AI Task Creator V1.5 — multi-task split for prompts like "winterize the house".
+1. Replace hardcoded hazard zip ranges in `hazards.js` with FEMA API.
+2. Zip error message copy in onboarding (deferred).
+3. AI Task Creator V1.5 — multi-task split for prompts like "winterize the house".
 
 ## Known Gaps / Mocked
 
 | Feature | Status |
 |---------|--------|
-| Google Calendar integration | Built. `/api/schedule` Edge Function + GIS just-in-time OAuth in `SchedulePanel`. Requires `VITE_GOOGLE_CLIENT_ID` + Calendar API enabled in Google Cloud Console. |
 | Hazard zip lookup | Hardcoded zip ranges. Replace with FEMA API. |
-| AI Task Creator QA | [PR #45](https://github.com/darylann-00/mitzy/pull/45) open. Needs smoke test on preview URL. Preview OAuth redirect requires: (1) remove `VITE_SUPABASE_REDIRECT_URL` from Vercel Preview env, (2) add `https://*.vercel.app` to Supabase allowed redirect URLs. |
+| `task.why` + `task.guidance` fields | Null for all current tasks — UI falls back to `task.note` and generic copy. |
+| Provider data | Claude-generated, no verification. |
