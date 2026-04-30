@@ -82,11 +82,16 @@ export function CalendarProvider({ user, children }) {
     return () => { cancelled = true; };
   }, [accessToken, user, activeTasks]);
 
+  const dismissMatch = (taskId) => {
+    setPendingCalendarMatches(prev => prev.filter(m => m.taskId !== taskId));
+  };
+
   return (
     <CalendarContext.Provider value={{
       accessToken,
       setAccessToken,
       pendingCalendarMatches,
+      dismissMatch,
     }}>
       {children}
     </CalendarContext.Provider>

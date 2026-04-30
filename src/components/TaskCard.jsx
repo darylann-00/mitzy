@@ -1,4 +1,5 @@
 import { CategoryTile } from "./CategoryIcons";
+import { MatchConfirmationChip } from "./MatchConfirmationChip";
 
 export function formatDueDate(days) {
   if (days === null || days === undefined) return '';
@@ -23,10 +24,21 @@ const BAR_COLOR = {
   'confirm':    '#06A77D',
 };
 
-export function TaskCard({ task, status, days, onSelect, onDone, showCategoryIcon = false, subtitle }) {
+export function TaskCard({
+  task, status, days, onSelect, onDone,
+  showCategoryIcon = false, subtitle,
+  pendingMatch, onMatchConfirm, onMatchDismiss,
+}) {
   const barColor = BAR_COLOR[status] ?? '#EAE4DA';
   const isActive = status === 'due' || status === 'needed' || status === 'coming-up';
-  const dueText  = subtitle !== undefined ? subtitle : formatDueDate(days);
+
+  let dueText = subtitle !== undefined ? subtitle : formatDueDate(days);
+
+  // Show scheduled date if status is scheduled
+  if (status === 'scheduled' && task.scheduledDate) {
+    const date = new Date(task.scheduledDate);
+    dueText = `Scheduled: ${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+  }
 
   return (
     <div data-testid="task-card" style={{
@@ -56,7 +68,7 @@ export function TaskCard({ task, status, days, onSelect, onDone, showCategoryIco
       )}
 
       {/* Task info */}
-      <div style={{ flex: 1, minWidth: 0 }} onClick={() => onSelect(task)}>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
           fontSize: 14,
           fontWeight: 500,
@@ -66,7 +78,8 @@ export function TaskCard({ task, status, days, onSelect, onDone, showCategoryIco
           whiteSpace: 'nowrap',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
-        }}>
+          cursor: 'pointer',
+        }} onClick={() => onSelect(task)}>
           {task.label}
         </div>
         {dueText && (
@@ -78,6 +91,13 @@ export function TaskCard({ task, status, days, onSelect, onDone, showCategoryIco
           }}>
             {dueText}
           </div>
+        )}
+        {pendingMatch && (
+          <MatchConfirmationChip
+            match={pendingMatch}
+            onConfirm={onMatchConfirm}
+            onDismiss={onMatchDismiss}
+          />
         )}
       </div>
 

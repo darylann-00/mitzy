@@ -5,6 +5,7 @@ import { TaskAnswerChips } from "../components/TaskAnswerChips";
 import { AppHeader } from "./HomeView";
 import { useProfileContext } from "../contexts/ProfileContext";
 import { useTaskContext }    from "../contexts/TaskContext";
+import { useCalendarContext } from "../contexts/CalendarContext";
 import { isWindowActive }    from "../utils/taskLogic";
 
 // ─── Group divider (Memphis dots) ──────────────────────────────────────────────
@@ -172,9 +173,10 @@ function ExploreSection({ tasks, markDone, markNeeded }) {
 }
 
 // ─── AllView ───────────────────────────────────────────────────────────────────
-export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCategory, dueOnly, setDueOnly }) {
+export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCategory, dueOnly, setDueOnly, onMatchConfirm, onMatchDismiss }) {
   const { providerHistory, region } = useProfileContext();
-  const { activeTasks, getStatus, getDays, markDone, markNeeded } = useTaskContext();
+  const { activeTasks, getStatus, getDays, markDone, markNeeded, taskState } = useTaskContext();
+  const { pendingCalendarMatches } = useCalendarContext();
 
   // Which categories are actually present in tasks
   const presentCats = new Set(activeTasks.map(t => t.cat));
@@ -272,19 +274,25 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
         {needsAttention.length > 0 && (
           <>
             <GroupLabel label="Needs attention" />
-            {needsAttention.map(task => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                status={getStatus(task)}
-                days={getDays(task)}
-                hasSavedProvider={!!providerHistory[task.id]}
-                onSelect={onSelectTask}
-                onDone={onDoneTask}
-                showCategoryIcon
-                subtitle={getStatus(task) === 'needed' ? '' : undefined}
-              />
-            ))}
+            {needsAttention.map(task => {
+              const match = pendingCalendarMatches.find(m => m.taskId === task.id);
+              return (
+                <TaskCard
+                  key={task.id}
+                  task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate }}
+                  status={getStatus(task)}
+                  days={getDays(task)}
+                  hasSavedProvider={!!providerHistory[task.id]}
+                  onSelect={onSelectTask}
+                  onDone={onDoneTask}
+                  showCategoryIcon
+                  subtitle={getStatus(task) === 'needed' ? '' : undefined}
+                  pendingMatch={match}
+                  onMatchConfirm={match ? () => onMatchConfirm(task.id, match.eventDate) : undefined}
+                  onMatchDismiss={match ? () => onMatchDismiss(task.id) : undefined}
+                />
+              );
+            })}
           </>
         )}
 
@@ -292,18 +300,24 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
           <>
             {needsAttention.length > 0 && <GroupDivider />}
             <GroupLabel label="Coming up" />
-            {comingUp.map(task => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                status={getStatus(task)}
-                days={getDays(task)}
-                hasSavedProvider={!!providerHistory[task.id]}
-                onSelect={onSelectTask}
-                onDone={onDoneTask}
-                showCategoryIcon
-              />
-            ))}
+            {comingUp.map(task => {
+              const match = pendingCalendarMatches.find(m => m.taskId === task.id);
+              return (
+                <TaskCard
+                  key={task.id}
+                  task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate }}
+                  status={getStatus(task)}
+                  days={getDays(task)}
+                  hasSavedProvider={!!providerHistory[task.id]}
+                  onSelect={onSelectTask}
+                  onDone={onDoneTask}
+                  showCategoryIcon
+                  pendingMatch={match}
+                  onMatchConfirm={match ? () => onMatchConfirm(task.id, match.eventDate) : undefined}
+                  onMatchDismiss={match ? () => onMatchDismiss(task.id) : undefined}
+                />
+              );
+            })}
           </>
         )}
 
@@ -311,19 +325,25 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
           <>
             {(needsAttention.length > 0 || comingUp.length > 0) && <GroupDivider />}
             <GroupLabel label="All good" />
-            {allGood.map(task => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                status={getStatus(task)}
-                days={getDays(task)}
-                hasSavedProvider={!!providerHistory[task.id]}
-                onSelect={onSelectTask}
-                onDone={onDoneTask}
-                showCategoryIcon
-                subtitle={seasonSubtitle(task)}
-              />
-            ))}
+            {allGood.map(task => {
+              const match = pendingCalendarMatches.find(m => m.taskId === task.id);
+              return (
+                <TaskCard
+                  key={task.id}
+                  task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate }}
+                  status={getStatus(task)}
+                  days={getDays(task)}
+                  hasSavedProvider={!!providerHistory[task.id]}
+                  onSelect={onSelectTask}
+                  onDone={onDoneTask}
+                  showCategoryIcon
+                  subtitle={seasonSubtitle(task)}
+                  pendingMatch={match}
+                  onMatchConfirm={match ? () => onMatchConfirm(task.id, match.eventDate) : undefined}
+                  onMatchDismiss={match ? () => onMatchDismiss(task.id) : undefined}
+                />
+              );
+            })}
           </>
         )}
 

@@ -3,6 +3,7 @@ import { TaskCard }    from "../components/TaskCard";
 import { HazardCard }  from "../components/HazardCard";
 import { useProfileContext } from "../contexts/ProfileContext";
 import { useTaskContext }    from "../contexts/TaskContext";
+import { useCalendarContext } from "../contexts/CalendarContext";
 
 // ─── Shared header pattern ─────────────────────────────────────────────────────
 export function AppHeader({ rightContent }) {
@@ -205,9 +206,12 @@ export function HomeView({
   onTrickleAssist,
   onHazardAccept,
   onHazardDismiss,
+  onMatchConfirm,
+  onMatchDismiss,
 }) {
   const { profile, providerHistory } = useProfileContext();
-  const { focusTasks, doneThisWeek, getStatus, getDays } = useTaskContext();
+  const { focusTasks, doneThisWeek, getStatus, getDays, taskState } = useTaskContext();
+  const { pendingCalendarMatches } = useCalendarContext();
 
   return (
     <div style={{ background:'#FDFAF2' }}>
@@ -232,19 +236,25 @@ export function HomeView({
         {focusTasks.length > 0 && (
           <div style={{ marginBottom:4 }}>
             <SectionLabel label="Focus for today" color="#1A5C3A" />
-            {focusTasks.map(task => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                status={getStatus(task)}
-                days={getDays(task)}
-                hasSavedProvider={!!providerHistory[task.id]}
-                onSelect={onSelectTask}
-                onDone={onDoneTask}
-                showCategoryIcon
-                subtitle={getStatus(task) === 'needed' ? '' : undefined}
-              />
-            ))}
+            {focusTasks.map(task => {
+              const match = pendingCalendarMatches.find(m => m.taskId === task.id);
+              return (
+                <TaskCard
+                  key={task.id}
+                  task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate }}
+                  status={getStatus(task)}
+                  days={getDays(task)}
+                  hasSavedProvider={!!providerHistory[task.id]}
+                  onSelect={onSelectTask}
+                  onDone={onDoneTask}
+                  showCategoryIcon
+                  subtitle={getStatus(task) === 'needed' ? '' : undefined}
+                  pendingMatch={match}
+                  onMatchConfirm={match ? () => onMatchConfirm(task.id, match.eventDate) : undefined}
+                  onMatchDismiss={match ? () => onMatchDismiss(task.id) : undefined}
+                />
+              );
+            })}
           </div>
         )}
 
