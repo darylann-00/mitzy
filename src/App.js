@@ -3,6 +3,7 @@ import "./styles/app.css";
 
 import { loadS, saveS, ONBOARDED_KEY, PROFILE_DONE_KEY, VISIT_COUNT_KEY, WELCOME_CHOICE_KEY } from "./utils/storage";
 import { detectHazards } from "./utils/hazards";
+import { EM_UNIVERSAL, EM_HAZARD } from "./data/tasks";
 import { supabase } from "./lib/supabase";
 
 import { useAuth }    from "./hooks/useAuth";
@@ -275,10 +276,16 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
     setPendingHazards(null);
   };
 
-  const handleAddHazardTasks = async () => {
-    if (!profile?.zip) return;
+  const handlePreviewHazardTasks = async () => {
+    if (!profile?.zip) return null;
     const hazards = await detectHazards(profile.zip);
-    if (hazards.length > 0) updateProfile({ ...profile, hazards });
+    const tasks = [...EM_UNIVERSAL];
+    hazards.forEach(h => { if (EM_HAZARD[h]) tasks.push(...EM_HAZARD[h]); });
+    return { hazards, tasks };
+  };
+
+  const handleConfirmHazardTasks = (hazards) => {
+    updateProfile({ ...profile, hazards });
   };
 
   const handleReset = async () => {
@@ -402,7 +409,8 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
       {view === "you" && (
         <ProfileView
           onReset={handleReset}
-          onAddHazardTasks={handleAddHazardTasks}
+          onPreviewHazardTasks={handlePreviewHazardTasks}
+          onConfirmHazardTasks={handleConfirmHazardTasks}
           user={user}
           onSignOut={signOut}
         />

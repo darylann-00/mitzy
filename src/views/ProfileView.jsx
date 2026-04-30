@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { AppHeader } from "./HomeView";
 import { HouseIcon, CarIcon, PersonIcon, PetIcon } from "../components/CategoryIcons";
+import { Sheet } from "../components/Sheet";
 import { useProfileContext } from "../contexts/ProfileContext";
+import { C } from "../data/constants";
 
 // ─── Car data (shared with SlimOnboarding) ─────────────────────────────────────
 const CAR_DATA = {
@@ -99,13 +101,14 @@ function ProvidersIcon({ size = 16 }) {
 }
 
 // ─── Main view ─────────────────────────────────────────────────────────────────
-export function ProfileView({ onReset, onAddHazardTasks, user, onSignOut }) {
+export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTasks, user, onSignOut }) {
   const { profile, providerHistory, updateProfile: onUpdateProfile } = useProfileContext();
   const [confirmReset,   setConfirmReset]   = useState(false);
   const [resetting,      setResetting]      = useState(false);
   const [resetError,     setResetError]     = useState(null);
   const [isEditing,      setIsEditing]      = useState(false);
   const [addingHazards,  setAddingHazards]  = useState(false);
+  const [hazardPreview,  setHazardPreview]  = useState(null); // { hazards, tasks } | null
   const [pendingRemove,  setPendingRemove]  = useState(null); // { type: 'car'|'kid'|'pet', index: number }
 
   // Edit state — all sections at once
@@ -162,9 +165,34 @@ export function ProfileView({ onReset, onAddHazardTasks, user, onSignOut }) {
   const allProviders = Object.entries(providerHistory || {}).map(([taskId, p]) => ({ taskId, ...p }));
   const vehicleLabel = profile.cars?.length ? profile.cars.join(', ') : (profile.car || null);
 
+  const HAZARD_LABELS = { earthquake:'Earthquake', wildfire:'Wildfire', hurricane:'Hurricane', tornado:'Tornado', winter:'Winter Storm', flood:'Flooding' };
+
   return (
     <div style={{ background:'#FDFAF2' }}>
       <AppHeader rightContent={<>Your<br />household</>} />
+
+      {hazardPreview && (
+        <Sheet title="Disaster prep tasks" onClose={() => setHazardPreview(null)}>
+          <p style={{ fontSize:13, color:C.muted, marginTop:0, marginBottom:12 }}>
+            Based on your zip, we found risk for: <strong style={{ color:C.ink }}>{hazardPreview.hazards.map(h => HAZARD_LABELS[h] || h).join(', ')}</strong>
+          </p>
+          <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:20 }}>
+            {hazardPreview.tasks.map(t => (
+              <div key={t.id} style={{ background:C.light, borderRadius:12, padding:'10px 14px' }}>
+                <div style={{ fontSize:14, fontWeight:600, color:C.ink, fontFamily:'DM Sans, sans-serif' }}>{t.label}</div>
+                {t.note && <div style={{ fontSize:12, color:C.muted, marginTop:3 }}>{t.note}</div>}
+              </div>
+            ))}
+          </div>
+          <button
+            className="pb"
+            onClick={() => { onConfirmHazardTasks(hazardPreview.hazards); setHazardPreview(null); }}
+            style={{ width:'100%', padding:'13px', fontSize:15, fontWeight:700, background:C.green, color:'#fff', border:'none', borderRadius:14, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+          >
+            Add {hazardPreview.tasks.length} tasks
+          </button>
+        </Sheet>
+      )}
 
       <div style={{ padding:'20px 18px 100px', maxWidth:680, margin:'0 auto' }}>
 
@@ -205,10 +233,15 @@ export function ProfileView({ onReset, onAddHazardTasks, user, onSignOut }) {
                     <span style={{ fontSize:12, color:'#4A6256', fontFamily:'DM Sans, sans-serif' }}>Disaster prep tasks for your area</span>
                     <button
                       disabled={addingHazards}
-                      onClick={async () => { setAddingHazards(true); await onAddHazardTasks(); setAddingHazards(false); }}
+                      onClick={async () => {
+                        setAddingHazards(true);
+                        const preview = await onPreviewHazardTasks();
+                        setAddingHazards(false);
+                        if (preview) setHazardPreview(preview);
+                      }}
                       style={{ fontSize:12, fontWeight:700, color: addingHazards ? '#9B9B9B' : '#1A5C3A', background:'none', border:'none', cursor: addingHazards ? 'default' : 'pointer', fontFamily:'DM Sans, sans-serif', padding:0 }}
                     >
-                      {addingHazards ? 'Checking…' : '+ Add'}
+                      {addingHazards ? 'Checking…' : 'See tasks'}
                     </button>
                   </div>
                 )}
