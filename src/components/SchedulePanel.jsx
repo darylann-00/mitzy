@@ -230,31 +230,39 @@ export function SchedulePanel({ task, onSchedule, onClose }) {
           {status === 'error' && (
             <div style={{
               background: '#FDE8E8', borderRadius: 10, padding: '10px 14px',
-              fontSize: 13, color: C.red, alignSelf: 'stretch',
+              fontSize: 13, color: C.red, alignSelf: 'stretch', lineHeight: 1.5,
             }}>
-              Couldn't connect to Google Calendar. Try again.
+              Mitzy needs access to your Google Calendar to add this event. When the Google
+              popup appears, tap <strong>Allow</strong> to continue.
             </div>
           )}
 
           {/* CTA */}
           {!status && (
-            <button
-              className="pb"
-              onClick={handleSchedule}
-              disabled={!date}
-              style={{
-                width: '100%', padding: 14,
-                borderRadius: 13, border: 'none',
-                background: date ? C.brand : C.cardBorder,
-                color: date ? C.brandLight : C.muted,
-                fontSize: 14, fontWeight: 700,
-                fontFamily: 'DM Sans, sans-serif',
-                cursor: date ? 'pointer' : 'default',
-                transition: 'background 0.15s, color 0.15s',
-              }}
-            >
-              Add to calendar →
-            </button>
+            <>
+              <button
+                className="pb"
+                onClick={handleSchedule}
+                disabled={!date}
+                style={{
+                  width: '100%', padding: 14,
+                  borderRadius: 13, border: 'none',
+                  background: date ? C.brand : C.cardBorder,
+                  color: date ? C.brandLight : C.muted,
+                  fontSize: 14, fontWeight: 700,
+                  fontFamily: 'DM Sans, sans-serif',
+                  cursor: date ? 'pointer' : 'default',
+                  transition: 'background 0.15s, color 0.15s',
+                }}
+              >
+                Add to calendar →
+              </button>
+              {!accessToken && (
+                <div style={{ fontSize: 12, color: C.muted, textAlign: 'center', lineHeight: 1.5 }}>
+                  You'll be asked to allow Google Calendar access.
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

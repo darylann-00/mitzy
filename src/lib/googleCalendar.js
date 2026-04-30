@@ -55,7 +55,7 @@ export function getCalendarToken({ silent = true } = {}) {
       resolve(resp.access_token);
     };
     try {
-      tokenClient.requestAccessToken({ prompt: silent ? '' : 'consent' });
+      tokenClient.requestAccessToken({ prompt: silent ? 'none' : 'consent' });
     } catch (e) {
       reject(e);
     }
