@@ -67,6 +67,7 @@ function HistoryCard({ task, entry, effectiveInterval, lastDoneDate, dueNextDate
     }}>
       {/* Collapsed trigger row */}
       <div
+        data-testid="history-card-toggle"
         onClick={handleToggle}
         style={{
           display: 'flex',
@@ -113,6 +114,7 @@ function HistoryCard({ task, entry, effectiveInterval, lastDoneDate, dueNextDate
           {/* Last done row */}
           <div style={{ borderTop: '1px solid #EAE4DA' }}>
             <div
+              data-testid="last-done-cell"
               onClick={() => handleEditingChange('last')}
               style={{
                 display: 'flex',
