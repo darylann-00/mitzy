@@ -55,6 +55,9 @@ test('date picker month arrows do not close picker', async ({ page }) => {
   // Wait for task detail view
   await expect(page.getByRole('button', { name: 'Mark as done' })).toBeVisible({ timeout: 5000 });
 
+  // Expand the history card to reveal the Last done row
+  await page.getByTestId('history-card-toggle').click();
+
   // Click the "Last done" cell to open the calendar
   await page.getByTestId('last-done-cell').click();
 
