@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { CAT_META } from "../data/constants";
 import { CAT_ICON_CONFIG } from "../components/CategoryIcons";
 import { MonthCalendar } from "../components/MonthCalendar";
+import { ScheduleSurface } from "../components/ScheduleSurface";
 import { useProfileContext } from "../contexts/ProfileContext";
 import { useTaskContext }    from "../contexts/TaskContext";
 
@@ -19,6 +20,404 @@ const FREQ_CANDIDATES = [3, 7, 14, 21, 30, 45, 60, 90, 120, 180, 270, 365, 548, 
 function getFrequencyPresets(defaultDays) {
   const below = FREQ_CANDIDATES.filter(d => d < defaultDays).slice(-4);
   return [...new Set([...below, defaultDays])];
+}
+
+// ─── HistoryCard component ─────────────────────────────────────────────────────
+function HistoryCard({ task, entry, effectiveInterval, lastDoneDate, dueNextDate, isOverdue, status, onMarkDone, onSetIntervalOverride }) {
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [customNum, setCustomNum] = useState('');
+  const [customUnit, setCustomUnit] = useState('months');
+  const [showCustomInput, setShowCustomInput] = useState(false);
+
+  if (task.oneTime) return null;
+
+  const frequencyStr = formatIntervalDays(effectiveInterval);
+
+  const handleToggle = () => {
+    setOpen(!open);
+    if (open) setEditing(null);
+  };
+
+  const handleEditingChange = (field) => {
+    if (editing === field) {
+      setEditing(null);
+    } else {
+      setEditing(field);
+      setShowCustomInput(false);
+      setCustomNum('');
+    }
+  };
+
+  let collapsedText = 'Due — not set yet';
+  if (status === 'scheduled' && entry?.scheduledDate) {
+    const scheduledDate = new Date(entry.scheduledDate);
+    collapsedText = `Scheduled ${scheduledDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  } else if (dueNextDate) {
+    collapsedText = `Due ${dueNextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  }
+
+  return (
+    <div style={{
+      background: '#FFFFFF',
+      border: '1px solid #EAE4DA',
+      borderTop: 'none',
+      borderRadius: '0 0 14px 14px',
+      marginBottom: 10,
+    }}>
+      {/* Collapsed trigger row */}
+      <div
+        onClick={handleToggle}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          padding: '12px 16px',
+          cursor: 'pointer',
+          backgroundColor: open ? '#F8F5EE' : '#FFFFFF',
+          justifyContent: 'space-between',
+        }}
+      >
+        <span style={{
+          fontSize: 15,
+          fontWeight: 700,
+          color: isOverdue ? '#D62828' : '#1C2B22',
+          fontFamily: 'DM Sans, sans-serif',
+        }}>
+          {collapsedText}
+        </span>
+        <svg
+          width="13"
+          height="13"
+          viewBox="0 0 13 13"
+          fill="none"
+          style={{
+            transform: open ? 'rotate(180deg)' : 'none',
+            transition: 'transform 0.2s',
+            flexShrink: 0,
+          }}
+        >
+          <polyline
+            points="2,4.5 6.5,8.5 11,4.5"
+            stroke="#4A6256"
+            strokeWidth="1.6"
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+
+      {/* Expanded content */}
+      {open && (
+        <>
+          {/* Last done row */}
+          <div style={{ borderTop: '1px solid #EAE4DA' }}>
+            <div
+              onClick={() => handleEditingChange('last')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: '12px 16px',
+                gap: 10,
+                cursor: 'pointer',
+                backgroundColor: editing === 'last' ? '#F8F5EE' : '#FFFFFF',
+              }}
+            >
+              <span style={{
+                fontSize: 12,
+                color: '#4A6256',
+                fontWeight: 500,
+                minWidth: 88,
+                fontFamily: 'DM Sans, sans-serif',
+              }}>
+                Last done
+              </span>
+              <span style={{
+                flex: 1,
+                fontSize: 14,
+                fontWeight: 500,
+                color: '#1C2B22',
+                fontFamily: 'DM Sans, sans-serif',
+              }}>
+                {lastDoneDate ? lastDoneDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Not set'}
+              </span>
+              <div style={{
+                fontSize: 12,
+                color: '#1A5C3A',
+                fontWeight: 600,
+                background: '#E8F5EE',
+                borderRadius: 6,
+                padding: '2px 8px',
+                fontFamily: 'DM Sans, sans-serif',
+              }}>
+                {editing === 'last' ? 'Cancel' : 'Edit'}
+              </div>
+            </div>
+            {editing === 'last' && (
+              <div style={{
+                padding: '10px 12px',
+                background: '#F8F5EE',
+                borderTop: '1px solid #EAE4DA',
+              }}>
+                <MonthCalendar
+                  value={lastDoneDate ? lastDoneDate.toISOString().slice(0, 10) : ''}
+                  max={new Date().toISOString().slice(0, 10)}
+                  onChange={iso => {
+                    onMarkDone(task, iso);
+                    setEditing(null);
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Frequency row */}
+          {frequencyStr && (
+            <div style={{ borderTop: '1px solid #EAE4DA' }}>
+              <div
+                onClick={() => handleEditingChange('freq')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '12px 16px',
+                  gap: 10,
+                  cursor: 'pointer',
+                  backgroundColor: editing === 'freq' ? '#F8F5EE' : '#FFFFFF',
+                }}
+              >
+                <span style={{
+                  fontSize: 12,
+                  color: '#4A6256',
+                  fontWeight: 500,
+                  minWidth: 88,
+                  fontFamily: 'DM Sans, sans-serif',
+                }}>
+                  Frequency
+                </span>
+                <span style={{
+                  flex: 1,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: entry?.intervalDays ? '#1A5C3A' : '#1C2B22',
+                  fontFamily: 'DM Sans, sans-serif',
+                }}>
+                  {frequencyStr}
+                </span>
+                <div style={{
+                  fontSize: 12,
+                  color: '#1A5C3A',
+                  fontWeight: 600,
+                  background: '#E8F5EE',
+                  borderRadius: 6,
+                  padding: '2px 8px',
+                  fontFamily: 'DM Sans, sans-serif',
+                }}>
+                  {editing === 'freq' ? 'Cancel' : 'Edit'}
+                </div>
+              </div>
+              {editing === 'freq' && task.intervalDays && (
+                <div style={{
+                  padding: '10px 12px',
+                  background: '#F8F5EE',
+                  borderTop: '1px solid #EAE4DA',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <div style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      color: '#4A6256',
+                      fontFamily: 'DM Sans, sans-serif',
+                    }}>
+                      Change frequency
+                    </div>
+                    <button
+                      onClick={() => {
+                        setEditing(null);
+                        setShowCustomInput(false);
+                        setCustomNum('');
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '2px 4px',
+                        fontSize: 16,
+                        color: '#4A6256',
+                        lineHeight: 1,
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                    {getFrequencyPresets(task.intervalDays).map(days => {
+                      const isDefault = days === task.intervalDays;
+                      const isCurrent = days === effectiveInterval && !showCustomInput;
+                      return (
+                        <button
+                          key={days}
+                          onClick={() => {
+                            setShowCustomInput(false);
+                            onSetIntervalOverride(task.id, days);
+                            setEditing(null);
+                          }}
+                          style={{
+                            padding: '5px 11px',
+                            borderRadius: 20,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            fontFamily: 'DM Sans, sans-serif',
+                            cursor: 'pointer',
+                            border: '1.5px solid',
+                            borderColor: isCurrent ? '#1A5C3A' : '#EAE4DA',
+                            background: isCurrent ? '#1A5C3A' : '#fff',
+                            color: isCurrent ? '#E8F5EE' : '#1C2B22',
+                          }}
+                        >
+                          {formatIntervalDays(days)}{isDefault ? ' ✓' : ''}
+                        </button>
+                      );
+                    })}
+                    <button
+                      onClick={() => {
+                        setShowCustomInput(v => !v);
+                      }}
+                      style={{
+                        padding: '5px 11px',
+                        borderRadius: 20,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        fontFamily: 'DM Sans, sans-serif',
+                        cursor: 'pointer',
+                        border: '1.5px solid',
+                        borderColor: showCustomInput ? '#1A5C3A' : '#EAE4DA',
+                        background: showCustomInput ? '#E8F5EE' : '#fff',
+                        color: '#1C2B22',
+                      }}
+                    >
+                      Custom
+                    </button>
+                  </div>
+                  {showCustomInput && (
+                    <>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}>
+                        <span style={{
+                          fontSize: 12,
+                          color: '#4A6256',
+                          fontFamily: 'DM Sans, sans-serif',
+                          flexShrink: 0,
+                        }}>
+                          Every
+                        </span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={customNum}
+                          onChange={e => setCustomNum(e.target.value)}
+                          placeholder="e.g. 3"
+                          autoFocus
+                          style={{
+                            width: 64,
+                            padding: '6px 8px',
+                            fontSize: 13,
+                            fontFamily: 'DM Sans, sans-serif',
+                            border: '1.5px solid #1A5C3A',
+                            borderRadius: 8,
+                            background: '#fff',
+                            color: '#1C2B22',
+                            textAlign: 'center',
+                          }}
+                        />
+                        <select
+                          value={customUnit}
+                          onChange={e => setCustomUnit(e.target.value)}
+                          style={{
+                            padding: '6px 8px',
+                            fontSize: 13,
+                            fontFamily: 'DM Sans, sans-serif',
+                            border: '1.5px solid #EAE4DA',
+                            borderRadius: 8,
+                            background: '#fff',
+                            color: '#1C2B22',
+                            width: 'auto',
+                          }}
+                        >
+                          <option value="days">days</option>
+                          <option value="months">months</option>
+                          <option value="years">years</option>
+                        </select>
+                        <button
+                          disabled={!customNum || parseInt(customNum, 10) < 1}
+                          onClick={() => {
+                            const n = parseInt(customNum, 10);
+                            if (!n || n < 1) return;
+                            const mult = { days: 1, months: 30, years: 365 }[customUnit];
+                            onSetIntervalOverride(task.id, n * mult);
+                            setShowCustomInput(false);
+                            setCustomNum('');
+                            setEditing(null);
+                          }}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: 8,
+                            fontSize: 12,
+                            fontWeight: 700,
+                            fontFamily: 'DM Sans, sans-serif',
+                            flexShrink: 0,
+                            border: 'none',
+                            background: (!customNum || parseInt(customNum, 10) < 1) ? '#C8D9D1' : '#1A5C3A',
+                            color: (!customNum || parseInt(customNum, 10) < 1) ? '#7A9B8E' : '#E8F5EE',
+                            cursor: (!customNum || parseInt(customNum, 10) < 1) ? 'default' : 'pointer',
+                          }}
+                        >
+                          Set
+                        </button>
+                      </div>
+                      {customNum !== '' && parseInt(customNum, 10) < 1 && (
+                        <div style={{
+                          fontSize: 11,
+                          color: '#D62828',
+                          fontFamily: 'DM Sans, sans-serif',
+                          marginBottom: 4,
+                        }}>
+                          Enter a number greater than 0
+                        </div>
+                      )}
+                    </>
+                  )}
+                  <div style={{
+                    fontSize: 10,
+                    color: '#4A6256',
+                    fontFamily: 'DM Sans, sans-serif',
+                    marginTop: 6,
+                  }}>
+                    ✓ marks the default recommendation
+                  </div>
+                  {!task.oneTime && task.intervalDays && effectiveInterval > task.intervalDays && (
+                    <div style={{
+                      background: '#FFF8E1',
+                      border: '1px solid #F4C430',
+                      borderRadius: 8,
+                      padding: '8px 10px',
+                      fontSize: 12,
+                      color: '#1C2B22',
+                      fontFamily: 'DM Sans, sans-serif',
+                      lineHeight: 1.5,
+                      marginTop: 10,
+                    }}>
+                      <strong>Heads up:</strong> the standard recommendation is {formatIntervalDays(task.intervalDays)}.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
 }
 
 
@@ -57,7 +456,7 @@ function FourDots({ size = 7 }) {
   );
 }
 
-export function TaskDetailView({ task, onAssist, onSchedule, onDone, onBack, onMarkDone, onSetIntervalOverride, onMarkNotApplicable, onRemove }) {
+export function TaskDetailView({ task, onAssist, onDone, onBack, onMarkDone, onSetIntervalOverride, onMarkNotApplicable, onRemove }) {
   const { providerHistory } = useProfileContext();
   const { taskState, getStatus } = useTaskContext();
   const savedProvider = providerHistory[task.id];
@@ -70,26 +469,13 @@ export function TaskDetailView({ task, onAssist, onSchedule, onDone, onBack, onM
   const scheduledStr = scheduledDate
     ? scheduledDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : null;
-  const [editingLastDone, setEditingLastDone] = useState(false);
-  const [editingFrequency, setEditingFrequency] = useState(false);
-  const [customNum, setCustomNum] = useState('');
-  const [customUnit, setCustomUnit] = useState('months');
-  const [showCustomInput, setShowCustomInput] = useState(false);
   const [confirmDismiss, setConfirmDismiss] = useState(false);
-  const customNumRef = useRef(null);
 
   // Last done / frequency / due next
   const effectiveInterval = entry?.intervalDays ?? task.intervalDays;
   const lastDoneDate = entry?.lastDone ? new Date(entry.lastDone) : null;
-  const lastDoneValue = lastDoneDate
-    ? lastDoneDate.toISOString().slice(0, 10)
-    : '';
-  const frequencyStr = formatIntervalDays(effectiveInterval);
   const dueNextDate = lastDoneDate && effectiveInterval
     ? new Date(lastDoneDate.getTime() + effectiveInterval * 86400000)
-    : null;
-  const dueNextStr = dueNextDate
-    ? dueNextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : null;
 
   // Assist subtitle
@@ -181,188 +567,18 @@ export function TaskDetailView({ task, onAssist, onSchedule, onDone, onBack, onM
           </div>
         )}
 
-        {/* Relevant dates */}
-        {!task.oneTime && (
-          <div style={{ background:'#fff', borderRadius:14, border:'1px solid #EAE4DA', marginBottom:10, padding:'11px 15px' }}>
-            <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:'#4A6256', marginBottom:9, fontFamily:"'Righteous', cursive" }}>
-              Relevant dates
-            </div>
-            <div style={{ display:'flex', gap:6 }}>
-              {/* Last done */}
-              <div
-                data-testid="last-done-cell"
-                onClick={() => { setEditingLastDone(true); setEditingFrequency(false); setShowCustomInput(false); setCustomNum(''); }}
-                style={{ flex:'1 1 0', minWidth:0, background:'#FDFAF2', borderRadius:10, padding:'7px 9px', cursor:'pointer', border:`1.5px solid ${editingLastDone ? '#1A5C3A' : '#EAE4DA'}` }}
-              >
-                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                  <div style={{ fontSize:9, color:'#4A6256', fontWeight:600, marginBottom:3, fontFamily:'DM Sans, sans-serif', whiteSpace:'nowrap' }}>Last done</div>
-                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none" style={{ marginBottom:3, flexShrink:0 }}>
-                    <path d="M8.5 1.5l2 2L3 11H1V9L8.5 1.5z" stroke="#4A6256" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-                  </svg>
-                </div>
-                <div style={{ fontSize:11, fontWeight:700, color:'#1C2B22', fontFamily:'DM Sans, sans-serif', lineHeight:1.3, whiteSpace:'nowrap' }}>
-                  {lastDoneDate ? lastDoneDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Not set'}
-                </div>
-              </div>
-              {/* Frequency */}
-              {frequencyStr && (
-                <div
-                  onClick={() => { setEditingFrequency(true); setEditingLastDone(false); setShowCustomInput(false); setCustomNum(''); }}
-                  style={{ flex:'1 1 0', minWidth:0, background:'#FDFAF2', borderRadius:10, padding:'7px 9px', cursor:'pointer', border:`1.5px solid ${editingFrequency ? '#1A5C3A' : '#EAE4DA'}` }}
-                >
-                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                    <div style={{ fontSize:9, color:'#4A6256', fontWeight:600, marginBottom:3, fontFamily:'DM Sans, sans-serif', whiteSpace:'nowrap' }}>Frequency</div>
-                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none" style={{ marginBottom:3, flexShrink:0 }}>
-                      <path d="M8.5 1.5l2 2L3 11H1V9L8.5 1.5z" stroke="#4A6256" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-                    </svg>
-                  </div>
-                  <div style={{ fontSize:11, fontWeight:700, color: entry?.intervalDays ? '#1A5C3A' : '#1C2B22', fontFamily:'DM Sans, sans-serif', lineHeight:1.3, whiteSpace:'nowrap' }}>{frequencyStr}</div>
-                </div>
-              )}
-              {/* Due next */}
-              {dueNextStr && (
-                <div style={{ flex:'1 1 0', minWidth:0, background:'#FDFAF2', borderRadius:10, padding:'7px 9px', border:'1px solid #EAE4DA' }}>
-                  <div style={{ fontSize:9, color:'#4A6256', fontWeight:600, marginBottom:3, fontFamily:'DM Sans, sans-serif', whiteSpace:'nowrap' }}>Due next</div>
-                  <div style={{ fontSize:11, fontWeight:700, color: isOverdue ? '#D62828' : '#1C2B22', fontFamily:'DM Sans, sans-serif', lineHeight:1.3, whiteSpace:'nowrap' }}>{dueNextStr}</div>
-                </div>
-              )}
-            </div>
-            {editingLastDone && (
-              <div style={{ marginTop:8 }}>
-                <MonthCalendar
-                  value={lastDoneValue}
-                  onChange={iso => {
-                    if (onMarkDone) onMarkDone(task, iso);
-                    setEditingLastDone(false);
-                  }}
-                  max={new Date().toISOString().slice(0, 10)}
-                />
-              </div>
-            )}
-            {editingFrequency && task.intervalDays && (
-              <div style={{ marginTop:10 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
-                  <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:'#4A6256', fontFamily:'DM Sans, sans-serif' }}>Change frequency</div>
-                  <button
-                    onClick={() => { setEditingFrequency(false); setShowCustomInput(false); setCustomNum(''); }}
-                    style={{ background:'none', border:'none', cursor:'pointer', padding:'2px 4px', fontSize:16, color:'#4A6256', lineHeight:1 }}
-                  >×</button>
-                </div>
-                <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:8 }}>
-                  {getFrequencyPresets(task.intervalDays).map(days => {
-                    const isDefault = days === task.intervalDays;
-                    const isCurrent = days === effectiveInterval && !showCustomInput;
-                    return (
-                      <button
-                        key={days}
-                        onClick={() => {
-                          setShowCustomInput(false);
-                          if (onSetIntervalOverride) onSetIntervalOverride(task.id, days);
-                          setEditingFrequency(false);
-                        }}
-                        style={{
-                          padding:'5px 11px', borderRadius:20, fontSize:11, fontWeight:700,
-                          fontFamily:'DM Sans, sans-serif', cursor:'pointer', border:'1.5px solid',
-                          borderColor: isCurrent ? '#1A5C3A' : '#EAE4DA',
-                          background: isCurrent ? '#1A5C3A' : '#fff',
-                          color: isCurrent ? '#E8F5EE' : '#1C2B22',
-                        }}
-                      >
-                        {formatIntervalDays(days)}{isDefault ? ' ✓' : ''}
-                      </button>
-                    );
-                  })}
-                  <button
-                    onClick={() => {
-                      setShowCustomInput(v => !v);
-                      setTimeout(() => customNumRef.current?.focus(), 50);
-                    }}
-                    style={{
-                      padding:'5px 11px', borderRadius:20, fontSize:11, fontWeight:700,
-                      fontFamily:'DM Sans, sans-serif', cursor:'pointer', border:'1.5px solid',
-                      borderColor: showCustomInput ? '#1A5C3A' : '#EAE4DA',
-                      background: showCustomInput ? '#E8F5EE' : '#fff',
-                      color: '#1C2B22',
-                    }}
-                  >
-                    Custom
-                  </button>
-                </div>
-                {showCustomInput && (
-                  <>
-                    <div style={{ display:'flex', gap:6, alignItems:'center', marginBottom:8 }}>
-                      <span style={{ fontSize:12, color:'#4A6256', fontFamily:'DM Sans, sans-serif', flexShrink:0 }}>Every</span>
-                      <input
-                        ref={customNumRef}
-                        type="number"
-                        min="1"
-                        value={customNum}
-                        onChange={e => setCustomNum(e.target.value)}
-                        placeholder="e.g. 3"
-                        style={{
-                          width:64, padding:'6px 8px', fontSize:13, fontFamily:'DM Sans, sans-serif',
-                          border:'1.5px solid #1A5C3A', borderRadius:8, background:'#fff',
-                          color:'#1C2B22', textAlign:'center',
-                        }}
-                      />
-                      <select
-                        value={customUnit}
-                        onChange={e => setCustomUnit(e.target.value)}
-                        style={{
-                          padding:'6px 8px', fontSize:13, fontFamily:'DM Sans, sans-serif',
-                          border:'1.5px solid #EAE4DA', borderRadius:8, background:'#fff',
-                          color:'#1C2B22', width:'auto',
-                        }}
-                      >
-                        <option value="days">days</option>
-                        <option value="months">months</option>
-                        <option value="years">years</option>
-                      </select>
-                      <button
-                        disabled={!customNum || parseInt(customNum, 10) < 1}
-                        onClick={() => {
-                          const n = parseInt(customNum, 10);
-                          if (!n || n < 1) return;
-                          const mult = { days: 1, months: 30, years: 365 }[customUnit];
-                          if (onSetIntervalOverride) onSetIntervalOverride(task.id, n * mult);
-                          setShowCustomInput(false);
-                          setCustomNum('');
-                          setEditingFrequency(false);
-                        }}
-                        style={{
-                          padding:'6px 12px', borderRadius:8, fontSize:12, fontWeight:700,
-                          fontFamily:'DM Sans, sans-serif', flexShrink:0, border:'none',
-                          background: (!customNum || parseInt(customNum, 10) < 1) ? '#C8D9D1' : '#1A5C3A',
-                          color: (!customNum || parseInt(customNum, 10) < 1) ? '#7A9B8E' : '#E8F5EE',
-                          cursor: (!customNum || parseInt(customNum, 10) < 1) ? 'default' : 'pointer',
-                        }}
-                      >
-                        Set
-                      </button>
-                    </div>
-                    {customNum !== '' && parseInt(customNum, 10) < 1 && (
-                      <div style={{ fontSize:11, color:'#D62828', fontFamily:'DM Sans, sans-serif', marginBottom:4 }}>
-                        Enter a number greater than 0
-                      </div>
-                    )}
-                  </>
-                )}
-                <div style={{ fontSize:10, color:'#4A6256', fontFamily:'DM Sans, sans-serif', marginTop:6 }}>
-                  ✓ marks the default recommendation
-                </div>
-              </div>
-            )}
-            {!task.oneTime && task.intervalDays && effectiveInterval > task.intervalDays && (
-              <div style={{
-                background:'#FFF8E1', border:'1px solid #F4C430', borderRadius:8,
-                padding:'8px 10px', fontSize:12, color:'#1C2B22', fontFamily:'DM Sans, sans-serif', lineHeight:1.5,
-                marginTop:10,
-              }}>
-                <strong>Heads up:</strong> the standard recommendation is {formatIntervalDays(task.intervalDays)}.
-              </div>
-            )}
-          </div>
-        )}
+        {/* History Card */}
+        <HistoryCard
+          task={task}
+          entry={entry}
+          effectiveInterval={effectiveInterval}
+          lastDoneDate={lastDoneDate}
+          dueNextDate={dueNextDate}
+          isOverdue={isOverdue}
+          status={status}
+          onMarkDone={onMarkDone}
+          onSetIntervalOverride={onSetIntervalOverride}
+        />
 
         {/* Why it matters */}
         <div style={{ background:'#fff', borderRadius:14, padding:'13px 15px', border:'1px solid #EAE4DA', marginBottom:10 }}>
@@ -374,10 +590,10 @@ export function TaskDetailView({ task, onAssist, onSchedule, onDone, onBack, onM
           </div>
         </div>
 
-        {/* How to do it */}
+        {/* What to expect */}
         <div style={{ background:'#fff', borderRadius:14, padding:'13px 15px', border:'1px solid #EAE4DA', marginBottom:10 }}>
           <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:'#4A6256', marginBottom:8, fontFamily:"'Righteous', cursive" }}>
-            How to do it
+            What to expect
           </div>
           {steps ? (
             steps.map((step, i) => (
@@ -420,20 +636,11 @@ export function TaskDetailView({ task, onAssist, onSchedule, onDone, onBack, onM
           </button>
         )}
 
+        {/* Schedule Surface */}
+        <ScheduleSurface task={task} />
+
         {/* Bottom row */}
         <div style={{ display:'flex', gap:8 }}>
-          <button
-            onClick={() => onSchedule(task)}
-            style={{
-              background:'#fff', border:'1.5px solid #EAE4DA', borderRadius:14,
-              padding:'0 16px', height:52, display:'flex', alignItems:'center', gap:7,
-              cursor:'pointer', flexShrink:0,
-            }}
-          >
-            <CalSVG />
-            <span style={{ fontSize:12, fontWeight:700, color:'#4A6256', fontFamily:'DM Sans, sans-serif' }}>Add to calendar</span>
-          </button>
-
           <button
             onClick={() => onDone(task)}
             style={{

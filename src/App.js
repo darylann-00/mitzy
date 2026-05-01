@@ -21,7 +21,6 @@ import { PrioritySetup }  from "./onboarding/PrioritySetup";
 
 import { Celebration }   from "./components/Celebration";
 import { AssistPanel }   from "./components/AssistPanel";
-import { SchedulePanel } from "./components/SchedulePanel";
 import { MarkDoneModal } from "./components/MarkDoneModal";
 import { AddTaskPanel }  from "./components/AddTaskPanel";
 import { AITaskCreator } from "./components/AITaskCreator";
@@ -154,19 +153,16 @@ function Overlays({
   celebration, onCelebrationDone,
   markDoneModal, onMarkDone, onMarkDoneClose,
   assistTask, onAssistClose,
-  scheduleTask, onScheduleClose,
   addingTask, onAddClose,
   aiCreatorOpen, onAiCreatorClose,
 }) {
   const { addCustomTask, pendingConflict, resolveConflict } = useProfileContext();
-  const { markScheduled } = useTaskContext();
 
   return (
     <>
       {celebration   && <Celebration onDone={onCelebrationDone} />}
       {markDoneModal && <MarkDoneModal task={markDoneModal} onDone={onMarkDone} onClose={onMarkDoneClose} />}
       {assistTask    && <AssistPanel task={assistTask} onClose={onAssistClose} />}
-      {scheduleTask  && <SchedulePanel task={scheduleTask} onSchedule={(d) => markScheduled(scheduleTask.id, d)} onClose={onScheduleClose} />}
       {addingTask    && <AddTaskPanel onAdd={addCustomTask} onClose={onAddClose} />}
       {aiCreatorOpen && <AITaskCreator onClose={onAiCreatorClose} />}
       {pendingConflict && <ProfileConflictModal onResolve={resolveConflict} />}
@@ -216,7 +212,6 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
   const [selectedTask,    setSelectedTask]    = useState(null);
   const [celebration,     setCelebration]     = useState(false);
   const [assistTask,      setAssistTask]      = useState(null);
-  const [scheduleTask,    setScheduleTask]    = useState(null);
   const [markDoneModal,   setMarkDoneModal]   = useState(null);
   const [addingTask,      setAddingTask]      = useState(false);
   const [aiCreatorOpen,   setAiCreatorOpen]   = useState(false);
@@ -316,7 +311,6 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
     celebration, onCelebrationDone: () => setCelebration(false),
     markDoneModal, onMarkDone: handleMarkDone, onMarkDoneClose: handleMarkDoneClose,
     assistTask, onAssistClose: () => setAssistTask(null),
-    scheduleTask, onScheduleClose: () => setScheduleTask(null),
     addingTask, onAddClose: () => setAddingTask(false),
     aiCreatorOpen, onAiCreatorClose: () => setAiCreatorOpen(false),
   };
@@ -349,7 +343,6 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
         <TaskDetailView
           task={selectedTask}
           onAssist={setAssistTask}
-          onSchedule={setScheduleTask}
           onDone={setMarkDoneModal}
           onMarkDone={(task, dateStr) => markDone(task.id, dateStr)}
           onSetIntervalOverride={(id, days) => setIntervalOverride(id, days)}
