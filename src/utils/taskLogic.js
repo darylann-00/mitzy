@@ -88,7 +88,8 @@ export function taskScore(task, lastDone, intervalDaysOverride) {
 
 export function isDependencySatisfied(task, taskState) {
   if (!task.dependsOn) return true;
-  return !!taskState[task.dependsOn]?.lastDone;
+  const deps = Array.isArray(task.dependsOn) ? task.dependsOn : [task.dependsOn];
+  return deps.some(id => !!taskState[id]?.lastDone);
 }
 
 // ─── Next due date display ────────────────────────────────────────────────────
