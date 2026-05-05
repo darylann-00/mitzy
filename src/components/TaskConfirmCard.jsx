@@ -10,7 +10,6 @@ export function TaskConfirmCard({ task, onChange, onSave, onCancel, regenerating
   const [editingFreq, setEditingFreq] = useState(false);
   const [showWhy, setShowWhy] = useState(false);
   const [showHow, setShowHow] = useState(false);
-  const [includeInFocus, setIncludeInFocus] = useState(!!task.oneTime);
 
   const meta = CAT_META[task.cat] || CAT_META.home;
   const isLocked = task.riskTier === 3;
@@ -55,7 +54,7 @@ export function TaskConfirmCard({ task, onChange, onSave, onCancel, regenerating
   };
 
   const handleSave = () => {
-    onSave({ ...task, includeInFocus });
+    onSave({ ...task });
   };
 
   return (
@@ -245,19 +244,6 @@ export function TaskConfirmCard({ task, onChange, onSave, onCancel, regenerating
           )}
         </div>
       )}
-
-      {/* Focus toggle */}
-      <label style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 14px', background:'#fff', borderRadius:14, border:'1px solid #EAE4DA', marginBottom:14, cursor:'pointer' }}>
-        <input
-          type="checkbox"
-          checked={includeInFocus}
-          onChange={e => setIncludeInFocus(e.target.checked)}
-          style={{ width:18, height:18, accentColor:C.brand }}
-        />
-        <span style={{ fontSize:13, color:C.ink, fontFamily:'DM Sans, sans-serif' }}>
-          Show in today's focus
-        </span>
-      </label>
 
       {/* Regen error */}
       {regenError && (
