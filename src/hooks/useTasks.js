@@ -73,13 +73,13 @@ export function useTasks(user) {
     const iso = dateStr
       ? (() => { const [y,m,d] = dateStr.split('-').map(Number); return new Date(y, m-1, d).toISOString(); })()
       : new Date().toISOString();
-    const entry = { lastDone: iso, scheduledDate: null };
+    const entry = { lastDone: iso, scheduledDate: null, needed: false };
     if (intervalDays) entry.intervalDays = intervalDays;
     const prev = taskState[id];
     setTaskState(s => ({ ...s, [id]: entry }));
     if (user) {
       const { error } = await supabase.from("task_records").upsert({
-        user_id: user.id, task_id: id, last_done: iso, scheduled_date: null,
+        user_id: user.id, task_id: id, last_done: iso, scheduled_date: null, needed: false,
         ...(intervalDays ? { interval_days: intervalDays } : {}),
       }, { onConflict: 'user_id,task_id' });
       if (error) { setTaskState(s => ({ ...s, [id]: prev })); return { error }; }
