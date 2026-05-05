@@ -183,11 +183,9 @@ export function AITaskCreator({ onClose }) {
     setSaving(true);
     setSaveError(null);
     try {
-      const { includeInFocus, ...task } = taskToSave;
+      const { includeInFocus: _ignored, ...task } = taskToSave;
       await addCustomTask(task);
-      if (includeInFocus && task.oneTime && markNeeded) {
-        try { await markNeeded(task.id); } catch {}
-      }
+      try { await markNeeded(task.id); } catch {}
       onClose();
     } catch (err) {
       setSaveError("Couldn't save — try again");
@@ -215,6 +213,7 @@ export function AITaskCreator({ onClose }) {
         promptText: prompt,
       };
       await addCustomTask(task);
+      try { await markNeeded(task.id); } catch {}
       onClose();
     } catch {
       setSaveError("Couldn't save — try again");
