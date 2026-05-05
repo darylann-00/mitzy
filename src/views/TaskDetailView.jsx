@@ -5,6 +5,7 @@ import { MonthCalendar } from "../components/MonthCalendar";
 import { ScheduleSurface } from "../components/ScheduleSurface";
 import { useProfileContext } from "../contexts/ProfileContext";
 import { useTaskContext }    from "../contexts/TaskContext";
+import { parseGuidanceBlocks, renderGuidanceBlocks } from "../utils/renderMarkdown";
 
 function formatIntervalDays(days) {
   if (!days) return null;
@@ -484,23 +485,7 @@ export function TaskDetailView({ task, onAssist, onDone, onBack, onMarkDone, onS
   const getSubtitle = ASSIST_SUBTITLES[task.assistType];
   const assistSubtitle = getSubtitle ? getSubtitle(task) : null;
 
-  // Parse guidance markdown (## headers, - bullets, or numbered lists) into renderable blocks
-  const guidanceBlocks = task.guidance
-    ? task.guidance.split('\n').reduce((acc, line) => {
-        const trimmed = line.trim();
-        if (!trimmed) return acc;
-        if (trimmed.startsWith('## ')) {
-          acc.push({ type: 'heading', text: trimmed.slice(3) });
-        } else if (/^[-–•]\s+/.test(trimmed)) {
-          acc.push({ type: 'bullet', text: trimmed.replace(/^[-–•]\s+/, '') });
-        } else if (/^\d+\.\s+/.test(trimmed)) {
-          acc.push({ type: 'bullet', text: trimmed.replace(/^\d+\.\s+/, '') });
-        } else {
-          acc.push({ type: 'text', text: trimmed });
-        }
-        return acc;
-      }, [])
-    : null;
+  const guidanceBlocks = parseGuidanceBlocks(task.guidance);
 
   return (
     <div style={{ background:'#FDFAF2', minHeight:'100vh' }}>
@@ -610,36 +595,7 @@ export function TaskDetailView({ task, onAssist, onDone, onBack, onMarkDone, onS
           <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:'#4A6256', marginBottom:8, fontFamily:"'Righteous', cursive" }}>
             What to expect
           </div>
-          {guidanceBlocks ? (() => {
-            let bulletIndex = 0;
-            return guidanceBlocks.map((block, i) => {
-              if (block.type === 'heading') {
-                bulletIndex = 0;
-                return (
-                  <div key={i} style={{ fontSize:11, fontWeight:700, color:'#4A6256', letterSpacing:'0.06em', textTransform:'uppercase', fontFamily:'DM Sans, sans-serif', marginTop: i > 0 ? 10 : 0, marginBottom:6 }}>
-                    {block.text}
-                  </div>
-                );
-              }
-              if (block.type === 'bullet') {
-                bulletIndex++;
-                const idx = bulletIndex;
-                return (
-                  <div key={i} style={{ display:'flex', gap:10, alignItems:'flex-start', marginBottom:8 }}>
-                    <div style={{ width:20, height:20, borderRadius:'50%', background:'#E8F0EC', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:10, fontWeight:700, color:'#1A5C3A', fontFamily:'DM Sans, sans-serif' }}>
-                      {idx}
-                    </div>
-                    <div style={{ fontSize:13, color:'#1C2B22', lineHeight:1.5, flex:1, fontFamily:'DM Sans, sans-serif' }}>{block.text}</div>
-                  </div>
-                );
-              }
-              return (
-                <div key={i} style={{ fontSize:13, color:'#1C2B22', lineHeight:1.5, fontFamily:'DM Sans, sans-serif', marginBottom:6 }}>
-                  {block.text}
-                </div>
-              );
-            });
-          })() : (
+          {guidanceBlocks ? renderGuidanceBlocks(guidanceBlocks) : (
             <div style={{ fontSize:13, color:'#4A6256', lineHeight:1.6, fontFamily:'DM Sans, sans-serif' }}>
               {task.note
                 ? 'Follow standard procedures or tap below to let Mitzy walk you through it.'
