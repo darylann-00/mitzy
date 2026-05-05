@@ -193,8 +193,8 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
     ? activeTasks
     : activeTasks.filter(t => t.cat === activeCategory);
 
-  // Separate unknown (no lastDone) from known
-  const knownFiltered   = filtered.filter(t => getStatus(t) !== 'unknown');
+  // Separate unknown (no lastDone) from known; hide completed one-time tasks
+  const knownFiltered   = filtered.filter(t => getStatus(t) !== 'unknown' && !(t.oneTime && getStatus(t) === 'ok'));
   const unknownFiltered = filtered.filter(t => getStatus(t) === 'unknown');
 
   // Sort known tasks by score (due first), treating out-of-season as "ok"
@@ -205,7 +205,16 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
     if (s === 'coming-up' || s === 'scheduled') return 2;
     return 1;
   };
-  const sorted = [...knownFiltered].sort((a, b) => sortScore(b) - sortScore(a));
+  // Within each group, sort by soonest: most overdue first (lowest getDays value)
+  const daysKey = (t) => {
+    const d = getDays(t);
+    return d === null ? Infinity : d;
+  };
+  const sorted = [...knownFiltered].sort((a, b) => {
+    const scoreDiff = sortScore(b) - sortScore(a);
+    if (scoreDiff !== 0) return scoreDiff;
+    return daysKey(a) - daysKey(b);
+  });
 
   // Three groups — out-of-season tasks always land in allGood
   const needsAttention = sorted.filter(t => isWindowActive(t, region) && ['due', 'needed', 'confirm'].includes(getStatus(t)));
