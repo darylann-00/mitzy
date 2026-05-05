@@ -312,14 +312,14 @@ export function buildTaskLibrary(profile) {
     profile.pets.forEach(p => lib.push(...petTasks(p)));
   }
 
+  const seen = new Set(lib.map(t => t.id));
+  const em = [...EM_UNIVERSAL];
   if (profile.hazards?.length > 0) {
-    const em   = [...EM_UNIVERSAL];
-    const seen = new Set(lib.map(t => t.id));
     profile.hazards.forEach(h => {
       if (EM_HAZARD[h]) em.push(...EM_HAZARD[h]);
     });
-    em.filter(t => !seen.has(t.id)).forEach(t => lib.push(t));
   }
+  em.filter(t => !seen.has(t.id)).forEach(t => lib.push(t));
 
   return lib;
 }
