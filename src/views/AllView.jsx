@@ -7,6 +7,7 @@ import { useProfileContext } from "../contexts/ProfileContext";
 import { useTaskContext }    from "../contexts/TaskContext";
 import { useCalendarContext } from "../contexts/CalendarContext";
 import { isWindowActive }    from "../utils/taskLogic";
+import { LIFE_EVENT_DEFS } from "../data/lifeEvents";
 
 // ─── Group divider (Memphis dots) ──────────────────────────────────────────────
 function GroupDivider() {
@@ -178,11 +179,78 @@ function ExploreSection({ tasks, markDone, markNeeded, markNotApplicable }) {
   );
 }
 
+// ─── Life event group ──────────────────────────────────────────────────────────
+function LifeEventGroup({ event, tasks, taskState, getStatus, getDays, providerHistory, pendingCalendarMatches, onSelectTask, onDoneTask, onMatchConfirm, onMatchDismiss }) {
+  const [open, setOpen] = useState(true);
+  const def = LIFE_EVENT_DEFS[event.type];
+  if (!def || tasks.length === 0) return null;
+  const doneCount = tasks.filter(t => taskState[t.id]?.lastDone).length;
+
+  return (
+    <div style={{ marginTop: 16, marginBottom: 4 }}>
+      <div
+        onClick={() => setOpen(o => !o)}
+        style={{
+          display:'flex', alignItems:'center', gap:10,
+          padding:'12px 14px', marginBottom: 10,
+          background:'#FFFBEE', border:'1.5px solid #F4C430', borderRadius:12,
+          cursor:'pointer',
+        }}
+      >
+        <span style={{ fontSize: 22 }}>{def.emoji}</span>
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:13, fontWeight:700, color:'#1C2B22', fontFamily:'DM Sans, sans-serif' }}>
+            {def.label}
+          </div>
+          <div style={{ fontSize:11, color:'#8A6A00', fontFamily:'DM Sans, sans-serif', marginTop: 2 }}>
+            {doneCount} of {tasks.length} done
+          </div>
+        </div>
+        <svg
+          width="14" height="14" viewBox="0 0 14 14" fill="none"
+          style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition:'transform 0.15s', flexShrink:0 }}
+        >
+          <polyline points="2,4 7,10 12,4" stroke="#8A6A00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
+
+      {open && tasks.map(task => {
+        const match = pendingCalendarMatches.find(m => m.taskId === task.id);
+        return (
+          <TaskCard
+            key={task.id}
+            task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate }}
+            status={getStatus(task)}
+            days={getDays(task)}
+            hasSavedProvider={!!providerHistory[task.id]}
+            onSelect={onSelectTask}
+            onDone={onDoneTask}
+            showCategoryIcon
+            subtitle=""
+            pendingMatch={match}
+            onMatchConfirm={match ? () => onMatchConfirm(task.id, match.eventDate) : undefined}
+            onMatchDismiss={match ? () => onMatchDismiss(task.id) : undefined}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── AllView ───────────────────────────────────────────────────────────────────
 export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCategory, dueOnly, setDueOnly, onMatchConfirm, onMatchDismiss }) {
-  const { providerHistory, region } = useProfileContext();
-  const { activeTasks, getStatus, getDays, markDone, markNeeded, markNotApplicable, taskState } = useTaskContext();
+  const { providerHistory, region, lifeEvents } = useProfileContext();
+  const { activeTasks: allActiveTasks, getStatus, getDays, markDone, markNeeded, markNotApplicable, taskState } = useTaskContext();
   const { pendingCalendarMatches } = useCalendarContext();
+
+  // Separate life-event tasks from the rest — they render in their own group at
+  // the top, not interleaved with HVAC filters and pet vaccines.
+  const activeEvent = lifeEvents?.activeEvent;
+  const eventTaskIds = new Set((lifeEvents?.activeEventTasks ?? []).map(t => t.id));
+  const activeTasks = allActiveTasks.filter(t => !eventTaskIds.has(t.id));
+  const eventTasks = activeEvent
+    ? allActiveTasks.filter(t => eventTaskIds.has(t.id))
+    : [];
 
   // Which categories are actually present in tasks
   const presentCats = new Set(activeTasks.map(t => t.cat));
@@ -278,6 +346,24 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
 
       {/* Task groups */}
       <div style={{ padding:'0 18px 160px', maxWidth:680, margin:'0 auto' }}>
+
+        {/* Life event group renders only on the All filter so category views
+            stay clean. Always at the top, always expanded by default. */}
+        {activeEvent && eventTasks.length > 0 && activeCategory === 'all' && (
+          <LifeEventGroup
+            event={activeEvent}
+            tasks={eventTasks}
+            taskState={taskState}
+            getStatus={getStatus}
+            getDays={getDays}
+            providerHistory={providerHistory}
+            pendingCalendarMatches={pendingCalendarMatches}
+            onSelectTask={onSelectTask}
+            onDoneTask={onDoneTask}
+            onMatchConfirm={onMatchConfirm}
+            onMatchDismiss={onMatchDismiss}
+          />
+        )}
 
         {!hasKnown && unknownFiltered.length === 0 && (
           <div style={{ background:'#FFFFFF', borderRadius:14, padding:'36px 20px', textAlign:'center', border:'1px solid #EAE4DA', marginTop:16 }}>

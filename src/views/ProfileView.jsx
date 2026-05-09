@@ -3,7 +3,9 @@ import { AppHeader } from "./HomeView";
 import { HouseIcon, CarIcon, PersonIcon, PetIcon } from "../components/CategoryIcons";
 import { Sheet } from "../components/Sheet";
 import { useProfileContext } from "../contexts/ProfileContext";
+import { useTaskContext }    from "../contexts/TaskContext";
 import { C } from "../data/constants";
+import { LIFE_EVENT_DEFS } from "../data/lifeEvents";
 
 // ─── Car data (shared with SlimOnboarding) ─────────────────────────────────────
 const CAR_DATA = {
@@ -100,9 +102,21 @@ function ProvidersIcon({ size = 16 }) {
   );
 }
 
+// ─── Life events icon ──────────────────────────────────────────────────────────
+function LifeEventsIcon({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="7" fill="#F4C430" />
+      <circle cx="9" cy="7.5" r="2" fill="#fff" />
+      <path d="M5 14 Q9 11 13 14" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+    </svg>
+  );
+}
+
 // ─── Main view ─────────────────────────────────────────────────────────────────
-export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTasks, user, onSignOut }) {
-  const { profile, providerHistory, updateProfile: onUpdateProfile } = useProfileContext();
+export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTasks, user, onSignOut, onStartLifeEvent }) {
+  const { profile, providerHistory, updateProfile: onUpdateProfile, lifeEvents } = useProfileContext();
+  const { taskState } = useTaskContext();
   const [confirmReset,   setConfirmReset]   = useState(false);
   const [resetting,      setResetting]      = useState(false);
   const [resetError,     setResetError]     = useState(null);
@@ -110,6 +124,7 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
   const [addingHazards,  setAddingHazards]  = useState(false);
   const [hazardPreview,  setHazardPreview]  = useState(null); // { hazards, tasks } | null
   const [pendingRemove,  setPendingRemove]  = useState(null); // { type: 'car'|'kid'|'pet', index: number }
+  const [confirmDismissEvent, setConfirmDismissEvent] = useState(false);
 
   // Edit state — all sections at once
   const [editHasHome,   setEditHasHome]   = useState(null);
@@ -512,6 +527,98 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
             ))}
           </div>
         )}
+
+        {/* ── Life events ── */}
+        {(() => {
+          const active = lifeEvents?.activeEvent;
+          const def = active ? LIFE_EVENT_DEFS[active.type] : null;
+          const eventTasks = lifeEvents?.activeEventTasks ?? [];
+          const doneCount = eventTasks.filter(t => taskState[t.id]?.lastDone).length;
+          const totalCount = eventTasks.length;
+
+          return (
+            <div style={S.sectionCard}>
+              <SectionHeader icon={<LifeEventsIcon size={16} />} iconBg="#FFFBEE" title="Life events" />
+              {active && def ? (
+                <>
+                  <div style={{ padding:'13px 16px', borderBottom: '1px solid #F5F0E8' }}>
+                    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom: 4 }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                        <span style={{ fontSize: 22 }}>{def.emoji}</span>
+                        <span style={{ fontSize:14, fontWeight:700, color:C.ink, fontFamily:'DM Sans, sans-serif' }}>
+                          {def.label}
+                        </span>
+                      </div>
+                      <span style={{ fontSize:12, fontWeight:700, color:'#1A5C3A', background:'#E8F5EE', borderRadius:20, padding:'3px 10px', fontFamily:'DM Sans, sans-serif' }}>
+                        {doneCount} of {totalCount} done
+                      </span>
+                    </div>
+                    <div style={{ fontSize:12, color:C.muted, fontFamily:'DM Sans, sans-serif' }}>
+                      Find your event tasks at the top of the All tab.
+                    </div>
+                  </div>
+                  <div style={{ padding:'10px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                    {!confirmDismissEvent ? (
+                      <>
+                        <span style={{ fontSize:12, color:C.muted, fontFamily:'DM Sans, sans-serif' }}>Wrap this up</span>
+                        <button
+                          onClick={() => setConfirmDismissEvent(true)}
+                          style={{ fontSize:12, fontWeight:700, color:'#D62828', background:'#FDE8E8', border:'none', borderRadius:20, padding:'5px 12px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                        >
+                          Remove event
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <span style={{ fontSize:12, color:'#D62828', fontFamily:'DM Sans, sans-serif', fontWeight:700 }}>
+                          Remove event and all its tasks?
+                        </span>
+                        <div style={{ display:'flex', gap:8 }}>
+                          <button onClick={() => setConfirmDismissEvent(false)} style={{ fontSize:12, fontWeight:600, color:'#4A6256', background:'#F0EDE4', border:'none', borderRadius:20, padding:'5px 12px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
+                            Cancel
+                          </button>
+                          <button
+                            onClick={async () => {
+                              try { await lifeEvents.dismissEvent(active.id); setConfirmDismissEvent(false); }
+                              catch { setConfirmDismissEvent(false); }
+                            }}
+                            style={{ fontSize:12, fontWeight:700, color:'#fff', background:'#D62828', border:'none', borderRadius:20, padding:'5px 12px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                          >
+                            Yes, remove
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div style={{ padding:'10px 16px' }}>
+                  <div style={{ fontSize:12, color:C.muted, fontFamily:'DM Sans, sans-serif', marginBottom: 8 }}>
+                    Going through something big? Mitzy can walk you through the admin.
+                  </div>
+                  {Object.entries(LIFE_EVENT_DEFS).map(([key, eventDef]) => (
+                    <button
+                      key={key}
+                      onClick={() => onStartLifeEvent(key)}
+                      style={{
+                        width:'100%', display:'flex', alignItems:'center', gap:10,
+                        padding:'11px 12px', cursor:'pointer',
+                        background:'#fff', border:'1.5px solid #EAE4DA', borderRadius:10,
+                        textAlign:'left', fontFamily:'DM Sans, sans-serif',
+                      }}
+                    >
+                      <span style={{ fontSize: 22 }}>{eventDef.emoji}</span>
+                      <span style={{ fontSize:13, fontWeight:700, color:C.ink, flex:1 }}>{eventDef.label}</span>
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <polyline points="4,2 10,7 4,12" stroke="#4A6256" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* ── Account ── */}
         {user && (
