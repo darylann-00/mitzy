@@ -24,6 +24,77 @@ function getFrequencyPresets(defaultDays) {
 }
 
 // ─── HistoryCard component ─────────────────────────────────────────────────────
+function OneTimeCard({ task, entry, onSetScheduledDate }) {
+  const [open, setOpen] = useState(false);
+  const scheduledDate = entry?.scheduledDate
+    ? new Date(entry.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : null;
+
+  return (
+    <div style={{
+      background: '#FFFFFF',
+      border: '1px solid #EAE4DA',
+      borderTop: 'none',
+      borderRadius: '0 0 14px 14px',
+      marginBottom: 10,
+    }}>
+      <div
+        data-testid="history-card-toggle"
+        onClick={() => setOpen(v => !v)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          padding: '12px 16px',
+          cursor: 'pointer',
+          backgroundColor: open ? '#F8F5EE' : '#FFFFFF',
+          justifyContent: 'space-between',
+        }}
+      >
+        <span style={{
+          fontSize: 15,
+          fontWeight: 700,
+          color: scheduledDate ? '#1C2B22' : '#4A6256',
+          fontFamily: 'DM Sans, sans-serif',
+        }}>
+          {scheduledDate ? `Due ${scheduledDate}` : 'No due date set'}
+        </span>
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"
+          style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}
+        >
+          <polyline points="2,4.5 6.5,8.5 11,4.5" stroke="#4A6256" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
+
+      {open && (
+        <div style={{ borderTop: '1px solid #EAE4DA', padding: '12px', background: '#F8F5EE' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#4A6256', fontFamily: 'DM Sans, sans-serif', marginBottom: 8 }}>
+            Set due date
+          </div>
+          <MonthCalendar
+            value={entry?.scheduledDate ? entry.scheduledDate.slice(0, 10) : ''}
+            onChange={iso => {
+              onSetScheduledDate(task.id, iso);
+              setOpen(false);
+            }}
+          />
+          {scheduledDate && (
+            <button
+              onClick={() => { onSetScheduledDate(task.id, null); setOpen(false); }}
+              style={{
+                marginTop: 8, background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: 12, color: '#4A6256', fontFamily: 'DM Sans, sans-serif',
+                textDecoration: 'underline', textDecorationColor: '#C8D9D1', padding: 0,
+              }}
+            >
+              Clear date
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function HistoryCard({ task, entry, effectiveInterval, lastDoneDate, dueNextDate, isOverdue, status, onMarkDone, onSetIntervalOverride, onSetOneTimeOverride }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -31,7 +102,7 @@ function HistoryCard({ task, entry, effectiveInterval, lastDoneDate, dueNextDate
   const [customUnit, setCustomUnit] = useState('months');
   const [showCustomInput, setShowCustomInput] = useState(false);
 
-  // task.oneTime = truly one-time by definition (no editing needed); entry?.oneTime = user override
+  // Base one-time tasks use OneTimeCard instead (handled by parent)
   if (task.oneTime && entry?.oneTime !== false) return null;
 
   const effectiveOneTime = entry?.oneTime !== undefined ? entry.oneTime : false;
@@ -510,7 +581,7 @@ function FourDots({ size = 7 }) {
   );
 }
 
-export function TaskDetailView({ task, onAssist, onDone, onBack, onMarkDone, onSetIntervalOverride, onSetOneTimeOverride, onMarkNotApplicable, onRemove }) {
+export function TaskDetailView({ task, onAssist, onDone, onBack, onMarkDone, onSetIntervalOverride, onSetOneTimeOverride, onSetScheduledDate, onMarkNotApplicable, onRemove }) {
   const { providerHistory } = useProfileContext();
   const { taskState, getStatus } = useTaskContext();
   const savedProvider = providerHistory[task.id];
@@ -619,18 +690,26 @@ export function TaskDetailView({ task, onAssist, onDone, onBack, onMarkDone, onS
         )}
 
         {/* History Card */}
-        <HistoryCard
-          task={task}
-          entry={entry}
-          effectiveInterval={effectiveInterval}
-          lastDoneDate={lastDoneDate}
-          dueNextDate={dueNextDate}
-          isOverdue={isOverdue}
-          status={status}
-          onMarkDone={onMarkDone}
-          onSetIntervalOverride={onSetIntervalOverride}
-          onSetOneTimeOverride={onSetOneTimeOverride}
-        />
+        {(task.oneTime && entry?.oneTime !== false) ? (
+          <OneTimeCard
+            task={task}
+            entry={entry}
+            onSetScheduledDate={onSetScheduledDate}
+          />
+        ) : (
+          <HistoryCard
+            task={task}
+            entry={entry}
+            effectiveInterval={effectiveInterval}
+            lastDoneDate={lastDoneDate}
+            dueNextDate={dueNextDate}
+            isOverdue={isOverdue}
+            status={status}
+            onMarkDone={onMarkDone}
+            onSetIntervalOverride={onSetIntervalOverride}
+            onSetOneTimeOverride={onSetOneTimeOverride}
+          />
+        )}
 
         {/* Why it matters */}
         <div style={{ background:'#fff', borderRadius:14, padding:'13px 15px', border:'1px solid #EAE4DA', marginBottom:10 }}>

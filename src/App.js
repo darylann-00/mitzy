@@ -351,6 +351,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
           onMarkDone={(task, dateStr) => markDone(task.id, dateStr)}
           onSetIntervalOverride={(id, days) => setIntervalOverride(id, days)}
           onSetOneTimeOverride={(id, oneTime) => setOneTimeOverride(id, oneTime)}
+          onSetScheduledDate={(id, date) => markScheduled(id, date)}
           onMarkNotApplicable={(id) => { markNotApplicable(id); setSelectedTask(null); }}
           onRemove={(id) => { removeCustomTask(id); setSelectedTask(null); }}
           onBack={() => setSelectedTask(null)}
