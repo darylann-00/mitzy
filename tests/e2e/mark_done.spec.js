@@ -58,8 +58,11 @@ test('date picker month arrows do not close picker', async ({ page }) => {
   // Expand the history card to reveal the Last done row
   await page.getByTestId('history-card-toggle').click();
 
-  // Click the "Last done" cell to open the calendar
+  // Click the "Last done" cell to reveal the date field
   await page.getByTestId('last-done-cell').click();
+
+  // Click the calendar icon to open the picker
+  await page.getByTestId('date-field-toggle').click();
 
   // Calendar should appear
   const calendar = page.getByTestId('month-calendar');

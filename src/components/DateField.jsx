@@ -47,6 +47,7 @@ export function DateField({ value, onChange, min, max }) {
         />
         <button
           type="button"
+          data-testid="date-field-toggle"
           onClick={() => setShowCal(s => !s)}
           style={{
             padding: '0 12px', background: 'none', border: 'none',
