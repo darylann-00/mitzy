@@ -15,7 +15,7 @@ export function TaskProvider({ user, children }) {
   const {
     taskState, setTaskState,
     disabledTasks, setDisabledTasks,
-    markDone, markScheduled, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride,
+    markDone, markScheduled, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, setDueDate,
     loading, syncError,
   } = useTasks(user);
 
@@ -116,7 +116,7 @@ export function TaskProvider({ user, children }) {
       disabledTasks, setDisabledTasks,
       activeTasks, visibleTasks, scoredDue, focusTasks, doneThisWeek,
       nextUpcomingTask,
-      markDone, markScheduled, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride,
+      markDone, markScheduled, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, setDueDate,
       getStatus, getDays, getNext,
       loading, syncError,
     }}>

@@ -200,7 +200,7 @@ export default function Mitzy() {
 // ─── Inner app — consumes contexts ─────────────────────────────────────────────
 function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, signInWithPassword, welcomeChoice, setWelcomeChoice }) {
   const { profile, taskLibrary, updateProfile, removeCustomTask, region, loading: profileLoading, syncError: profileSyncError, serverProfileChecked, serverProfileExists } = useProfileContext();
-  const { activeTasks, taskState, setTaskState, setDisabledTasks, markDone, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, markScheduled, nextUpcomingTask, loading: tasksLoading, syncError: tasksSyncError } = useTaskContext();
+  const { activeTasks, taskState, setTaskState, setDisabledTasks, markDone, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, setDueDate, markScheduled, nextUpcomingTask, loading: tasksLoading, syncError: tasksSyncError } = useTaskContext();
   const { pendingCalendarMatches, dismissMatch } = useCalendarContext();
 
   // ─── Onboarding state ──────────────────────────────────────────────────────
@@ -351,7 +351,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
           onMarkDone={(task, dateStr) => markDone(task.id, dateStr)}
           onSetIntervalOverride={(id, days) => setIntervalOverride(id, days)}
           onSetOneTimeOverride={(id, oneTime) => setOneTimeOverride(id, oneTime)}
-          onSetScheduledDate={(id, date) => markScheduled(id, date)}
+          onSetDueDate={(id, date) => setDueDate(id, date)}
           onMarkNotApplicable={(id) => { markNotApplicable(id); setSelectedTask(null); }}
           onRemove={(id) => { removeCustomTask(id); setSelectedTask(null); }}
           onBack={() => setSelectedTask(null)}

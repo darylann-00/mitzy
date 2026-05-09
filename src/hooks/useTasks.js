@@ -43,13 +43,14 @@ export function useTasks(user) {
         const state    = {};
         const disabled = {};
         for (const row of data) {
-          if (row.last_done || row.scheduled_date || row.interval_days || row.needed || row.one_time != null) {
+          if (row.last_done || row.scheduled_date || row.due_date || row.interval_days || row.needed || row.one_time != null) {
             state[row.task_id] = {
               lastDone:      row.last_done,
               scheduledDate: row.scheduled_date,
-              ...(row.interval_days ? { intervalDays: row.interval_days } : {}),
-              ...(row.needed        ? { needed: true }                     : {}),
-              ...(row.one_time != null ? { oneTime: row.one_time }         : {}),
+              ...(row.due_date      ? { dueDate: row.due_date }            : {}),
+              ...(row.interval_days ? { intervalDays: row.interval_days }  : {}),
+              ...(row.needed        ? { needed: true }                      : {}),
+              ...(row.one_time != null ? { oneTime: row.one_time }          : {}),
             };
           }
           if (row.disabled) {
@@ -143,5 +144,16 @@ export function useTasks(user) {
     }
   };
 
-  return { taskState, setTaskState, disabledTasks, setDisabledTasks, markDone, markScheduled, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, loading, syncError };
+  const setDueDate = async (id, dueDate) => {
+    const prev = taskState[id];
+    setTaskState(s => ({ ...s, [id]: { ...s[id], dueDate: dueDate ?? undefined } }));
+    if (user) {
+      const { error } = await supabase.from("task_records").upsert({
+        user_id: user.id, task_id: id, due_date: dueDate ?? null,
+      }, { onConflict: 'user_id,task_id' });
+      if (error) setTaskState(s => ({ ...s, [id]: prev }));
+    }
+  };
+
+  return { taskState, setTaskState, disabledTasks, setDisabledTasks, markDone, markScheduled, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, setDueDate, loading, syncError };
 }
