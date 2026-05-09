@@ -605,7 +605,7 @@ export function TaskDetailView({ task, onAssist, onDone, onBack, onMarkDone, onS
         </div>
 
         {/* Assist button */}
-        {task.assistType && (
+        {(task.assistType || task.isCustom) && (
           <button
             onClick={() => onAssist(task)}
             style={{
