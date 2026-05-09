@@ -23,14 +23,17 @@ function getFrequencyPresets(defaultDays) {
 }
 
 // ─── HistoryCard component ─────────────────────────────────────────────────────
-function HistoryCard({ task, entry, effectiveInterval, lastDoneDate, dueNextDate, isOverdue, status, onMarkDone, onSetIntervalOverride }) {
+function HistoryCard({ task, entry, effectiveInterval, lastDoneDate, dueNextDate, isOverdue, status, onMarkDone, onSetIntervalOverride, onSetOneTimeOverride }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [customNum, setCustomNum] = useState('');
   const [customUnit, setCustomUnit] = useState('months');
   const [showCustomInput, setShowCustomInput] = useState(false);
 
-  if (task.oneTime) return null;
+  // task.oneTime = truly one-time by definition (no editing needed); entry?.oneTime = user override
+  if (task.oneTime && entry?.oneTime !== false) return null;
+
+  const effectiveOneTime = entry?.oneTime !== undefined ? entry.oneTime : false;
 
   const frequencyStr = formatIntervalDays(effectiveInterval);
 
@@ -50,7 +53,9 @@ function HistoryCard({ task, entry, effectiveInterval, lastDoneDate, dueNextDate
   };
 
   let collapsedText = 'Due — not set yet';
-  if (status === 'scheduled' && entry?.scheduledDate) {
+  if (effectiveOneTime) {
+    collapsedText = lastDoneDate ? 'Done — one time' : 'One time — not done yet';
+  } else if (status === 'scheduled' && entry?.scheduledDate) {
     const scheduledDate = new Date(entry.scheduledDate);
     collapsedText = `Scheduled ${scheduledDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
   } else if (dueNextDate) {
@@ -174,7 +179,7 @@ function HistoryCard({ task, entry, effectiveInterval, lastDoneDate, dueNextDate
           </div>
 
           {/* Frequency row */}
-          {frequencyStr && (
+          {(frequencyStr || effectiveOneTime) && (
             <div style={{ borderTop: '1px solid #EAE4DA' }}>
               <div
                 onClick={() => handleEditingChange('freq')}
@@ -200,10 +205,10 @@ function HistoryCard({ task, entry, effectiveInterval, lastDoneDate, dueNextDate
                   flex: 1,
                   fontSize: 14,
                   fontWeight: 500,
-                  color: entry?.intervalDays ? '#1A5C3A' : '#1C2B22',
+                  color: (entry?.intervalDays || effectiveOneTime) ? '#1A5C3A' : '#1C2B22',
                   fontFamily: 'DM Sans, sans-serif',
                 }}>
-                  {frequencyStr}
+                  {effectiveOneTime ? 'Once' : frequencyStr}
                 </span>
                 <div style={{
                   fontSize: 12,
@@ -217,7 +222,7 @@ function HistoryCard({ task, entry, effectiveInterval, lastDoneDate, dueNextDate
                   {editing === 'freq' ? 'Cancel' : 'Edit'}
                 </div>
               </div>
-              {editing === 'freq' && task.intervalDays && (
+              {editing === 'freq' && (task.intervalDays || effectiveOneTime) && (
                 <div style={{
                   padding: '10px 12px',
                   background: '#F8F5EE',
@@ -253,6 +258,29 @@ function HistoryCard({ task, entry, effectiveInterval, lastDoneDate, dueNextDate
                       ×
                     </button>
                   </div>
+                  {effectiveOneTime ? (
+                    <div style={{ marginBottom: 8 }}>
+                      <button
+                        onClick={() => {
+                          onSetOneTimeOverride(task.id, false);
+                          setEditing(null);
+                        }}
+                        style={{
+                          padding: '5px 11px',
+                          borderRadius: 20,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          fontFamily: 'DM Sans, sans-serif',
+                          cursor: 'pointer',
+                          border: '1.5px solid #EAE4DA',
+                          background: '#fff',
+                          color: '#1C2B22',
+                        }}
+                      >
+                        Switch to recurring
+                      </button>
+                    </div>
+                  ) : (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
                     {getFrequencyPresets(task.intervalDays).map(days => {
                       const isDefault = days === task.intervalDays;
@@ -301,8 +329,29 @@ function HistoryCard({ task, entry, effectiveInterval, lastDoneDate, dueNextDate
                     >
                       Custom
                     </button>
+                    <button
+                      onClick={() => {
+                        setShowCustomInput(false);
+                        onSetOneTimeOverride(task.id, true);
+                        setEditing(null);
+                      }}
+                      style={{
+                        padding: '5px 11px',
+                        borderRadius: 20,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        fontFamily: 'DM Sans, sans-serif',
+                        cursor: 'pointer',
+                        border: '1.5px solid #EAE4DA',
+                        background: '#fff',
+                        color: '#1C2B22',
+                      }}
+                    >
+                      Once
+                    </button>
                   </div>
-                  {showCustomInput && (
+                  )}
+                  {!effectiveOneTime && showCustomInput && (
                     <>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}>
                         <span style={{
@@ -389,6 +438,7 @@ function HistoryCard({ task, entry, effectiveInterval, lastDoneDate, dueNextDate
                       )}
                     </>
                   )}
+                  {!effectiveOneTime && (
                   <div style={{
                     fontSize: 10,
                     color: '#4A6256',
@@ -397,7 +447,8 @@ function HistoryCard({ task, entry, effectiveInterval, lastDoneDate, dueNextDate
                   }}>
                     ✓ marks the default recommendation
                   </div>
-                  {!task.oneTime && task.intervalDays && effectiveInterval > task.intervalDays && (
+                  )}
+                  {!effectiveOneTime && !task.oneTime && task.intervalDays && effectiveInterval > task.intervalDays && (
                     <div style={{
                       background: '#FFF8E1',
                       border: '1px solid #F4C430',
@@ -458,7 +509,7 @@ function FourDots({ size = 7 }) {
   );
 }
 
-export function TaskDetailView({ task, onAssist, onDone, onBack, onMarkDone, onSetIntervalOverride, onMarkNotApplicable, onRemove }) {
+export function TaskDetailView({ task, onAssist, onDone, onBack, onMarkDone, onSetIntervalOverride, onSetOneTimeOverride, onMarkNotApplicable, onRemove }) {
   const { providerHistory } = useProfileContext();
   const { taskState, getStatus } = useTaskContext();
   const savedProvider = providerHistory[task.id];
@@ -580,6 +631,7 @@ export function TaskDetailView({ task, onAssist, onDone, onBack, onMarkDone, onS
           status={status}
           onMarkDone={onMarkDone}
           onSetIntervalOverride={onSetIntervalOverride}
+          onSetOneTimeOverride={onSetOneTimeOverride}
         />
 
         {/* Why it matters */}
