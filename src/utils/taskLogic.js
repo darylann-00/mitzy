@@ -51,12 +51,18 @@ export function isWindowActive(task, region) {
 
 export function taskStatus(task, taskState) {
   const entry = taskState[task.id];
+  const isOneTime = entry?.oneTime !== undefined ? entry.oneTime : task.oneTime;
 
   if (entry?.scheduledDate && new Date(entry.scheduledDate) > new Date()) return "scheduled";
   if (entry?.scheduledDate && new Date(entry.scheduledDate) <= new Date()) return "confirm";
-  if (task.oneTime) {
+  if (isOneTime) {
     if (entry?.needed)   return "needed";
     if (entry?.lastDone) return "ok";
+    if (entry?.dueDate) {
+      const daysUntil = Math.ceil((new Date(entry.dueDate) - Date.now()) / 86400000);
+      if (daysUntil < 0)  return "due";
+      if (daysUntil <= 7) return "coming-up";
+    }
     return "unknown";
   }
 
@@ -74,10 +80,11 @@ export function taskStatus(task, taskState) {
 
 // ─── Task scoring (higher = more urgent) ─────────────────────────────────────
 
-export function taskScore(task, lastDone, intervalDaysOverride) {
+export function taskScore(task, lastDone, intervalDaysOverride, oneTimeOverride) {
   const stakeWeight  = { high: 3, medium: 2, low: 1 }[task.stakes] || 1;
   const intervalDays = intervalDaysOverride ?? task.intervalDays;
-  if (task.oneTime) return lastDone ? 0 : stakeWeight * 3;
+  const isOneTime    = oneTimeOverride !== undefined ? oneTimeOverride : task.oneTime;
+  if (isOneTime) return lastDone ? 0 : stakeWeight * 3;
   const daysSince = lastDone
     ? Math.floor((Date.now() - new Date(lastDone)) / 86400000)
     : intervalDays * 2;
@@ -94,8 +101,9 @@ export function isDependencySatisfied(task, taskState) {
 
 // ─── Next due date display ────────────────────────────────────────────────────
 
-export function nextDueStr(task, lastDone, intervalDaysOverride) {
-  if (task.oneTime) return "once";
+export function nextDueStr(task, lastDone, intervalDaysOverride, oneTimeOverride) {
+  const isOneTime = oneTimeOverride !== undefined ? oneTimeOverride : task.oneTime;
+  if (isOneTime) return "once";
   if (!lastDone) return "anytime";
   const intervalDays = intervalDaysOverride ?? task.intervalDays;
   const due = new Date(new Date(lastDone).getTime() + intervalDays * 86400000);

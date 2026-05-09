@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { MonthCalendar } from "./MonthCalendar";
+import { DateField } from "./DateField";
 import { getCalendarToken } from "../lib/googleCalendar";
 import { useCalendarContext } from "../contexts/CalendarContext";
 import { useTaskContext } from "../contexts/TaskContext";
@@ -58,49 +59,6 @@ const fmtMatchDate = iso => {
 
 const matchToIsoDate = m => m.eventDate.slice(0, 10);
 
-const dateWrap = { display: 'flex', justifyContent: 'center', padding: '4px 0 2px' };
-
-function DateField({ value, onChange, min }) {
-  const [showCal, setShowCal] = useState(false);
-  const wrapRef = useRef(null);
-
-  useEffect(() => {
-    if (!showCal) return;
-    function onDown(e) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) setShowCal(false);
-    }
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
-  }, [showCal]);
-
-  return (
-    <div ref={wrapRef}>
-      <style>{`.mitzy-date-no-picker::-webkit-calendar-picker-indicator{opacity:0;width:0;padding:0;margin:0}`}</style>
-      <div style={{ display: 'flex', alignItems: 'stretch', border: '1.5px solid #EAE4DA', borderRadius: 10, background: '#FDFAF2', overflow: 'hidden' }}>
-        <input
-          type="date"
-          className="mitzy-date-no-picker"
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          min={min}
-          style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', padding: '10px 12px', fontSize: 14, fontFamily: 'DM Sans, sans-serif', color: value ? '#1C2B22' : '#9E9689' }}
-        />
-        <button
-          type="button"
-          onClick={() => setShowCal(s => !s)}
-          style={{ padding: '0 12px', background: 'none', border: 'none', borderLeft: '1.5px solid #EAE4DA', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-        >
-          <CalSVG color={showCal ? '#1A5C3A' : '#4A6256'} size={16} />
-        </button>
-      </div>
-      {showCal && (
-        <div style={{ ...dateWrap, marginTop: 6 }}>
-          <MonthCalendar value={value} onChange={v => { onChange(v); setShowCal(false); }} min={min} />
-        </div>
-      )}
-    </div>
-  );
-}
 
 function parseTime(value) {
   if (!value) return { h12: '', m: '', period: 'AM' };

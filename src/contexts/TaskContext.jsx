@@ -15,7 +15,7 @@ export function TaskProvider({ user, children }) {
   const {
     taskState, setTaskState,
     disabledTasks, setDisabledTasks,
-    markDone, markScheduled, markNotApplicable, markNeeded, setIntervalOverride,
+    markDone, markScheduled, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, setDueDate,
     loading, syncError,
   } = useTasks(user);
 
@@ -35,8 +35,8 @@ export function TaskProvider({ user, children }) {
   const scoredDue = useMemo(() => [...visibleTasks]
     .filter(t => taskStatus(t, taskState) !== "ok")
     .sort((a, b) => {
-      const sa = taskScore(a, taskState[a.id]?.lastDone, taskState[a.id]?.intervalDays);
-      const sb = taskScore(b, taskState[b.id]?.lastDone, taskState[b.id]?.intervalDays);
+      const sa = taskScore(a, taskState[a.id]?.lastDone, taskState[a.id]?.intervalDays, taskState[a.id]?.oneTime);
+      const sb = taskScore(b, taskState[b.id]?.lastDone, taskState[b.id]?.intervalDays, taskState[b.id]?.oneTime);
       return sb - sa;
     }), [visibleTasks, taskState]);
 
@@ -96,12 +96,13 @@ export function TaskProvider({ user, children }) {
   const getDays = useCallback((t) => {
     const entry = taskState[t.id];
     if (!entry?.lastDone) return 0;
-    if (t.oneTime) return null;
+    const isOneTime = entry?.oneTime !== undefined ? entry.oneTime : t.oneTime;
+    if (isOneTime) return null;
     const intervalDays = entry?.intervalDays ?? t.intervalDays;
     return intervalDays - Math.floor((Date.now() - new Date(entry.lastDone)) / 86400000);
   }, [taskState]);
 
-  const getNext = (t) => nextDueStr(t, taskState[t.id]?.lastDone, taskState[t.id]?.intervalDays);
+  const getNext = (t) => nextDueStr(t, taskState[t.id]?.lastDone, taskState[t.id]?.intervalDays, taskState[t.id]?.oneTime);
 
   const nextUpcomingTask = useMemo(() =>
     visibleTasks
@@ -115,7 +116,7 @@ export function TaskProvider({ user, children }) {
       disabledTasks, setDisabledTasks,
       activeTasks, visibleTasks, scoredDue, focusTasks, doneThisWeek,
       nextUpcomingTask,
-      markDone, markScheduled, markNotApplicable, markNeeded, setIntervalOverride,
+      markDone, markScheduled, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, setDueDate,
       getStatus, getDays, getNext,
       loading, syncError,
     }}>
