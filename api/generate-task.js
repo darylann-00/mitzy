@@ -118,7 +118,7 @@ Return shape (success):
   }
 }
 
-Personalize using profile context (vehicles, kids, pets, climate region, age) only when directly relevant to the task. Do not mention profile context in the task otherwise.
+Personalize using profile context (vehicles, kids, pets, climate region, age) only when directly relevant to the task. Do not mention profile context in the task otherwise. IMPORTANT: If the prompt mentions a specific age that does not match any profile child's age, the task is for someone outside the household — do not reference, tag, or link to the user's children in any field.
 
 For seasonal tasks, set activeMonths matching the user's climate region. For one-time tasks, set intervalDays: null and oneTime: true.
 

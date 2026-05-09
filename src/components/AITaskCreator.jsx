@@ -207,7 +207,7 @@ export function AITaskCreator({ onClose }) {
         stakes: 'medium',
         activeMonths: null,
         requires: [],
-        assistType: null,
+        assistType: 'guidance',
         isCustom: true,
         isAIGenerated: false,
         promptText: prompt,
