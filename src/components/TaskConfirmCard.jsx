@@ -2,6 +2,7 @@ import { useState } from "react";
 import { C, CAT_META } from "../data/constants";
 import { CategoryTile } from "./CategoryIcons";
 import { FrequencyPicker, formatIntervalDays } from "./FrequencyPicker";
+import { parseGuidanceBlocks, renderGuidanceBlocks } from "../utils/renderMarkdown";
 
 export function TaskConfirmCard({ task, onChange, onSave, onCancel, regenerating, regenError }) {
   const [editingLabel, setEditingLabel] = useState(false);
@@ -238,8 +239,8 @@ export function TaskConfirmCard({ task, onChange, onSave, onCancel, regenerating
             <span style={{ color:C.muted, fontSize:13 }}>{showHow ? '−' : '+'}</span>
           </button>
           {showHow && (
-            <div style={{ padding:'0 14px 12px', fontSize:13, color:C.ink, lineHeight:1.6, fontFamily:'DM Sans, sans-serif', whiteSpace:'pre-wrap' }}>
-              {task.guidance}
+            <div style={{ padding:'0 14px 12px' }}>
+              {renderGuidanceBlocks(parseGuidanceBlocks(task.guidance))}
             </div>
           )}
         </div>

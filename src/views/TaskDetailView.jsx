@@ -5,6 +5,7 @@ import { MonthCalendar } from "../components/MonthCalendar";
 import { ScheduleSurface } from "../components/ScheduleSurface";
 import { useProfileContext } from "../contexts/ProfileContext";
 import { useTaskContext }    from "../contexts/TaskContext";
+import { parseGuidanceBlocks, renderGuidanceBlocks } from "../utils/renderMarkdown";
 
 function formatIntervalDays(days) {
   if (!days) return null;
@@ -484,10 +485,7 @@ export function TaskDetailView({ task, onAssist, onDone, onBack, onMarkDone, onS
   const getSubtitle = ASSIST_SUBTITLES[task.assistType];
   const assistSubtitle = getSubtitle ? getSubtitle(task) : null;
 
-  // Parse guidance into steps
-  const steps = task.guidance
-    ? task.guidance.split(/\d+\.\s+/).filter(Boolean)
-    : null;
+  const guidanceBlocks = parseGuidanceBlocks(task.guidance);
 
   return (
     <div style={{ background:'#FDFAF2', minHeight:'100vh' }}>
@@ -597,16 +595,7 @@ export function TaskDetailView({ task, onAssist, onDone, onBack, onMarkDone, onS
           <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:'#4A6256', marginBottom:8, fontFamily:"'Righteous', cursive" }}>
             What to expect
           </div>
-          {steps ? (
-            steps.map((step, i) => (
-              <div key={i} style={{ display:'flex', gap:10, alignItems:'flex-start', marginBottom: i < steps.length - 1 ? 10 : 0 }}>
-                <div style={{ width:22, height:22, borderRadius:'50%', background:'#E8F0EC', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:11, fontWeight:700, color:'#1A5C3A', fontFamily:'DM Sans, sans-serif' }}>
-                  {i + 1}
-                </div>
-                <div style={{ fontSize:13, color:'#1C2B22', lineHeight:1.5, flex:1, fontFamily:'DM Sans, sans-serif' }}>{step.trim()}</div>
-              </div>
-            ))
-          ) : (
+          {guidanceBlocks ? renderGuidanceBlocks(guidanceBlocks) : (
             <div style={{ fontSize:13, color:'#4A6256', lineHeight:1.6, fontFamily:'DM Sans, sans-serif' }}>
               {task.note
                 ? 'Follow standard procedures or tap below to let Mitzy walk you through it.'
