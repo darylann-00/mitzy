@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CAT_META } from "../data/constants";
 import { CAT_ICON_CONFIG } from "../components/CategoryIcons";
 import { MonthCalendar } from "../components/MonthCalendar";
+import { DateField } from "../components/DateField";
 import { ScheduleSurface } from "../components/ScheduleSurface";
 import { useProfileContext } from "../contexts/ProfileContext";
 import { useTaskContext }    from "../contexts/TaskContext";
@@ -66,16 +67,10 @@ function OneTimeCard({ task, entry, onSetDueDate }) {
       </div>
 
       {open && (
-        <div style={{ borderTop: '1px solid #EAE4DA', padding: '12px', background: '#F8F5EE' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#4A6256', fontFamily: 'DM Sans, sans-serif', marginBottom: 8 }}>
-            Set due date
-          </div>
-          <MonthCalendar
+        <div style={{ borderTop: '1px solid #EAE4DA', padding: '12px 14px 14px', background: '#F8F5EE' }}>
+          <DateField
             value={entry?.dueDate ? entry.dueDate.slice(0, 10) : ''}
-            onChange={iso => {
-              onSetDueDate(task.id, iso);
-              setOpen(false);
-            }}
+            onChange={iso => { onSetDueDate(task.id, iso || null); }}
           />
           {dueDateStr && (
             <button
@@ -238,12 +233,11 @@ function HistoryCard({ task, entry, effectiveInterval, lastDoneDate, dueNextDate
                 background: '#F8F5EE',
                 borderTop: '1px solid #EAE4DA',
               }}>
-                <MonthCalendar
+                <DateField
                   value={lastDoneDate ? lastDoneDate.toISOString().slice(0, 10) : ''}
                   max={new Date().toISOString().slice(0, 10)}
                   onChange={iso => {
-                    onMarkDone(task, iso);
-                    setEditing(null);
+                    if (iso) { onMarkDone(task, iso); setEditing(null); }
                   }}
                 />
               </div>
