@@ -23,7 +23,8 @@ export function buildAssistPrompt(task, profile) {
     : "";
 
   const ctx  = `${ins}${car}${kids}${pets}Location: ${loc}.`;
-  const base = `Task: "${task.label}". Note: ${task.note}. ${ctx} Only reference the above context if it's directly relevant to this task — do not mention it otherwise.`;
+  const noteOrGuidance = task.guidance || task.note || '';
+  const base = `Task: "${task.label}".${noteOrGuidance ? ` Context: ${noteOrGuidance}.` : ''} ${ctx} Only reference the above context if it's directly relevant to this task — do not mention it otherwise.`;
 
   switch (task.assistType) {
     case "script":
