@@ -675,8 +675,8 @@ export function TaskDetailView({ task, onAssist, onDone, onBack, onMarkDone, onS
           </div>
         )}
 
-        {/* Scheduled chip */}
-        {scheduledStr && (
+        {/* Scheduled chip — hidden for one-time tasks since OneTimeCard shows the date */}
+        {scheduledStr && !(task.oneTime && entry?.oneTime !== false) && (
           <div data-testid="scheduled-chip" style={{
             display:'inline-flex', alignItems:'center', gap:6,
             background:'rgba(244, 196, 48, 0.15)',
