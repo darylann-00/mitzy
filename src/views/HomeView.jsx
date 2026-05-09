@@ -1,6 +1,7 @@
 import { TrickleCard } from "../components/TrickleCard";
 import { TaskCard }    from "../components/TaskCard";
 import { HazardCard }  from "../components/HazardCard";
+import { LifeEventNudge } from "../components/LifeEventNudge";
 import { useProfileContext } from "../contexts/ProfileContext";
 import { useTaskContext }    from "../contexts/TaskContext";
 import { useCalendarContext } from "../contexts/CalendarContext";
@@ -198,6 +199,9 @@ export function HomeView({
   trickleTask,
   pendingHazards,
   nextUpcomingTask,
+  lifeEventNudge,
+  onLifeEventNudgePrimary,
+  onLifeEventNudgeDismiss,
   onGoToAll,
   onSelectTask,
   onDoneTask,
@@ -218,6 +222,19 @@ export function HomeView({
       <HomeHeader profile={profile} doneThisWeek={doneThisWeek} />
 
       <div style={{ padding:'20px 18px 160px', maxWidth:680, margin:'0 auto' }}>
+
+        {/* Life event nudge (discovery or wrap-up) */}
+        {lifeEventNudge && (
+          <>
+            <LifeEventNudge
+              variant={lifeEventNudge.variant}
+              eventLabel={lifeEventNudge.eventLabel}
+              onPrimary={onLifeEventNudgePrimary}
+              onDismiss={onLifeEventNudgeDismiss}
+            />
+            <Divider />
+          </>
+        )}
 
         {/* Trickle question */}
         {trickleTask && (

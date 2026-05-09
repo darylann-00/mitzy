@@ -112,11 +112,22 @@ Return shape (success):
     "guidance": "<markdown with ## headers, bullets where natural, under 250 words>",
     "oneTime": <boolean>,
     "riskTier": 1 | 2 | 3 | 3.5,
+    "suppressCelebration": <boolean — true ONLY for sensitive/somber tasks where confetti on completion would feel inappropriate>,
     "assumptions": [
       { "key": "<short_snake_case>", "label": "<current chosen value>", "options": ["<option1>", "<option2>", ...] }
     ]
   }
 }
+
+# suppressCelebration rules
+Set suppressCelebration: true ONLY when the task is somber and a "completed!" confetti burst would feel disrespectful. Examples that should be true:
+- Death-related: funeral, estate, probate, cancel deceased's accounts, write obituary
+- Divorce/separation: file divorce papers, divide assets, custody arrangements
+- Job loss: file unemployment, COBRA, severance review
+- Serious illness: chemo schedule, hospice setup, end-of-life directives
+- Pet loss: cremation, vet euthanasia follow-up
+
+Default is false. Routine home/car/health/finance maintenance is celebratable.
 
 Personalize using profile context (vehicles, kids, pets, climate region, age) only when directly relevant to the task. Do not mention profile context in the task otherwise. IMPORTANT: If the prompt mentions a specific age that does not match any profile child's age, the task is for someone outside the household — do not reference, tag, or link to the user's children in any field.
 

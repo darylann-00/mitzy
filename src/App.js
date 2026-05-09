@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import "./styles/app.css";
 
-import { loadS, saveS, ONBOARDED_KEY, PROFILE_DONE_KEY, VISIT_COUNT_KEY, WELCOME_CHOICE_KEY } from "./utils/storage";
+import { loadS, saveS, ONBOARDED_KEY, PROFILE_DONE_KEY, VISIT_COUNT_KEY, WELCOME_CHOICE_KEY, LIFE_EVENTS_NUDGE_KEY } from "./utils/storage";
+import { LIFE_EVENT_DEFS } from "./data/lifeEvents";
 import { detectHazards } from "./utils/hazards";
 import { EM_UNIVERSAL, EM_HAZARD } from "./data/tasks";
 import { supabase } from "./lib/supabase";
@@ -25,6 +26,8 @@ import { MarkDoneModal } from "./components/MarkDoneModal";
 import { AddTaskPanel }  from "./components/AddTaskPanel";
 import { AITaskCreator } from "./components/AITaskCreator";
 import { ProfileConflictModal } from "./components/ProfileConflictModal";
+import { NewBabyIntake } from "./components/LifeEventIntake";
+import { tasksForIntake as newBabyTasksForIntake } from "./data/lifeEvents/newBaby";
 
 import { HomeView }       from "./views/HomeView";
 import { AllView }        from "./views/AllView";
@@ -155,6 +158,7 @@ function Overlays({
   assistTask, onAssistClose,
   addingTask, onAddClose,
   aiCreatorOpen, onAiCreatorClose,
+  lifeEventIntake, onLifeEventIntakeClose, onStartLifeEventConfirm,
 }) {
   const { addCustomTask, pendingConflict, resolveConflict } = useProfileContext();
 
@@ -166,6 +170,13 @@ function Overlays({
       {addingTask    && <AddTaskPanel onAdd={addCustomTask} onClose={onAddClose} />}
       {aiCreatorOpen && <AITaskCreator onClose={onAiCreatorClose} />}
       {pendingConflict && <ProfileConflictModal onResolve={resolveConflict} />}
+      {lifeEventIntake === 'new-baby' && (
+        <NewBabyIntake
+          onClose={onLifeEventIntakeClose}
+          onStart={(answers) => onStartLifeEventConfirm('new-baby', answers)}
+          generateTaskList={newBabyTasksForIntake}
+        />
+      )}
     </>
   );
 }
@@ -199,7 +210,7 @@ export default function Mitzy() {
 
 // ─── Inner app — consumes contexts ─────────────────────────────────────────────
 function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, signInWithPassword, welcomeChoice, setWelcomeChoice }) {
-  const { profile, taskLibrary, updateProfile, removeCustomTask, region, loading: profileLoading, syncError: profileSyncError, serverProfileChecked, serverProfileExists } = useProfileContext();
+  const { profile, taskLibrary, updateProfile, removeCustomTask, region, loading: profileLoading, syncError: profileSyncError, serverProfileChecked, serverProfileExists, lifeEvents } = useProfileContext();
   const { activeTasks, taskState, setTaskState, setDisabledTasks, markDone, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, setDueDate, markScheduled, nextUpcomingTask, loading: tasksLoading, syncError: tasksSyncError } = useTaskContext();
   const { pendingCalendarMatches, dismissMatch } = useCalendarContext();
 
@@ -217,6 +228,8 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
   const [aiCreatorOpen,   setAiCreatorOpen]   = useState(false);
   const [activeCategory,  setActiveCategory]  = useState('all');
   const [dueOnly,         setDueOnly]         = useState(false);
+  const [lifeEventIntake, setLifeEventIntake] = useState(null); // null | 'new-baby'
+  const [nudgeState, setNudgeState] = useState(() => loadS(LIFE_EVENTS_NUDGE_KEY, { discoveryDismissed: false, wrapupDismissed: {} }));
 
   // ─── Session (trickle + hazards) ───────────────────────────────────────────
   const { trickleTask, dismissTrickle, answerTrickle, pendingHazards, setPendingHazards } = useSession({ onboarded, profile, activeTasks, taskState });
@@ -256,9 +269,68 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
   const handleMarkDone = async (id, dateStr) => {
     const result = await markDone(id, dateStr);
     if (result?.error) return { error: true };
-    setCelebration(true);
+    // Suppress confetti for tasks tagged as sad/sensitive (sourced from life
+    // event defs and from the AI task creator's safety classifier).
+    const task = taskLibrary.find(t => t.id === id);
+    if (!task?.suppressCelebration) setCelebration(true);
     setMarkDoneModal(null);
     return {};
+  };
+
+  const handleStartLifeEventConfirm = async (type, answers) => {
+    await lifeEvents.startEvent(type, answers);
+  };
+
+  // ─── Life event nudge ──────────────────────────────────────────────────────
+  // Pick which (if any) nudge to show on HomeView. Wrap-up wins over discovery
+  // because it's only relevant when the user has fully engaged with an event.
+  const visitCount = loadS(VISIT_COUNT_KEY, 0);
+  const computeNudge = () => {
+    const active = lifeEvents?.activeEvent;
+    if (active) {
+      const eventTasks = lifeEvents.activeEventTasks || [];
+      const allDone = eventTasks.length > 0 && eventTasks.every(t => taskState[t.id]?.lastDone);
+      const dismissedForThisEvent = nudgeState.wrapupDismissed?.[active.id];
+      if (allDone && !dismissedForThisEvent) {
+        return { variant: 'wrapup', eventLabel: LIFE_EVENT_DEFS[active.type]?.label ?? 'this event', activeId: active.id };
+      }
+      return null;
+    }
+    if (!nudgeState.discoveryDismissed && visitCount >= 2) {
+      return { variant: 'discovery' };
+    }
+    return null;
+  };
+  const lifeEventNudge = computeNudge();
+
+  const handleNudgePrimary = () => {
+    if (!lifeEventNudge) return;
+    if (lifeEventNudge.variant === 'discovery') {
+      const next = { ...nudgeState, discoveryDismissed: true };
+      setNudgeState(next); saveS(LIFE_EVENTS_NUDGE_KEY, next);
+      setView('you');
+    } else if (lifeEventNudge.variant === 'wrapup') {
+      lifeEvents.completeEvent(lifeEventNudge.activeId);
+      const next = {
+        ...nudgeState,
+        wrapupDismissed: { ...(nudgeState.wrapupDismissed || {}), [lifeEventNudge.activeId]: true },
+      };
+      setNudgeState(next); saveS(LIFE_EVENTS_NUDGE_KEY, next);
+    }
+  };
+
+  const handleNudgeDismiss = () => {
+    if (!lifeEventNudge) return;
+    if (lifeEventNudge.variant === 'discovery') {
+      const next = { ...nudgeState, discoveryDismissed: true };
+      setNudgeState(next); saveS(LIFE_EVENTS_NUDGE_KEY, next);
+    } else if (lifeEventNudge.variant === 'wrapup') {
+      const next = {
+        ...nudgeState,
+        wrapupDismissed: { ...(nudgeState.wrapupDismissed || {}), [lifeEventNudge.activeId]: true },
+      };
+      setNudgeState(next); saveS(LIFE_EVENTS_NUDGE_KEY, next);
+    }
   };
 
   const handleMarkDoneClose = () => {
@@ -313,6 +385,9 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
     assistTask, onAssistClose: () => setAssistTask(null),
     addingTask, onAddClose: () => setAddingTask(false),
     aiCreatorOpen, onAiCreatorClose: () => setAiCreatorOpen(false),
+    lifeEventIntake,
+    onLifeEventIntakeClose: () => setLifeEventIntake(null),
+    onStartLifeEventConfirm: handleStartLifeEventConfirm,
   };
 
   // ─── Onboarding gates ──────────────────────────────────────────────────────
@@ -374,6 +449,9 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
           trickleTask={trickleTask}
           pendingHazards={pendingHazards}
           nextUpcomingTask={nextUpcomingTask}
+          lifeEventNudge={lifeEventNudge}
+          onLifeEventNudgePrimary={handleNudgePrimary}
+          onLifeEventNudgeDismiss={handleNudgeDismiss}
           onGoToAll={() => setView('all')}
           onSelectTask={setSelectedTask}
           onDoneTask={setMarkDoneModal}
@@ -412,6 +490,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
           onConfirmHazardTasks={handleConfirmHazardTasks}
           user={user}
           onSignOut={signOut}
+          onStartLifeEvent={(type) => setLifeEventIntake(type)}
         />
       )}
 

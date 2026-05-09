@@ -142,6 +142,44 @@ export function useProfile(user, welcomeChoice) {
     }
   };
 
+  const addCustomTasksBulk = async (tasks) => {
+    if (!tasks || tasks.length === 0) return;
+    const next = [...customTasks, ...tasks];
+    const prev = customTasks;
+    setCustomTasks(next);
+    saveS(CUSTOM_TASKS_KEY, next);
+    if (user) {
+      const rows = tasks.map(t => ({ user_id: user.id, ...toCustomTaskRow(t) }));
+      const { error } = await supabase
+        .from("custom_tasks")
+        .upsert(rows, { onConflict: "user_id,task_id" });
+      if (error) {
+        setCustomTasks(prev);
+        saveS(CUSTOM_TASKS_KEY, prev);
+        throw error;
+      }
+    }
+  };
+
+  const removeCustomTasksByLifeEvent = async (lifeEventId) => {
+    const prev = customTasks;
+    const next = customTasks.filter(t => t.lifeEventId !== lifeEventId);
+    setCustomTasks(next);
+    saveS(CUSTOM_TASKS_KEY, next);
+    if (user) {
+      const { error } = await supabase
+        .from("custom_tasks")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("life_event_id", lifeEventId);
+      if (error) {
+        setCustomTasks(prev);
+        saveS(CUSTOM_TASKS_KEY, prev);
+        throw error;
+      }
+    }
+  };
+
   const removeCustomTask = async (taskId) => {
     const prev = customTasks;
     const next = customTasks.filter(t => t.id !== taskId);
@@ -177,8 +215,9 @@ export function useProfile(user, welcomeChoice) {
   };
 
   return {
-    profile, setProfile, taskLibrary,
+    profile, setProfile, taskLibrary, customTasks,
     updateProfile, addCustomTask, removeCustomTask,
+    addCustomTasksBulk, removeCustomTasksByLifeEvent,
     loading, syncError,
     pendingConflict, resolveConflict,
     serverProfileChecked, serverProfileExists,
@@ -187,22 +226,24 @@ export function useProfile(user, welcomeChoice) {
 
 function toCustomTaskRow(t) {
   return {
-    task_id:         t.id,
-    cat:             t.cat,
-    label:           t.label,
-    interval_days:   t.intervalDays   ?? null,
-    window_days:     t.windowDays     ?? null,
-    stakes:          t.stakes         ?? null,
-    active_months:   t.activeMonths   ?? null,
-    assist_type:     t.assistType     ?? null,
-    search_query:    t.searchQuery    ?? null,
-    why:             t.why            ?? null,
-    guidance:        t.guidance       ?? null,
-    one_time:        !!t.oneTime,
-    is_ai_generated: !!t.isAIGenerated,
-    risk_tier:       t.riskTier       ?? null,
-    assumptions:     t.assumptions    ?? null,
-    prompt_text:     t.promptText     ?? null,
+    task_id:             t.id,
+    cat:                 t.cat,
+    label:               t.label,
+    interval_days:       t.intervalDays   ?? null,
+    window_days:         t.windowDays     ?? null,
+    stakes:              t.stakes         ?? null,
+    active_months:       t.activeMonths   ?? null,
+    assist_type:         t.assistType     ?? null,
+    search_query:        t.searchQuery    ?? null,
+    why:                 t.why            ?? null,
+    guidance:            t.guidance       ?? null,
+    one_time:            !!t.oneTime,
+    is_ai_generated:     !!t.isAIGenerated,
+    risk_tier:           t.riskTier       ?? null,
+    assumptions:         t.assumptions    ?? null,
+    prompt_text:         t.promptText     ?? null,
+    life_event_id:       t.lifeEventId    ?? null,
+    suppress_celebration: !!t.suppressCelebration,
   };
 }
 
@@ -225,6 +266,8 @@ function fromCustomTaskRow(row) {
     riskTier:      row.risk_tier      ?? undefined,
     assumptions:   row.assumptions    ?? undefined,
     promptText:    row.prompt_text    ?? undefined,
+    lifeEventId:   row.life_event_id  ?? null,
+    suppressCelebration: !!row.suppress_celebration,
     requires:      [],
   };
 }
