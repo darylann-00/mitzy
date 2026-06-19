@@ -24,7 +24,6 @@ function ProviderSearch({ query, zip, onSelect, onSaveProvider }) {
   const [providers, setProviders] = useState(null);
   const [manualMode, setManualMode] = useState(false);
   const [manualName, setManualName] = useState('');
-  const [manualPhone, setManualPhone] = useState('');
 
   const fetchProviders = async () => {
     setStatus('loading');
@@ -48,54 +47,69 @@ function ProviderSearch({ query, zip, onSelect, onSaveProvider }) {
     }
   };
 
-  if (manualMode) {
+  const searchByName = async () => {
+    if (!manualName.trim()) return;
+    setStatus('loading');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('Not authenticated');
+
+      const res = await fetch('/api/providers', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'authorization': `Bearer ${token}` },
+        body: JSON.stringify({ taskLabel: manualName.trim(), taskCat: 'health', taskNote: '', zip, searchQuery: manualName.trim() }),
+      });
+      if (!res.ok) throw new Error(`${res.status}`);
+      const { text } = await res.json();
+      const parsed = parseProviders(text);
+      setProviders(parsed);
+      setStatus('done');
+    } catch {
+      setStatus('error');
+    }
+  };
+
+  if (manualMode && status === 'idle') {
     return (
       <div style={{ marginTop: 8 }}>
-        <input
-          placeholder="Name (e.g. Dr. Chen)"
-          value={manualName}
-          onChange={e => setManualName(e.target.value)}
-          style={{
-            width: '100%', padding: '9px 11px', borderRadius: 8, border: `1px solid ${C.cardBorder}`,
-            fontSize: 13, fontFamily: 'DM Sans, sans-serif', marginBottom: 6, boxSizing: 'border-box',
-          }}
-        />
-        <input
-          placeholder="Phone number"
-          type="tel"
-          value={manualPhone}
-          onChange={e => setManualPhone(e.target.value)}
-          style={{
-            width: '100%', padding: '9px 11px', borderRadius: 8, border: `1px solid ${C.cardBorder}`,
-            fontSize: 13, fontFamily: 'DM Sans, sans-serif', marginBottom: 8, boxSizing: 'border-box',
-          }}
-        />
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            onClick={() => {
-              const p = { name: manualName.trim() || 'My provider', phone: manualPhone.trim() || null, hours: null, address: null, website: null };
-              onSaveProvider(p);
-              onSelect(p);
+        <div style={{ fontSize: 12, color: C.muted, marginBottom: 6, fontFamily: 'DM Sans, sans-serif' }}>
+          Search for your provider by name
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <input
+            placeholder="e.g. Dr. Chen, Aspen Dental"
+            value={manualName}
+            onChange={e => setManualName(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') searchByName(); }}
+            style={{
+              flex: 1, padding: '9px 11px', borderRadius: 8, border: `1px solid ${C.cardBorder}`,
+              fontSize: 13, fontFamily: 'DM Sans, sans-serif', boxSizing: 'border-box',
             }}
+          />
+          <button
+            onClick={searchByName}
             disabled={!manualName.trim()}
             style={{
-              flex: 1, padding: '9px 0', background: manualName.trim() ? C.brand : '#D0C8C0',
+              padding: '9px 14px', background: manualName.trim() ? C.brand : '#D0C8C0',
               color: C.brandLight, border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700,
               cursor: manualName.trim() ? 'pointer' : 'default', fontFamily: 'DM Sans, sans-serif',
+              flexShrink: 0,
             }}
           >
-            Use this provider
-          </button>
-          <button
-            onClick={() => setManualMode(false)}
-            style={{
-              padding: '9px 14px', background: 'none', border: `1px solid ${C.cardBorder}`,
-              borderRadius: 8, fontSize: 12, color: C.muted, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
-            }}
-          >
-            Back
+            Search
           </button>
         </div>
+        <button
+          onClick={() => { setManualMode(false); setManualName(''); }}
+          style={{
+            width: '100%', padding: '8px 0', background: 'none', border: 'none',
+            fontSize: 12, color: C.muted, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+            marginTop: 4,
+          }}
+        >
+          Back to find providers
+        </button>
       </div>
     );
   }
