@@ -28,6 +28,7 @@ export function TaskCard({
   task, status, days, onSelect, onDone,
   showCategoryIcon = false, subtitle,
   pendingMatch, onMatchConfirm, onMatchDismiss,
+  stepProgress,
 }) {
   const barColor = BAR_COLOR[status] ?? '#EAE4DA';
   const isActive = status === 'due' || status === 'needed' || status === 'coming-up';
@@ -92,6 +93,16 @@ export function TaskCard({
             {dueText}
           </div>
         )}
+        {stepProgress && task.steps && (() => {
+          const done = task.steps.filter(s => stepProgress[s.key]?.done).length;
+          const total = task.steps.length;
+          if (done > 0 && done < total) return (
+            <div style={{ fontSize: 11, color: '#06A77D', marginTop: 2, fontFamily: 'DM Sans, sans-serif', fontWeight: 600 }}>
+              {done} of {total} steps done
+            </div>
+          );
+          return null;
+        })()}
         {pendingMatch && (
           <MatchConfirmationChip
             match={pendingMatch}

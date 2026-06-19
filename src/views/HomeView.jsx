@@ -266,6 +266,7 @@ export function HomeView({
                   onDone={onDoneTask}
                   showCategoryIcon
                   subtitle={getStatus(task) === 'needed' ? '' : undefined}
+                  stepProgress={taskState[task.id]?.stepProgress}
                   pendingMatch={match}
                   onMatchConfirm={match ? () => onMatchConfirm(task.id, match.eventDate) : undefined}
                   onMatchDismiss={match ? () => onMatchDismiss(task.id) : undefined}
