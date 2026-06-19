@@ -19,9 +19,12 @@ function parseProviders(text) {
 }
 
 // ─── Mini provider search (reuses /api/providers) ────────────────────────────
-function ProviderSearch({ query, zip, onSelect }) {
+function ProviderSearch({ query, zip, onSelect, onSaveProvider }) {
   const [status, setStatus] = useState('idle');
   const [providers, setProviders] = useState(null);
+  const [manualMode, setManualMode] = useState(false);
+  const [manualName, setManualName] = useState('');
+  const [manualPhone, setManualPhone] = useState('');
 
   const fetchProviders = async () => {
     setStatus('loading');
@@ -45,15 +48,79 @@ function ProviderSearch({ query, zip, onSelect }) {
     }
   };
 
+  if (manualMode) {
+    return (
+      <div style={{ marginTop: 8 }}>
+        <input
+          placeholder="Name (e.g. Dr. Chen)"
+          value={manualName}
+          onChange={e => setManualName(e.target.value)}
+          style={{
+            width: '100%', padding: '9px 11px', borderRadius: 8, border: `1px solid ${C.cardBorder}`,
+            fontSize: 13, fontFamily: 'DM Sans, sans-serif', marginBottom: 6, boxSizing: 'border-box',
+          }}
+        />
+        <input
+          placeholder="Phone number"
+          type="tel"
+          value={manualPhone}
+          onChange={e => setManualPhone(e.target.value)}
+          style={{
+            width: '100%', padding: '9px 11px', borderRadius: 8, border: `1px solid ${C.cardBorder}`,
+            fontSize: 13, fontFamily: 'DM Sans, sans-serif', marginBottom: 8, boxSizing: 'border-box',
+          }}
+        />
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => {
+              const p = { name: manualName.trim() || 'My provider', phone: manualPhone.trim() || null, hours: null, address: null, website: null };
+              onSaveProvider(p);
+              onSelect(p);
+            }}
+            disabled={!manualName.trim()}
+            style={{
+              flex: 1, padding: '9px 0', background: manualName.trim() ? C.brand : '#D0C8C0',
+              color: C.brandLight, border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700,
+              cursor: manualName.trim() ? 'pointer' : 'default', fontFamily: 'DM Sans, sans-serif',
+            }}
+          >
+            Use this provider
+          </button>
+          <button
+            onClick={() => setManualMode(false)}
+            style={{
+              padding: '9px 14px', background: 'none', border: `1px solid ${C.cardBorder}`,
+              borderRadius: 8, fontSize: 12, color: C.muted, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+            }}
+          >
+            Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (status === 'idle') {
     return (
-      <button onClick={fetchProviders} style={{
-        width: '100%', padding: '11px 14px', background: C.brand, color: C.brandLight,
-        border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer',
-        fontFamily: 'DM Sans, sans-serif', marginTop: 8,
-      }}>
-        Find providers near you
-      </button>
+      <div style={{ marginTop: 8 }}>
+        <button onClick={fetchProviders} style={{
+          width: '100%', padding: '11px 14px', background: C.brand, color: C.brandLight,
+          border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+          fontFamily: 'DM Sans, sans-serif',
+        }}>
+          Find providers near you
+        </button>
+        <button
+          onClick={() => setManualMode(true)}
+          style={{
+            width: '100%', padding: '8px 0', background: 'none', border: 'none',
+            fontSize: 12, color: C.muted, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+            marginTop: 4,
+          }}
+        >
+          I already have one
+        </button>
+      </div>
     );
   }
 
@@ -92,7 +159,7 @@ function ProviderSearch({ query, zip, onSelect }) {
   return (
     <div style={{ marginTop: 10 }}>
       {providers.slice(0, 4).map((p, i) => (
-        <MiniProviderCard key={i} provider={p} onSelect={() => onSelect(p)} />
+        <MiniProviderCard key={i} provider={p} onSelect={() => { onSaveProvider(p); onSelect(p); }} />
       ))}
     </div>
   );
@@ -133,7 +200,7 @@ function MiniProviderCard({ provider: p, onSelect }) {
 }
 
 // ─── Step card ────────────────────────────────────────────────────────────────
-function StepCard({ step, index, isDone, isActive, isFuture, context, onComplete, onUndo, onSelectProvider }) {
+function StepCard({ step, index, isDone, isActive, isFuture, context, onComplete, onUndo, onSelectProvider, onSaveProvider }) {
   const resolvedBody = resolveStepVars(step.body, context);
   const resolvedPhone = resolveStepVars(step.phone, context);
   const resolvedScript = resolveStepVars(step.callScript, context);
@@ -212,6 +279,7 @@ function StepCard({ step, index, isDone, isActive, isFuture, context, onComplete
               query={step.providerSearchQuery || step.label}
               zip={context.zip}
               onSelect={(provider) => onSelectProvider(provider)}
+              onSaveProvider={onSaveProvider}
             />
           )}
 
@@ -288,7 +356,7 @@ function StepCard({ step, index, isDone, isActive, isFuture, context, onComplete
 
 // ─── GuidedSteps (main export) ────────────────────────────────────────────────
 export const GuidedSteps = memo(function GuidedSteps({ steps, taskId, stepProgress, onSetStepProgress }) {
-  const { profile, providerHistory } = useProfileContext();
+  const { profile, providerHistory, saveProvider } = useProfileContext();
 
   const savedProvider = providerHistory[taskId];
 
@@ -370,6 +438,7 @@ export const GuidedSteps = memo(function GuidedSteps({ steps, taskId, stepProgre
             onComplete={() => handleComplete(step)}
             onUndo={() => handleUndo(step)}
             onSelectProvider={(provider) => handleSelectProvider(step, provider)}
+            onSaveProvider={(provider) => saveProvider(taskId, provider)}
           />
         );
       })}
