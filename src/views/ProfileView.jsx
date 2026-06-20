@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { AppHeader } from "./HomeView";
 import { HouseIcon, CarIcon, PersonIcon, PetIcon } from "../components/CategoryIcons";
 import { Sheet } from "../components/Sheet";
@@ -6,6 +6,7 @@ import { useProfileContext } from "../contexts/ProfileContext";
 import { useTaskContext }    from "../contexts/TaskContext";
 import { C } from "../data/constants";
 import { LIFE_EVENT_DEFS } from "../data/lifeEvents";
+import { INSURANCE_PROVIDERS } from "../data/insuranceProviders";
 
 // ─── Car data (shared with SlimOnboarding) ─────────────────────────────────────
 const CAR_DATA = {
@@ -99,6 +100,65 @@ function ProvidersIcon({ size = 16 }) {
       <path d="M9 14 L3 8 Q1 5 4 3 Q6.5 2 9 6 Q11.5 2 14 3 Q17 5 15 8 Z" fill="#D62828" />
       <polygon points="9,3 10,6.5 14,6.5 11,8.5 12,12 9,10 6,12 7,8.5 4,6.5 8,6.5" fill="#F4C430" />
     </svg>
+  );
+}
+
+// ─── Insurance picker ──────────────────────────────────────────────────────────
+function InsurancePicker({ value, onChange }) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen]   = useState(false);
+  const [rect, setRect]   = useState(null);
+  const anchorRef = useRef(null);
+
+  const filtered = query.trim()
+    ? INSURANCE_PROVIDERS.filter(p => p.label.toLowerCase().includes(query.toLowerCase()))
+    : INSURANCE_PROVIDERS;
+
+  const select = (label) => { onChange(label); setQuery(''); setOpen(false); };
+  const clear  = () => { onChange(''); setQuery(''); setOpen(false); };
+
+  const openDropdown = () => {
+    if (anchorRef.current) setRect(anchorRef.current.getBoundingClientRect());
+    setOpen(true);
+  };
+
+  return (
+    <div>
+      <div ref={anchorRef} style={{ display:'flex', alignItems:'center', gap:6, border:'1px solid #D4CFC6', borderRadius:10, padding:'7px 11px', background:'#FDFAF2' }}>
+        <input
+          style={{ flex:1, fontSize:14, fontFamily:'DM Sans, sans-serif', border:'none', outline:'none', background:'transparent', color:'#1C2B22' }}
+          placeholder={value || 'Search providers…'}
+          value={query}
+          onFocus={openDropdown}
+          onChange={e => { setQuery(e.target.value); openDropdown(); }}
+        />
+        {value && !query && (
+          <button onClick={clear} style={{ fontSize:16, lineHeight:1, border:'none', background:'none', cursor:'pointer', color:'#9B9B9B', padding:'0 2px' }}>×</button>
+        )}
+      </div>
+      {open && rect && (filtered.length > 0 || query.trim()) && (
+        <div style={{ position:'fixed', zIndex:1000, top: rect.bottom + 4, left: rect.left, width: rect.width, background:'#fff', border:'1px solid #D4CFC6', borderRadius:10, maxHeight:200, overflowY:'auto', boxShadow:'0 4px 12px rgba(0,0,0,0.12)' }}>
+          {filtered.map(({ label }) => (
+            <button
+              key={label}
+              onMouseDown={e => { e.preventDefault(); select(label); }}
+              style={{ display:'block', width:'100%', textAlign:'left', padding:'10px 14px', fontSize:13, fontFamily:'DM Sans, sans-serif', border:'none', borderBottom:'1px solid #F5F0E8', cursor:'pointer', background: label === value ? '#E8F5EE' : '#fff', color: label === value ? '#1A5C3A' : '#1C2B22', fontWeight: label === value ? 700 : 400 }}
+            >
+              {label}
+            </button>
+          ))}
+          {query.trim() && !INSURANCE_PROVIDERS.some(p => p.label.toLowerCase() === query.trim().toLowerCase()) && (
+            <button
+              onMouseDown={e => { e.preventDefault(); select(query.trim()); }}
+              style={{ display:'block', width:'100%', textAlign:'left', padding:'10px 14px', fontSize:13, fontFamily:'DM Sans, sans-serif', border:'none', cursor:'pointer', background:'#F0EDE4', color:'#1A5C3A', fontWeight:700 }}
+            >
+              Add "{query.trim()}"
+            </button>
+          )}
+        </div>
+      )}
+      {open && <div style={{ position:'fixed', inset:0, zIndex:999 }} onMouseDown={() => setOpen(false)} />}
+    </div>
   );
 }
 
@@ -477,7 +537,7 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
                 </div>
               </EditField>
               <EditField label="Insurance provider" last>
-                <input style={S.input} type="text" value={editInsurance} onChange={e => setEditInsurance(e.target.value)} placeholder="e.g. Blue Cross, Aetna…" />
+                <InsurancePicker value={editInsurance} onChange={setEditInsurance} />
               </EditField>
             </>
           ) : (
@@ -487,7 +547,20 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
               {profile.gender && profile.gender !== 'prefer-not' && (
                 <Row label="Gender" value={{ woman:'Woman', man:'Man', nonbinary:'Non-binary' }[profile.gender] ?? null} />
               )}
-              <Row label="Insurance" value={profile.insurance} last />
+              {(() => {
+                const portalUrl = INSURANCE_PROVIDERS.find(p => p.label === profile.insurance)?.portal;
+                return (
+                  <div style={S.row(true)}>
+                    <span style={S.rowLabel}>Insurance</span>
+                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                      <span style={S.rowValue(!profile.insurance)}>{profile.insurance || 'Not set'}</span>
+                      {portalUrl && (
+                        <a href={portalUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize:11, fontWeight:700, color:C.brand, textDecoration:'none', fontFamily:'DM Sans, sans-serif' }}>Portal ↗</a>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </>
           )}
         </div>
