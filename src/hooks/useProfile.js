@@ -244,6 +244,7 @@ function toCustomTaskRow(t) {
     prompt_text:         t.promptText     ?? null,
     life_event_id:       t.lifeEventId    ?? null,
     suppress_celebration: !!t.suppressCelebration,
+    steps:               t.steps          ?? null,
   };
 }
 
@@ -268,6 +269,7 @@ function fromCustomTaskRow(row) {
     promptText:    row.prompt_text    ?? undefined,
     lifeEventId:   row.life_event_id  ?? null,
     suppressCelebration: !!row.suppress_celebration,
+    steps:         row.steps          ?? undefined,
     requires:      [],
   };
 }

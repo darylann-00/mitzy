@@ -43,14 +43,15 @@ export function useTasks(user) {
         const state    = {};
         const disabled = {};
         for (const row of data) {
-          if (row.last_done || row.scheduled_date || row.due_date || row.interval_days || row.needed || row.one_time != null) {
+          if (row.last_done || row.scheduled_date || row.due_date || row.interval_days || row.needed || row.one_time != null || row.step_progress) {
             state[row.task_id] = {
               lastDone:      row.last_done,
               scheduledDate: row.scheduled_date,
-              ...(row.due_date      ? { dueDate: row.due_date }            : {}),
-              ...(row.interval_days ? { intervalDays: row.interval_days }  : {}),
-              ...(row.needed        ? { needed: true }                      : {}),
+              ...(row.due_date       ? { dueDate: row.due_date }            : {}),
+              ...(row.interval_days  ? { intervalDays: row.interval_days }  : {}),
+              ...(row.needed         ? { needed: true }                      : {}),
               ...(row.one_time != null ? { oneTime: row.one_time }          : {}),
+              ...(row.step_progress  ? { stepProgress: row.step_progress }  : {}),
             };
           }
           if (row.disabled) {
@@ -75,13 +76,13 @@ export function useTasks(user) {
     const iso = dateStr
       ? (() => { const [y,m,d] = dateStr.split('-').map(Number); return new Date(y, m-1, d).toISOString(); })()
       : new Date().toISOString();
-    const entry = { lastDone: iso, scheduledDate: null, needed: false };
+    const entry = { lastDone: iso, scheduledDate: null, needed: false, stepProgress: null };
     if (intervalDays) entry.intervalDays = intervalDays;
     const prev = taskState[id];
     setTaskState(s => ({ ...s, [id]: entry }));
     if (user) {
       const { error } = await supabase.from("task_records").upsert({
-        user_id: user.id, task_id: id, last_done: iso, scheduled_date: null, needed: false,
+        user_id: user.id, task_id: id, last_done: iso, scheduled_date: null, needed: false, step_progress: null,
         ...(intervalDays ? { interval_days: intervalDays } : {}),
       }, { onConflict: 'user_id,task_id' });
       if (error) { setTaskState(s => ({ ...s, [id]: prev })); return { error }; }
@@ -155,5 +156,18 @@ export function useTasks(user) {
     }
   };
 
-  return { taskState, setTaskState, disabledTasks, setDisabledTasks, markDone, markScheduled, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, setDueDate, loading, syncError };
+  const setStepProgress = async (id, stepKey, entry) => {
+    const prev = taskState[id];
+    const prevProgress = prev?.stepProgress ?? {};
+    const nextProgress = { ...prevProgress, [stepKey]: entry };
+    setTaskState(s => ({ ...s, [id]: { ...s[id], stepProgress: nextProgress } }));
+    if (user) {
+      const { error } = await supabase.from("task_records").upsert({
+        user_id: user.id, task_id: id, step_progress: nextProgress,
+      }, { onConflict: 'user_id,task_id' });
+      if (error) setTaskState(s => ({ ...s, [id]: prev }));
+    }
+  };
+
+  return { taskState, setTaskState, disabledTasks, setDisabledTasks, markDone, markScheduled, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, setDueDate, setStepProgress, loading, syncError };
 }

@@ -211,7 +211,7 @@ export default function Mitzy() {
 // ─── Inner app — consumes contexts ─────────────────────────────────────────────
 function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, signInWithPassword, welcomeChoice, setWelcomeChoice }) {
   const { profile, taskLibrary, updateProfile, removeCustomTask, region, loading: profileLoading, syncError: profileSyncError, serverProfileChecked, serverProfileExists, lifeEvents } = useProfileContext();
-  const { activeTasks, taskState, setTaskState, setDisabledTasks, markDone, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, setDueDate, markScheduled, nextUpcomingTask, loading: tasksLoading, syncError: tasksSyncError } = useTaskContext();
+  const { activeTasks, taskState, setTaskState, setDisabledTasks, markDone, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, setDueDate, setStepProgress, markScheduled, nextUpcomingTask, loading: tasksLoading, syncError: tasksSyncError } = useTaskContext();
   const { pendingCalendarMatches, dismissMatch } = useCalendarContext();
 
   // ─── Onboarding state ──────────────────────────────────────────────────────
@@ -417,6 +417,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
         <Overlays {...overlayProps} />
         <TaskDetailView
           task={selectedTask}
+          taskState={taskState}
           onAssist={setAssistTask}
           onDone={(task) => {
             const entry = taskState[task.id];
@@ -427,6 +428,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
           onSetIntervalOverride={(id, days) => setIntervalOverride(id, days)}
           onSetOneTimeOverride={(id, oneTime) => setOneTimeOverride(id, oneTime)}
           onSetDueDate={(id, date) => setDueDate(id, date)}
+          onSetStepProgress={(stepKey, entry) => setStepProgress(selectedTask.id, stepKey, entry)}
           onMarkNotApplicable={(id) => { markNotApplicable(id); setSelectedTask(null); }}
           onRemove={(id) => { removeCustomTask(id); setSelectedTask(null); }}
           onBack={() => setSelectedTask(null)}

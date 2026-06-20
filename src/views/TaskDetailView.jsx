@@ -7,6 +7,7 @@ import { ScheduleSurface } from "../components/ScheduleSurface";
 import { useProfileContext } from "../contexts/ProfileContext";
 import { useTaskContext }    from "../contexts/TaskContext";
 import { parseGuidanceBlocks, renderGuidanceBlocks } from "../utils/renderMarkdown";
+import { GuidedSteps } from "../components/GuidedSteps";
 
 function formatIntervalDays(days) {
   if (!days) return null;
@@ -575,7 +576,7 @@ function FourDots({ size = 7 }) {
   );
 }
 
-export function TaskDetailView({ task, onAssist, onDone, onBack, onMarkDone, onSetIntervalOverride, onSetOneTimeOverride, onSetDueDate, onMarkNotApplicable, onRemove }) {
+export function TaskDetailView({ task, taskState: taskStateProp, onAssist, onDone, onBack, onMarkDone, onSetIntervalOverride, onSetOneTimeOverride, onSetDueDate, onSetStepProgress, onMarkNotApplicable, onRemove }) {
   const { providerHistory } = useProfileContext();
   const { taskState, getStatus } = useTaskContext();
   const savedProvider = providerHistory[task.id];
@@ -715,19 +716,28 @@ export function TaskDetailView({ task, onAssist, onDone, onBack, onMarkDone, onS
           </div>
         </div>
 
-        {/* What to expect */}
-        <div style={{ background:'#fff', borderRadius:14, padding:'13px 15px', border:'1px solid #EAE4DA', marginBottom:10 }}>
-          <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:'#4A6256', marginBottom:8, fontFamily:"'Righteous', cursive" }}>
-            What to expect
-          </div>
-          {guidanceBlocks ? renderGuidanceBlocks(guidanceBlocks) : (
-            <div style={{ fontSize:13, color:'#4A6256', lineHeight:1.6, fontFamily:'DM Sans, sans-serif' }}>
-              {task.note
-                ? 'Follow standard procedures or tap below to let Mitzy walk you through it.'
-                : 'Tap "Want Mitzy to help?" below and get step-by-step guidance.'}
+        {/* What to expect / Guided steps */}
+        {task.steps && task.steps.length > 0 ? (
+          <GuidedSteps
+            steps={task.steps}
+            taskId={task.id}
+            stepProgress={entry?.stepProgress}
+            onSetStepProgress={onSetStepProgress}
+          />
+        ) : (
+          <div style={{ background:'#fff', borderRadius:14, padding:'13px 15px', border:'1px solid #EAE4DA', marginBottom:10 }}>
+            <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:'#4A6256', marginBottom:8, fontFamily:"'Righteous', cursive" }}>
+              What to expect
             </div>
-          )}
-        </div>
+            {guidanceBlocks ? renderGuidanceBlocks(guidanceBlocks) : (
+              <div style={{ fontSize:13, color:'#4A6256', lineHeight:1.6, fontFamily:'DM Sans, sans-serif' }}>
+                {task.note
+                  ? 'Follow standard procedures or tap below to let Mitzy walk you through it.'
+                  : 'Tap "Want Mitzy to help?" below and get step-by-step guidance.'}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Assist button */}
         {(task.assistType || task.isCustom) && (
