@@ -126,7 +126,7 @@ Return shape (success):
         "linkUrl": "<URL to open, only for type=link, else null>",
         "linkLabel": "<button text for link, only for type=link, else null>",
         "phone": "{{provider.phone}}  (only for type=call after a provider_search step, else null)",
-        "callScript": "<what to say on the phone, may use {{insurance}} and {{provider.name}}, only for type=call, else null>",
+        "callScript": "<what to say on the phone — do NOT include insurance or assume new/existing patient, the UI handles those separately. May use {{provider.name}}. Only for type=call, else null>",
         "dependsOnProvider": "<true if this step uses {{provider.*}} vars from a prior provider_search step, else false>"
       }
     ]
@@ -139,7 +139,7 @@ Generate 3–5 steps per task. Each step must be specific enough that the user n
 - For tasks needing a professional (T2/T3/T3.5), include a provider_search step early and a call step with callScript after it
 - Steps after a provider_search step should set dependsOnProvider: true and use {{provider.name}}, {{provider.phone}}, {{provider.hours}}
 - For T1 (DIY) tasks, use action and link steps — no provider_search needed
-- type=call steps should always include a callScript with a natural phone script
+- type=call steps should always include a callScript with a natural phone script. Do NOT mention insurance, "new patient", or "existing patient" in the script — the UI adds insurance info separately and the user knows their own patient status
 - For null fields, omit them or set to null
 
 # suppressCelebration rules

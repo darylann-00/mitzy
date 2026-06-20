@@ -155,7 +155,7 @@ export const ALL_TASKS = [
     lastGuidanceUpdate: "2025-01",
     steps: [
       { key: "find_hvac", label: "Find an HVAC company", body: "Search for a licensed HVAC service near {{zip}}. Book in August or September — they fill up fast before heating season.", type: "provider_search", providerSearchQuery: "HVAC heating furnace inspection" },
-      { key: "call_to_schedule", label: "Call to schedule the inspection", body: "Call {{provider.name}} to book a furnace tune-up. Office hours: {{provider.hours}}", type: "call", phone: "{{provider.phone}}", callScript: "Hi, I'd like to schedule an annual furnace inspection and tune-up. Can you do a full check including the heat exchanger, filter, and safety testing?", dependsOnProvider: true },
+      { key: "call_to_schedule", label: "Call to schedule the inspection", body: "Call {{provider.name}} to book a furnace tune-up.", type: "call", phone: "{{provider.phone}}", callScript: "Hi, I'd like to schedule an annual furnace inspection and tune-up. Can you do a full check including the heat exchanger, filter, and safety testing?", dependsOnProvider: true },
       { key: "prep_for_visit", label: "Prep for the technician's visit", body: "Clear the area around your furnace so the tech can access it. Note any unusual smells, sounds, or performance issues to mention. Make sure someone will be home during the visit.", type: "action" },
       { key: "save_report", label: "Save the service report", body: "Keep the report the tech gives you — it's useful for warranty claims and when selling your home. Take a photo if it's paper.", type: "action" },
     ],
@@ -1015,7 +1015,7 @@ export const ALL_TASKS = [
     steps: [
       { key: "check_insurance", label: "Check your insurance coverage", body: "Confirm your plan covers an annual physical — most do at 100% with no copay. Check your insurance card or portal for your plan name and member ID.", type: "action" },
       { key: "find_doctor", label: "Find a primary care doctor", body: "Search for an in-network primary care doctor near {{zip}} who's accepting new patients.", type: "provider_search", providerSearchQuery: "primary care physician" },
-      { key: "call_to_schedule", label: "Call to schedule your appointment", body: "Call {{provider.name}} to book your annual physical. Office hours: {{provider.hours}}", type: "call", phone: "{{provider.phone}}", callScript: "Hi, I'd like to schedule an annual physical as a new patient. My insurance is {{insurance}}. What's your earliest availability?", dependsOnProvider: true },
+      { key: "call_to_schedule", label: "Call to schedule your appointment", body: "Call {{provider.name}} to book your annual physical.", type: "call", phone: "{{provider.phone}}", callScript: "Hi, I'd like to schedule an annual physical. What's your earliest availability?", dependsOnProvider: true },
       { key: "prep_for_visit", label: "Prep for your appointment", body: "Write down: all medications and supplements you take, any symptoms or concerns to mention, and whether you want bloodwork done. Bring your insurance card and a photo ID.", type: "action" },
     ],
   },
@@ -1043,7 +1043,7 @@ export const ALL_TASKS = [
     lastGuidanceUpdate: "2025-01",
     steps: [
       { key: "find_dentist", label: "Find a dentist", body: "Search for an in-network dentist near {{zip}} who's accepting new patients. Most insurance covers two cleanings per year.", type: "provider_search", providerSearchQuery: "dentist" },
-      { key: "call_to_book", label: "Call to book your cleaning", body: "Call {{provider.name}} to schedule. Office hours: {{provider.hours}}", type: "call", phone: "{{provider.phone}}", callScript: "Hi, I'd like to schedule a dental cleaning as a new patient. My insurance is {{insurance}}. Do you have anything in the next few weeks?", dependsOnProvider: true },
+      { key: "call_to_book", label: "Call to book your cleaning", body: "Call {{provider.name}} to schedule your cleaning.", type: "call", phone: "{{provider.phone}}", callScript: "Hi, I'd like to schedule a dental cleaning. Do you have anything in the next few weeks?", dependsOnProvider: true },
       { key: "prep_for_visit", label: "Prep for your appointment", body: "Note any sensitivity, pain, or areas that bleed when you brush. If you've had dental work done elsewhere, mention it so they can update your records.", type: "action" },
     ],
   },
@@ -1071,7 +1071,7 @@ export const ALL_TASKS = [
     lastGuidanceUpdate: "2025-01",
     steps: [
       { key: "find_eye_doctor", label: "Find an eye doctor", body: "Search for an optometrist near {{zip}}. Check if your vision insurance is separate from medical — many plans have a separate vision carrier.", type: "provider_search", providerSearchQuery: "optometrist eye doctor" },
-      { key: "call_to_schedule", label: "Call to schedule", body: "Call {{provider.name}} to book your exam. Office hours: {{provider.hours}}", type: "call", phone: "{{provider.phone}}", callScript: "Hi, I'd like to schedule a comprehensive eye exam. My vision insurance is {{insurance}}. What's your next available appointment?", dependsOnProvider: true },
+      { key: "call_to_schedule", label: "Call to schedule", body: "Call {{provider.name}} to book your exam.", type: "call", phone: "{{provider.phone}}", callScript: "Hi, I'd like to schedule a comprehensive eye exam. What's your next available appointment?", dependsOnProvider: true },
       { key: "prep_for_visit", label: "Prep for your appointment", body: "Bring your current glasses or contacts. Note any headaches, eye strain, or difficulty with night driving. Ask for your prescription in writing — you can often fill it at a lower cost elsewhere.", type: "action" },
     ],
   },

@@ -25,6 +25,13 @@ function ProviderSearch({ query, zip, onSelect, onSaveProvider }) {
   const [manualMode, setManualMode] = useState(false);
   const [manualName, setManualName] = useState('');
 
+  const resetToIdle = () => {
+    setStatus('idle');
+    setProviders(null);
+    setManualName('');
+    setManualMode(false);
+  };
+
   const fetchProviders = async () => {
     setStatus('loading');
     try {
@@ -55,10 +62,11 @@ function ProviderSearch({ query, zip, onSelect, onSaveProvider }) {
       const token = session?.access_token;
       if (!token) throw new Error('Not authenticated');
 
+      const nameQuery = `${manualName.trim()} ${query}`;
       const res = await fetch('/api/providers', {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'authorization': `Bearer ${token}` },
-        body: JSON.stringify({ taskLabel: manualName.trim(), taskCat: 'health', taskNote: '', zip, searchQuery: manualName.trim() }),
+        body: JSON.stringify({ taskLabel: nameQuery, taskCat: 'health', taskNote: '', zip, searchQuery: nameQuery, skipBlurbs: true }),
       });
       if (!res.ok) throw new Error(`${res.status}`);
       const { text } = await res.json();
@@ -155,8 +163,12 @@ function ProviderSearch({ query, zip, onSelect, onSaveProvider }) {
     return (
       <div style={{ padding: '12px 0', fontSize: 13, color: C.muted, fontFamily: 'DM Sans, sans-serif' }}>
         Couldn't load providers right now.{' '}
-        <button onClick={fetchProviders} style={{ background: 'none', border: 'none', color: C.brand, fontWeight: 700, cursor: 'pointer', fontSize: 13, fontFamily: 'DM Sans, sans-serif' }}>
+        <button onClick={manualMode ? searchByName : fetchProviders} style={{ background: 'none', border: 'none', color: C.brand, fontWeight: 700, cursor: 'pointer', fontSize: 13, fontFamily: 'DM Sans, sans-serif' }}>
           Try again
+        </button>
+        {' · '}
+        <button onClick={resetToIdle} style={{ background: 'none', border: 'none', color: C.muted, cursor: 'pointer', fontSize: 13, fontFamily: 'DM Sans, sans-serif' }}>
+          Back
         </button>
       </div>
     );
@@ -165,7 +177,10 @@ function ProviderSearch({ query, zip, onSelect, onSaveProvider }) {
   if (!providers || providers.length === 0) {
     return (
       <div style={{ padding: '12px 0', fontSize: 13, color: C.muted, fontFamily: 'DM Sans, sans-serif' }}>
-        No providers found nearby. Try the Assist button below for more options.
+        No providers found nearby.{' '}
+        <button onClick={resetToIdle} style={{ background: 'none', border: 'none', color: C.brand, fontWeight: 700, cursor: 'pointer', fontSize: 13, fontFamily: 'DM Sans, sans-serif' }}>
+          Try a different search
+        </button>
       </div>
     );
   }
@@ -175,6 +190,16 @@ function ProviderSearch({ query, zip, onSelect, onSaveProvider }) {
       {providers.slice(0, 4).map((p, i) => (
         <MiniProviderCard key={i} provider={p} onSelect={() => { onSaveProvider(p); onSelect(p); }} />
       ))}
+      <button
+        onClick={resetToIdle}
+        style={{
+          width: '100%', padding: '8px 0', background: 'none', border: 'none',
+          fontSize: 12, color: C.muted, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+          marginTop: 2,
+        }}
+      >
+        Not what you're looking for? Try again
+      </button>
     </div>
   );
 }
@@ -309,6 +334,11 @@ function StepCard({ step, index, isDone, isActive, isFuture, context, onComplete
                 </svg>
                 Call {resolvedPhone}
               </a>
+              {context.provider?.hours && (
+                <div style={{ fontSize: 11, color: C.muted, marginTop: 6, fontFamily: 'DM Sans, sans-serif' }}>
+                  Office hours: {context.provider.hours}
+                </div>
+              )}
             </div>
           )}
 
@@ -323,6 +353,11 @@ function StepCard({ step, index, isDone, isActive, isFuture, context, onComplete
               <div style={{ fontSize: 13, fontStyle: 'italic', color: C.ink, lineHeight: 1.5, fontFamily: 'DM Sans, sans-serif' }}>
                 "{resolvedScript}"
               </div>
+              {context.insurance && (
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 6, fontFamily: 'DM Sans, sans-serif' }}>
+                  If they ask, your insurance is <strong style={{ color: C.ink }}>{context.insurance}</strong>
+                </div>
+              )}
               <button
                 onClick={() => handleCopy(resolvedScript)}
                 style={{
@@ -369,8 +404,59 @@ function StepCard({ step, index, isDone, isActive, isFuture, context, onComplete
 }
 
 // ─── GuidedSteps (main export) ────────────────────────────────────────────────
+function InsurancePrompt({ onSave }) {
+  const [value, setValue] = useState('');
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = () => {
+    if (!value.trim()) return;
+    onSave(value.trim());
+    setSaved(true);
+  };
+
+  if (saved) return null;
+
+  return (
+    <div style={{
+      padding: '10px 12px', background: '#FFF8ED', border: '1px solid #F4C430',
+      borderRadius: 10, marginBottom: 10,
+    }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 6, fontFamily: 'DM Sans, sans-serif' }}>
+        What's your insurance? <span style={{ fontWeight: 400, color: C.muted }}>(optional)</span>
+      </div>
+      <div style={{ fontSize: 11, color: C.muted, marginBottom: 8, fontFamily: 'DM Sans, sans-serif' }}>
+        If you add it, Mitzy will include it in phone scripts so you don't have to look it up.
+      </div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <input
+          placeholder="e.g. Blue Cross PPO, Aetna HMO"
+          value={value}
+          onChange={e => setValue(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleSave(); }}
+          style={{
+            flex: 1, padding: '8px 10px', borderRadius: 8, border: `1px solid ${C.cardBorder}`,
+            fontSize: 13, fontFamily: 'DM Sans, sans-serif', boxSizing: 'border-box',
+          }}
+        />
+        <button
+          onClick={handleSave}
+          disabled={!value.trim()}
+          style={{
+            padding: '8px 14px', background: value.trim() ? C.brand : '#D0C8C0',
+            color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700,
+            cursor: value.trim() ? 'pointer' : 'default', fontFamily: 'DM Sans, sans-serif',
+            flexShrink: 0,
+          }}
+        >
+          Save
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export const GuidedSteps = memo(function GuidedSteps({ steps, taskId, stepProgress, onSetStepProgress }) {
-  const { profile, providerHistory, saveProvider } = useProfileContext();
+  const { profile, providerHistory, saveProvider, updateProfile } = useProfileContext();
 
   const savedProvider = providerHistory[taskId];
 
@@ -423,6 +509,11 @@ export const GuidedSteps = memo(function GuidedSteps({ steps, taskId, stepProgre
           </div>
         )}
       </div>
+
+      {/* Insurance prompt — only if flow has a call step and insurance not set */}
+      {!profile?.insurance && steps.some(s => s.type === 'call') && (
+        <InsurancePrompt onSave={(val) => updateProfile({ insurance: val })} />
+      )}
 
       {/* Saved provider callout */}
       {savedProvider && !stepProgress && (
