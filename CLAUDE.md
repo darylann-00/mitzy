@@ -9,7 +9,7 @@ Before ending a session, summarize what changed and any decisions made
 
 ## Testing
 
-Playwright e2e tests live in `tests/e2e/`. Three baseline tests run on every PR (sign_in, onboarding, mark_done). When a PR touches a user-facing flow that doesn't have a test yet, add one in the same PR. If the flow already has a test, update it. Tests use the dev Supabase project (`lrzheitfrltcyvllblmb`) and the shared helpers in `tests/e2e/helpers/auth.js`.
+Playwright e2e tests live in `tests/e2e/`. Three baseline tests run on every PR (sign_in, onboarding, mark_done). When a PR touches a user-facing flow that doesn't have a test yet, add one in the same PR. If the flow already has a test, update it. Tests use the shared helpers in `tests/e2e/helpers/auth.js`. Do not reference or use the dev Supabase project — it is no longer available. All testing happens against the prod or preview Supabase environments.
 
 ## Guardrails
 
