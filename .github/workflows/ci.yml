@@ -24,6 +24,7 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     # Requires GitHub secrets (Settings → Secrets and variables → Actions):
     #   VITE_SUPABASE_URL_DEV      — https://lrzheitfrltcyvllblmb.supabase.co
     #   VITE_SUPABASE_ANON_KEY_DEV — anon key for the dev Supabase project
@@ -41,7 +42,16 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install chromium --with-deps
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+      - run: npx playwright install-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
       - run: npm run test:e2e
         env:
           CI: true
