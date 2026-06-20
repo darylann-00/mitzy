@@ -1,0 +1,1 @@
+ALTER TABLE task_records ADD COLUMN IF NOT EXISTS snoozed_until DATE DEFAULT NULL;

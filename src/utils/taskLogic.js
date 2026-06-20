@@ -53,6 +53,8 @@ export function taskStatus(task, taskState) {
   const entry = taskState[task.id];
   const isOneTime = entry?.oneTime !== undefined ? entry.oneTime : task.oneTime;
 
+  if (entry?.snoozedUntil && entry.snoozedUntil > new Date().toISOString().slice(0, 10)) return "snoozed";
+
   if (entry?.scheduledDate && new Date(entry.scheduledDate) > new Date()) return "scheduled";
   if (entry?.scheduledDate && new Date(entry.scheduledDate) <= new Date()) return "confirm";
   if (isOneTime) {
@@ -80,7 +82,8 @@ export function taskStatus(task, taskState) {
 
 // ─── Task scoring (higher = more urgent) ─────────────────────────────────────
 
-export function taskScore(task, lastDone, intervalDaysOverride, oneTimeOverride) {
+export function taskScore(task, lastDone, intervalDaysOverride, oneTimeOverride, snoozedUntil) {
+  if (snoozedUntil && snoozedUntil > new Date().toISOString().slice(0, 10)) return 0;
   const stakeWeight  = { high: 3, medium: 2, low: 1 }[task.stakes] || 1;
   const intervalDays = intervalDaysOverride ?? task.intervalDays;
   const isOneTime    = oneTimeOverride !== undefined ? oneTimeOverride : task.oneTime;

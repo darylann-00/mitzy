@@ -22,16 +22,18 @@ const BAR_COLOR = {
   'scheduled':  '#F4C430',
   'ok':         '#06A77D',
   'confirm':    '#06A77D',
+  'snoozed':    '#6B8DD6',
 };
 
 export function TaskCard({
-  task, status, days, onSelect, onDone,
-  showCategoryIcon = false, subtitle,
+  task, status, days, onSelect, onDone, onUnsnooze,
+  showCategoryIcon = false, subtitle, noMargin = false,
   pendingMatch, onMatchConfirm, onMatchDismiss,
   stepProgress,
 }) {
   const barColor = BAR_COLOR[status] ?? '#EAE4DA';
   const isActive = status === 'due' || status === 'needed' || status === 'coming-up';
+  const isSnoozed = status === 'snoozed';
 
   let dueText = subtitle !== undefined ? subtitle : formatDueDate(days);
 
@@ -41,16 +43,22 @@ export function TaskCard({
     dueText = `Scheduled: ${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
   }
 
+  if (isSnoozed && task.snoozedUntil) {
+    const date = new Date(task.snoozedUntil + 'T12:00:00');
+    dueText = `Snoozed until ${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+  }
+
   return (
     <div data-testid="task-card" style={{
       background: '#FFFFFF',
       borderRadius: 14,
       padding: '13px 12px 13px 0',
-      marginBottom: 7,
+      marginBottom: (noMargin || isSnoozed) ? 0 : 7,
       display: 'flex',
       alignItems: 'center',
       border: '1px solid #EAE4DA',
       overflow: 'hidden',
+      opacity: isSnoozed ? 0.6 : 1,
     }}>
       {/* Left status bar */}
       <div style={{
@@ -112,50 +120,74 @@ export function TaskCard({
         )}
       </div>
 
-      {/* Let's do it */}
-      <button
-        onClick={e => { e.stopPropagation(); onSelect(task); }}
-        style={{
-          fontSize: 11,
-          padding: '6px 11px',
-          borderRadius: 8,
-          border: 'none',
-          cursor: 'pointer',
-          fontFamily: 'DM Sans, sans-serif',
-          fontWeight: 700,
-          background: isActive ? '#F77F00' : '#E8F0EC',
-          color: isActive ? '#fff' : '#1A5C3A',
-          whiteSpace: 'nowrap',
-          marginRight: 8,
-          flexShrink: 0,
-        }}
-      >
-        Let's do it
-      </button>
+      {isSnoozed ? (
+        <button
+          onClick={e => { e.stopPropagation(); onUnsnooze?.(task.id); }}
+          style={{
+            fontSize: 11,
+            padding: '6px 11px',
+            borderRadius: 8,
+            border: '1.5px solid #6B8DD6',
+            cursor: 'pointer',
+            fontFamily: 'DM Sans, sans-serif',
+            fontWeight: 700,
+            background: 'rgba(107,141,214,0.1)',
+            color: '#6B8DD6',
+            whiteSpace: 'nowrap',
+            marginRight: 8,
+            flexShrink: 0,
+          }}
+        >
+          Wake up
+        </button>
+      ) : (
+        <>
+          {/* Let's do it */}
+          <button
+            onClick={e => { e.stopPropagation(); onSelect(task); }}
+            style={{
+              fontSize: 11,
+              padding: '6px 11px',
+              borderRadius: 8,
+              border: 'none',
+              cursor: 'pointer',
+              fontFamily: 'DM Sans, sans-serif',
+              fontWeight: 700,
+              background: isActive ? '#F77F00' : '#E8F0EC',
+              color: isActive ? '#fff' : '#1A5C3A',
+              whiteSpace: 'nowrap',
+              marginRight: 8,
+              flexShrink: 0,
+            }}
+          >
+            Let's do it
+          </button>
 
-      {/* Checkmark */}
-      <button
-        onClick={e => { e.stopPropagation(); onDone(task); }}
-        aria-label={`mark ${task.label} done`}
-        style={{
-          width: 30,
-          height: 30,
-          borderRadius: 7,
-          border: '2px solid #1A5C3A',
-          background: '#E8F5EE',
-          flexShrink: 0,
-          cursor: 'pointer',
-          marginRight: 4,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 0,
-        }}
-      >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <polyline points="3,8 6.5,11.5 13,4" stroke="#1A5C3A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
+          {/* Checkmark */}
+          <button
+            onClick={e => { e.stopPropagation(); onDone(task); }}
+            aria-label={`mark ${task.label} done`}
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: 7,
+              border: '2px solid #1A5C3A',
+              background: '#E8F5EE',
+              flexShrink: 0,
+              cursor: 'pointer',
+              marginRight: 4,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 0,
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <polyline points="3,8 6.5,11.5 13,4" stroke="#1A5C3A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </>
+      )}
     </div>
   );
 }
