@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, memo } from "react";
 import { resolveStepVars } from "../utils/resolveStepVars";
 import { useProfileContext } from "../contexts/ProfileContext";
 import { supabase } from "../lib/supabase";
+import { INSURANCE_PROVIDERS } from "../data/insuranceProviders";
 
 const C = {
   brand: '#1A5C3A', brandDark: '#0F3D27', brandLight: '#E8F5EE',
@@ -434,7 +435,16 @@ function StepCard({ step, index, isDone, isActive, isFuture, context, onComplete
 // ─── GuidedSteps (main export) ────────────────────────────────────────────────
 function InsurancePrompt({ onSave }) {
   const [value, setValue] = useState('');
+  const [query, setQuery] = useState('');
+  const [open,  setOpen]  = useState(false);
   const [saved, setSaved] = useState(false);
+
+  const filtered = query.trim()
+    ? INSURANCE_PROVIDERS.filter(p => p.label.toLowerCase().includes(query.toLowerCase()))
+    : INSURANCE_PROVIDERS;
+
+  const select = (label) => { setValue(label); setQuery(''); setOpen(false); };
+  const clear  = () => { setValue(''); setQuery(''); setOpen(false); };
 
   const handleSave = () => {
     if (!value.trim()) return;
@@ -445,40 +455,56 @@ function InsurancePrompt({ onSave }) {
   if (saved) return null;
 
   return (
-    <div style={{
-      padding: '10px 12px', background: '#FFF8ED', border: '1px solid #F4C430',
-      borderRadius: 10, marginBottom: 10,
-    }}>
+    <div style={{ padding: '10px 12px', background: '#FFF8ED', border: '1px solid #F4C430', borderRadius: 10, marginBottom: 10 }}>
       <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 6, fontFamily: 'DM Sans, sans-serif' }}>
         What's your insurance? <span style={{ fontWeight: 400, color: C.muted }}>(optional)</span>
       </div>
       <div style={{ fontSize: 11, color: C.muted, marginBottom: 8, fontFamily: 'DM Sans, sans-serif' }}>
         Mitzy will remind you of your plan name when you're on the phone so you don't have to dig for your card.
       </div>
-      <div style={{ display: 'flex', gap: 6 }}>
-        <input
-          placeholder="e.g. Blue Cross PPO, Aetna HMO"
-          value={value}
-          onChange={e => setValue(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') handleSave(); }}
-          style={{
-            flex: 1, padding: '8px 10px', borderRadius: 8, border: `1px solid ${C.cardBorder}`,
-            fontSize: 13, fontFamily: 'DM Sans, sans-serif', boxSizing: 'border-box',
-          }}
-        />
-        <button
-          onClick={handleSave}
-          disabled={!value.trim()}
-          style={{
-            padding: '8px 14px', background: value.trim() ? C.brand : '#D0C8C0',
-            color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700,
-            cursor: value.trim() ? 'pointer' : 'default', fontFamily: 'DM Sans, sans-serif',
-            flexShrink: 0,
-          }}
-        >
-          Save
-        </button>
+      <div style={{ position: 'relative', marginBottom: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, border: `1px solid ${C.cardBorder}`, borderRadius: 8, padding: '7px 10px', background: '#fff' }}>
+          <input
+            style={{ flex: 1, fontSize: 13, fontFamily: 'DM Sans, sans-serif', border: 'none', outline: 'none', background: 'transparent', color: C.ink }}
+            placeholder={value || 'Search providers…'}
+            value={query}
+            onFocus={() => setOpen(true)}
+            onChange={e => { setQuery(e.target.value); setOpen(true); }}
+          />
+          {value && !query && (
+            <button onClick={clear} style={{ fontSize: 16, lineHeight: 1, border: 'none', background: 'none', cursor: 'pointer', color: '#9B9B9B', padding: '0 2px' }}>×</button>
+          )}
+        </div>
+        {open && (filtered.length > 0 || query.trim()) && (
+          <div style={{ position: 'absolute', zIndex: 100, top: 'calc(100% + 4px)', left: 0, right: 0, background: '#fff', border: `1px solid ${C.cardBorder}`, borderRadius: 10, maxHeight: 180, overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+            {filtered.map(({ label }) => (
+              <button
+                key={label}
+                onMouseDown={e => { e.preventDefault(); select(label); }}
+                style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 12px', fontSize: 13, fontFamily: 'DM Sans, sans-serif', border: 'none', borderBottom: `1px solid ${C.cardBorder}`, cursor: 'pointer', background: label === value ? '#E8F5EE' : '#fff', color: label === value ? C.brand : C.ink, fontWeight: label === value ? 700 : 400 }}
+              >
+                {label}
+              </button>
+            ))}
+            {query.trim() && !INSURANCE_PROVIDERS.some(p => p.label.toLowerCase() === query.trim().toLowerCase()) && (
+              <button
+                onMouseDown={e => { e.preventDefault(); select(query.trim()); }}
+                style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 12px', fontSize: 13, fontFamily: 'DM Sans, sans-serif', border: 'none', cursor: 'pointer', background: '#F0EDE4', color: C.brand, fontWeight: 700 }}
+              >
+                Add "{query.trim()}"
+              </button>
+            )}
+          </div>
+        )}
+        {open && <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onMouseDown={() => setOpen(false)} />}
       </div>
+      <button
+        onClick={handleSave}
+        disabled={!value.trim()}
+        style={{ width: '100%', padding: '8px 0', background: value.trim() ? C.brand : '#D0C8C0', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: value.trim() ? 'pointer' : 'default', fontFamily: 'DM Sans, sans-serif' }}
+      >
+        Save
+      </button>
     </div>
   );
 }
