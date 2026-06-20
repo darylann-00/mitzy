@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { AppHeader } from "./HomeView";
 import { HouseIcon, CarIcon, PersonIcon, PetIcon } from "../components/CategoryIcons";
 import { Sheet } from "../components/Sheet";
@@ -107,35 +107,37 @@ function ProvidersIcon({ size = 16 }) {
 function InsurancePicker({ value, onChange }) {
   const [query, setQuery] = useState('');
   const [open, setOpen]   = useState(false);
+  const [rect, setRect]   = useState(null);
+  const anchorRef = useRef(null);
 
   const filtered = query.trim()
     ? INSURANCE_PROVIDERS.filter(p => p.label.toLowerCase().includes(query.toLowerCase()))
     : INSURANCE_PROVIDERS;
 
-  const select = (label) => {
-    onChange(label);
-    setQuery('');
-    setOpen(false);
+  const select = (label) => { onChange(label); setQuery(''); setOpen(false); };
+  const clear  = () => { onChange(''); setQuery(''); setOpen(false); };
+
+  const openDropdown = () => {
+    if (anchorRef.current) setRect(anchorRef.current.getBoundingClientRect());
+    setOpen(true);
   };
 
-  const clear = () => { onChange(''); setQuery(''); setOpen(false); };
-
   return (
-    <div style={{ position:'relative' }}>
-      <div style={{ display:'flex', alignItems:'center', gap:6, border:'1px solid #D4CFC6', borderRadius:10, padding:'7px 11px', background:'#FDFAF2' }}>
+    <div>
+      <div ref={anchorRef} style={{ display:'flex', alignItems:'center', gap:6, border:'1px solid #D4CFC6', borderRadius:10, padding:'7px 11px', background:'#FDFAF2' }}>
         <input
           style={{ flex:1, fontSize:14, fontFamily:'DM Sans, sans-serif', border:'none', outline:'none', background:'transparent', color:'#1C2B22' }}
           placeholder={value || 'Search providers…'}
           value={query}
-          onFocus={() => setOpen(true)}
-          onChange={e => { setQuery(e.target.value); setOpen(true); }}
+          onFocus={openDropdown}
+          onChange={e => { setQuery(e.target.value); openDropdown(); }}
         />
         {value && !query && (
           <button onClick={clear} style={{ fontSize:16, lineHeight:1, border:'none', background:'none', cursor:'pointer', color:'#9B9B9B', padding:'0 2px' }}>×</button>
         )}
       </div>
-      {open && (filtered.length > 0 || query.trim()) && (
-        <div style={{ position:'absolute', zIndex:100, top:'calc(100% + 4px)', left:0, right:0, background:'#fff', border:'1px solid #D4CFC6', borderRadius:10, maxHeight:200, overflowY:'auto', boxShadow:'0 4px 12px rgba(0,0,0,0.08)' }}>
+      {open && rect && (filtered.length > 0 || query.trim()) && (
+        <div style={{ position:'fixed', zIndex:1000, top: rect.bottom + 4, left: rect.left, width: rect.width, background:'#fff', border:'1px solid #D4CFC6', borderRadius:10, maxHeight:200, overflowY:'auto', boxShadow:'0 4px 12px rgba(0,0,0,0.12)' }}>
           {filtered.map(({ label }) => (
             <button
               key={label}
@@ -155,7 +157,7 @@ function InsurancePicker({ value, onChange }) {
           )}
         </div>
       )}
-      {open && <div style={{ position:'fixed', inset:0, zIndex:99 }} onMouseDown={() => setOpen(false)} />}
+      {open && <div style={{ position:'fixed', inset:0, zIndex:999 }} onMouseDown={() => setOpen(false)} />}
     </div>
   );
 }
