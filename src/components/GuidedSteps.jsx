@@ -19,7 +19,7 @@ function parseProviders(text) {
 }
 
 // ─── Mini provider search (reuses /api/providers) ────────────────────────────
-function ProviderSearch({ query, zip, onSelect, onSaveProvider }) {
+function ProviderSearch({ query, zip, onSelect, onSaveProvider, nameSearchOnly }) {
   const [status, setStatus] = useState('idle');
   const [providers, setProviders] = useState(null);
   const [manualMode, setManualMode] = useState(false);
@@ -78,11 +78,11 @@ function ProviderSearch({ query, zip, onSelect, onSaveProvider }) {
     }
   };
 
-  if (manualMode && status === 'idle') {
+  if ((manualMode || nameSearchOnly) && status === 'idle') {
     return (
       <div style={{ marginTop: 8 }}>
         <div style={{ fontSize: 12, color: C.muted, marginBottom: 6, fontFamily: 'DM Sans, sans-serif' }}>
-          Search for your provider by name
+          {nameSearchOnly ? 'Look up your provider to save their info' : 'Search for your provider by name'}
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           <input
@@ -108,16 +108,18 @@ function ProviderSearch({ query, zip, onSelect, onSaveProvider }) {
             Search
           </button>
         </div>
-        <button
-          onClick={() => { setManualMode(false); setManualName(''); }}
-          style={{
-            width: '100%', padding: '8px 0', background: 'none', border: 'none',
-            fontSize: 12, color: C.muted, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
-            marginTop: 4,
-          }}
-        >
-          Back to find providers
-        </button>
+        {!nameSearchOnly && (
+          <button
+            onClick={() => { setManualMode(false); setManualName(''); }}
+            style={{
+              width: '100%', padding: '8px 0', background: 'none', border: 'none',
+              fontSize: 12, color: C.muted, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+              marginTop: 4,
+            }}
+          >
+            Back to find providers
+          </button>
+        )}
       </div>
     );
   }
@@ -188,7 +190,7 @@ function ProviderSearch({ query, zip, onSelect, onSaveProvider }) {
   return (
     <div style={{ marginTop: 10 }}>
       {providers.slice(0, 4).map((p, i) => (
-        <MiniProviderCard key={i} provider={p} onSelect={() => { onSaveProvider(p); onSelect(p); }} />
+        <MiniProviderCard key={i} provider={p} onSelect={() => { onSaveProvider(p); onSelect(p, providers); }} />
       ))}
       <button
         onClick={resetToIdle}
@@ -239,12 +241,13 @@ function MiniProviderCard({ provider: p, onSelect }) {
 }
 
 // ─── Step card ────────────────────────────────────────────────────────────────
-function StepCard({ step, index, isDone, isActive, isFuture, context, onComplete, onUndo, onSelectProvider, onSaveProvider }) {
+function StepCard({ step, index, isDone, isActive, isFuture, context, onComplete, onUndo, onSelectProvider, onSaveProvider, cachedResults, onChangeProvider }) {
   const resolvedBody = resolveStepVars(step.body, context);
   const resolvedPhone = resolveStepVars(step.phone, context);
   const resolvedScript = resolveStepVars(step.callScript, context);
   const resolvedLinkUrl = resolveStepVars(step.linkUrl, context);
   const [copied, setCopied] = useState(false);
+  const [showingAlternates, setShowingAlternates] = useState(false);
 
   const handleCopy = (text) => {
     navigator.clipboard?.writeText(text);
@@ -314,12 +317,20 @@ function StepCard({ step, index, isDone, isActive, isFuture, context, onComplete
 
           {/* Type-specific content (only for active step) */}
           {isActive && step.type === 'provider_search' && (
-            <ProviderSearch
-              query={step.providerSearchQuery || step.label}
-              zip={context.zip}
-              onSelect={(provider) => onSelectProvider(provider)}
-              onSaveProvider={onSaveProvider}
-            />
+            <>
+              <ProviderSearch
+                query={step.providerSearchQuery || step.label}
+                zip={context.zip}
+                onSelect={(provider, results) => onSelectProvider(provider, results)}
+                onSaveProvider={onSaveProvider}
+                nameSearchOnly={!!step.nameSearchOnly}
+              />
+              {!step.nameSearchOnly && (
+                <div style={{ fontSize: 11, color: '#9A9080', marginTop: 8, lineHeight: 1.5, fontFamily: 'DM Sans, sans-serif' }}>
+                  These results are from Google Maps and may not reflect your insurance network. Always verify coverage with your insurer before booking.
+                </div>
+              )}
+            </>
           )}
 
           {isActive && step.type === 'call' && resolvedPhone && !resolvedPhone.includes('{{') && (
@@ -367,6 +378,28 @@ function StepCard({ step, index, isDone, isActive, isFuture, context, onComplete
               >
                 {copied ? 'Copied!' : 'Copy script'}
               </button>
+            </div>
+          )}
+
+          {/* Try a different provider — on call steps with cached results */}
+          {isActive && step.type === 'call' && step.dependsOnProvider && cachedResults?.length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              <button
+                onClick={() => setShowingAlternates(!showingAlternates)}
+                style={{
+                  background: 'none', border: 'none', fontSize: 12, color: C.muted,
+                  cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', padding: 0,
+                }}
+              >
+                {showingAlternates ? 'Hide other options' : "Didn't work out? Try a different provider"}
+              </button>
+              {showingAlternates && (
+                <div style={{ marginTop: 8 }}>
+                  {cachedResults.filter(r => r.name !== context.provider?.name).map((p, i) => (
+                    <MiniProviderCard key={i} provider={p} onSelect={() => onChangeProvider(p)} />
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -425,7 +458,7 @@ function InsurancePrompt({ onSave }) {
         What's your insurance? <span style={{ fontWeight: 400, color: C.muted }}>(optional)</span>
       </div>
       <div style={{ fontSize: 11, color: C.muted, marginBottom: 8, fontFamily: 'DM Sans, sans-serif' }}>
-        If you add it, Mitzy will include it in phone scripts so you don't have to look it up.
+        Mitzy will remind you of your plan name when you're on the phone so you don't have to dig for your card.
       </div>
       <div style={{ display: 'flex', gap: 6 }}>
         <input
@@ -485,10 +518,11 @@ export const GuidedSteps = memo(function GuidedSteps({ steps, taskId, stepProgre
     onSetStepProgress(step.key, { done: false });
   };
 
-  const handleSelectProvider = (step, provider) => {
+  const handleSelectProvider = (step, provider, results) => {
     onSetStepProgress(step.key, {
       done: true, completedAt: new Date().toISOString(),
       provider: { name: provider.name, phone: provider.phone, hours: provider.hours, address: provider.address, website: provider.website },
+      results: results?.map(r => ({ name: r.name, phone: r.phone, hours: r.hours, address: r.address, website: r.website, rating: r.rating, reviewCount: r.reviewCount })),
     });
   };
 
@@ -531,6 +565,10 @@ export const GuidedSteps = memo(function GuidedSteps({ steps, taskId, stepProgre
         const isActive = i === firstIncomplete;
         const isFuture = !isDone && !isActive;
 
+        const providerStepEntry = step.dependsOnProvider
+          ? steps.map(s => stepProgress?.[s.key]).find(e => e?.results)
+          : null;
+
         return (
           <StepCard
             key={step.key}
@@ -542,8 +580,16 @@ export const GuidedSteps = memo(function GuidedSteps({ steps, taskId, stepProgre
             context={context}
             onComplete={() => handleComplete(step)}
             onUndo={() => handleUndo(step)}
-            onSelectProvider={(provider) => handleSelectProvider(step, provider)}
+            onSelectProvider={(provider, results) => handleSelectProvider(step, provider, results)}
             onSaveProvider={(provider) => saveProvider(taskId, provider)}
+            cachedResults={providerStepEntry?.results}
+            onChangeProvider={(newProvider) => {
+              const providerStep = steps.find(s => s.type === 'provider_search');
+              if (providerStep) {
+                handleSelectProvider(providerStep, newProvider, providerStepEntry?.results);
+                saveProvider(taskId, newProvider);
+              }
+            }}
           />
         );
       })}

@@ -123,6 +123,7 @@ Return shape (success):
         "body": "<specific actionable instruction — tell the user exactly what to do, not just what to accomplish. May use {{zip}} for location>",
         "type": "action" | "provider_search" | "call" | "link",
         "providerSearchQuery": "<query for finding providers, only for type=provider_search, else null>",
+        "nameSearchOnly": "<true for health/insurance-dependent tasks where user should find provider through insurance portal first, false for home/car/other tasks where Google Maps search is fine>",
         "linkUrl": "<URL to open, only for type=link, else null>",
         "linkLabel": "<button text for link, only for type=link, else null>",
         "phone": "{{provider.phone}}  (only for type=call after a provider_search step, else null)",
@@ -137,6 +138,7 @@ Return shape (success):
 Generate 3–5 steps per task. Each step must be specific enough that the user never has to figure out what to do — tell them exactly where to go, what to click, what to say.
 - First step should be the smallest possible action to reduce activation energy
 - For tasks needing a professional (T2/T3/T3.5), include a provider_search step early and a call step with callScript after it
+- For health/medical tasks (cat: "health"), set nameSearchOnly: true on provider_search steps — the body should tell the user to find an in-network provider through their insurance portal first, then look them up by name to save their info. For non-health tasks, set nameSearchOnly: false so the general Google Maps search is available
 - Steps after a provider_search step should set dependsOnProvider: true and use {{provider.name}}, {{provider.phone}}, {{provider.hours}}
 - For T1 (DIY) tasks, use action and link steps — no provider_search needed
 - type=call steps should always include a callScript with a natural phone script. Do NOT mention insurance, "new patient", or "existing patient" in the script — the UI adds insurance info separately and the user knows their own patient status

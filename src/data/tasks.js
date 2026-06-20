@@ -1013,8 +1013,8 @@ export const ALL_TASKS = [
     guidance: "1. Schedule at least 6 weeks in advance — primary care books out quickly. 2. Bring a list of all medications and supplements you currently take. 3. Write down any symptoms or concerns before the appointment so you don't forget them. 4. Ask specifically for bloodwork if you want labs reviewed.",
     lastGuidanceUpdate: "2025-01",
     steps: [
-      { key: "check_insurance", label: "Check your insurance coverage", body: "Confirm your plan covers an annual physical — most do at 100% with no copay. Check your insurance card or portal for your plan name and member ID.", type: "action" },
-      { key: "find_doctor", label: "Find a primary care doctor", body: "Search for an in-network primary care doctor near {{zip}} who's accepting new patients.", type: "provider_search", providerSearchQuery: "primary care physician" },
+      { key: "check_insurance", label: "Check your insurance coverage", body: "Confirm your plan covers an annual physical — most do at 100% with no copay. Log into your insurance portal (check your insurance card for the website) and look up your plan details.", type: "action" },
+      { key: "find_doctor", label: "Find an in-network doctor", body: "Use your insurance portal's \"Find a Doctor\" tool to search for a primary care physician near {{zip}} who's accepting new patients. Once you've picked one, look them up below to save their info.", type: "provider_search", providerSearchQuery: "primary care physician", nameSearchOnly: true },
       { key: "call_to_schedule", label: "Call to schedule your appointment", body: "Call {{provider.name}} to book your annual physical.", type: "call", phone: "{{provider.phone}}", callScript: "Hi, I'd like to schedule an annual physical. What's your earliest availability?", dependsOnProvider: true },
       { key: "prep_for_visit", label: "Prep for your appointment", body: "Write down: all medications and supplements you take, any symptoms or concerns to mention, and whether you want bloodwork done. Bring your insurance card and a photo ID.", type: "action" },
     ],
@@ -1042,7 +1042,7 @@ export const ALL_TASKS = [
     guidance: "1. Book your next two appointments before leaving the office — dental practices book out quickly. 2. Mention any sensitivity, pain, or areas that bleed when brushing. 3. Ask about your gum pocket measurements — these track gum health over time.",
     lastGuidanceUpdate: "2025-01",
     steps: [
-      { key: "find_dentist", label: "Find a dentist", body: "Search for an in-network dentist near {{zip}} who's accepting new patients. Most insurance covers two cleanings per year.", type: "provider_search", providerSearchQuery: "dentist" },
+      { key: "find_dentist", label: "Find an in-network dentist", body: "Use your insurance portal's \"Find a Doctor\" tool to search for a dentist near {{zip}} accepting new patients. Most plans cover two cleanings per year. Once you've picked one, look them up below to save their info.", type: "provider_search", providerSearchQuery: "dentist", nameSearchOnly: true },
       { key: "call_to_book", label: "Call to book your cleaning", body: "Call {{provider.name}} to schedule your cleaning.", type: "call", phone: "{{provider.phone}}", callScript: "Hi, I'd like to schedule a dental cleaning. Do you have anything in the next few weeks?", dependsOnProvider: true },
       { key: "prep_for_visit", label: "Prep for your appointment", body: "Note any sensitivity, pain, or areas that bleed when you brush. If you've had dental work done elsewhere, mention it so they can update your records.", type: "action" },
     ],
@@ -1070,7 +1070,7 @@ export const ALL_TASKS = [
     guidance: "1. Bring your current glasses or contacts to the appointment. 2. Mention any headaches, eye strain, or difficulty with night driving. 3. Ask for your prescription in writing — you can often fill it at a lower cost elsewhere.",
     lastGuidanceUpdate: "2025-01",
     steps: [
-      { key: "find_eye_doctor", label: "Find an eye doctor", body: "Search for an optometrist near {{zip}}. Check if your vision insurance is separate from medical — many plans have a separate vision carrier.", type: "provider_search", providerSearchQuery: "optometrist eye doctor" },
+      { key: "find_eye_doctor", label: "Find an in-network eye doctor", body: "Check if your vision insurance is separate from medical — many plans have a separate vision carrier. Use your insurance portal to search for an optometrist near {{zip}}. Once you've picked one, look them up below to save their info.", type: "provider_search", providerSearchQuery: "optometrist eye doctor", nameSearchOnly: true },
       { key: "call_to_schedule", label: "Call to schedule", body: "Call {{provider.name}} to book your exam.", type: "call", phone: "{{provider.phone}}", callScript: "Hi, I'd like to schedule a comprehensive eye exam. What's your next available appointment?", dependsOnProvider: true },
       { key: "prep_for_visit", label: "Prep for your appointment", body: "Bring your current glasses or contacts. Note any headaches, eye strain, or difficulty with night driving. Ask for your prescription in writing — you can often fill it at a lower cost elsewhere.", type: "action" },
     ],
