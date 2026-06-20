@@ -406,7 +406,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
   if (welcomeChoice === 'returning' && !user) {
     return <LoginGate sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} signInWithPassword={signInWithPassword} authError={authError} welcomeChoice={welcomeChoice} />;
   }
-  if (!profileDone && !serverConfirmsOnboarded) return <SlimOnboarding onComplete={handleSlimOnboardingComplete} onBack={() => { localStorage.removeItem(WELCOME_CHOICE_KEY); setWelcomeChoice(null); }} />;
+  if (!profileDone && !serverConfirmsOnboarded) return <SlimOnboarding onComplete={handleSlimOnboardingComplete} onBack={() => { saveS(WELCOME_CHOICE_KEY, 'returning'); setWelcomeChoice('returning'); }} />;
   if (!onboarded   && !serverConfirmsOnboarded) return <PrioritySetup taskLib={taskLibrary} region={region} onComplete={handlePrioritySetupComplete} />;
   if (!user)        return <LoginGate sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} signInWithPassword={signInWithPassword} authError={authError} welcomeChoice={welcomeChoice} />;
 
