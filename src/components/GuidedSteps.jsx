@@ -325,11 +325,6 @@ function StepCard({ step, index, isDone, isActive, isFuture, context, onComplete
                 onSaveProvider={onSaveProvider}
                 nameSearchOnly={!!step.nameSearchOnly}
               />
-              {!step.nameSearchOnly && (
-                <div style={{ fontSize: 11, color: '#9A9080', marginTop: 8, lineHeight: 1.5, fontFamily: 'DM Sans, sans-serif' }}>
-                  These results are from Google Maps and may not reflect your insurance network. Always verify coverage with your insurer before booking.
-                </div>
-              )}
             </>
           )}
 
