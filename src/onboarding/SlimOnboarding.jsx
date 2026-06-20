@@ -142,7 +142,7 @@ function NextBtn({ onClick, disabled, children }) {
 }
 
 // ─── Main component ────────────────────────────────────────────────────────────
-export function SlimOnboarding({ onComplete }) {
+export function SlimOnboarding({ onComplete, onBack }) {
   const [step,     setStep]     = useState(-1); // -1 = welcome
   const [profile,  setProfile]  = useState({ name: '', birthYear: '', gender: '', hasHome: null, hasCar: null, cars: [], zip: '', hasKids: null, kids: [], hasPets: null, pets: [] });
   const [carInput,     setCarInput]     = useState({ year: '', make: '', model: '' });
@@ -256,6 +256,14 @@ export function SlimOnboarding({ onComplete }) {
           <div style={{ fontSize:12, color:'rgba(184,220,200,0.7)', fontFamily:'DM Sans, sans-serif' }}>
             Takes about 2 minutes
           </div>
+          {onBack && (
+            <button
+              onClick={onBack}
+              style={{ marginTop:20, background:'none', border:'none', color:'#A8D5B8', fontSize:14, fontFamily:'DM Sans, sans-serif', cursor:'pointer', textDecoration:'underline', padding:0 }}
+            >
+              Already have an account? Sign in
+            </button>
+          )}
         </div>
       </GreenScreen>
     );
