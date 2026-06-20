@@ -230,6 +230,7 @@ function LifeEventGroup({ event, tasks, taskState, getStatus, getDays, providerH
             pendingMatch={match}
             onMatchConfirm={match ? () => onMatchConfirm(task.id, match.eventDate) : undefined}
             onMatchDismiss={match ? () => onMatchDismiss(task.id) : undefined}
+            stepProgress={taskState[task.id]?.stepProgress}
           />
         );
       })}
@@ -391,6 +392,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
                   pendingMatch={match}
                   onMatchConfirm={match ? () => onMatchConfirm(task.id, match.eventDate) : undefined}
                   onMatchDismiss={match ? () => onMatchDismiss(task.id) : undefined}
+            stepProgress={taskState[task.id]?.stepProgress}
                 />
               );
             })}
@@ -416,6 +418,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
                   pendingMatch={match}
                   onMatchConfirm={match ? () => onMatchConfirm(task.id, match.eventDate) : undefined}
                   onMatchDismiss={match ? () => onMatchDismiss(task.id) : undefined}
+            stepProgress={taskState[task.id]?.stepProgress}
                 />
               );
             })}
@@ -442,6 +445,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
                   pendingMatch={match}
                   onMatchConfirm={match ? () => onMatchConfirm(task.id, match.eventDate) : undefined}
                   onMatchDismiss={match ? () => onMatchDismiss(task.id) : undefined}
+            stepProgress={taskState[task.id]?.stepProgress}
                 />
               );
             })}

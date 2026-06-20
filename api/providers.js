@@ -69,9 +69,9 @@ export default async function handler(req) {
     });
   }
 
-  let taskLabel, taskCat, taskNote, zip, searchQuery, maxResults;
+  let taskLabel, taskCat, taskNote, zip, searchQuery, maxResults, skipBlurbs;
   try {
-    ({ taskLabel, taskCat, taskNote, zip, searchQuery, maxResults } = await req.json());
+    ({ taskLabel, taskCat, taskNote, zip, searchQuery, maxResults, skipBlurbs } = await req.json());
   } catch {
     return new Response("Invalid JSON", { status: 400 });
   }
@@ -165,6 +165,19 @@ export default async function handler(req) {
     weekdayHours:  p.regularOpeningHours?.weekdayDescriptions ?? null,
     topReviews:    (p.reviews || []).slice(0, 3).map(r => r.text?.text).filter(Boolean),
   }));
+
+  // ── 2b. Skip Claude synthesis for direct lookups ───────────────────────────
+  if (skipBlurbs) {
+    const lite = placesSummary.map(p => ({
+      name: p.name, rating: p.rating, reviewCount: p.reviewCount,
+      phone: p.phone, website: p.website, priceRange: p.priceRange,
+      address: p.address, blurb: "",
+      hours: (p.weekdayHours || []).join(' · '),
+    }));
+    return new Response(JSON.stringify({ text: JSON.stringify(lite) }), {
+      headers: { "content-type": "application/json", ...corsHeaders(req) },
+    });
+  }
 
   // ── 3. Claude synthesis ─────────────────────────────────────────────────────
   const signals = getRelevantSignals(taskCat);
