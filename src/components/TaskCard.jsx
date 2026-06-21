@@ -1,5 +1,6 @@
 import { CategoryTile } from "./CategoryIcons";
 import { MatchConfirmationChip } from "./MatchConfirmationChip";
+import { SnoozeIcon } from "./SnoozeIcon";
 
 export function formatDueDate(days) {
   if (days === null || days === undefined) return '';
@@ -26,7 +27,7 @@ const BAR_COLOR = {
 };
 
 export function TaskCard({
-  task, status, days, onSelect, onDone, onUnsnooze,
+  task, status, days, onSelect, onDone, onSnooze, onUnsnooze,
   showCategoryIcon = false, subtitle, noMargin = false,
   pendingMatch, onMatchConfirm, onMatchDismiss,
   stepProgress,
@@ -162,6 +163,30 @@ export function TaskCard({
           >
             Let's do it
           </button>
+
+          {/* Snooze */}
+          {onSnooze && (
+            <button
+              onClick={e => { e.stopPropagation(); onSnooze(task); }}
+              aria-label={`snooze ${task.label}`}
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: 7,
+                border: '1.5px solid #D0C8C0',
+                background: '#F8F5EC',
+                flexShrink: 0,
+                cursor: 'pointer',
+                marginRight: 4,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 0,
+              }}
+            >
+              <SnoozeIcon size={15} color="#9BAFC4" />
+            </button>
+          )}
 
           {/* Checkmark */}
           <button

@@ -112,7 +112,7 @@ export function SwipeableTaskCard({ task, onSnooze, ...cardProps }) {
           touchAction: 'pan-y',
         }}
       >
-        <TaskCard task={task} {...cardProps} noMargin />
+        <TaskCard task={task} {...cardProps} onSnooze={onSnooze} noMargin />
       </div>
     </div>
   );
