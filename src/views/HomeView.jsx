@@ -1,5 +1,6 @@
 import { TrickleCard } from "../components/TrickleCard";
-import { TaskCard }    from "../components/TaskCard";
+import { SwipeableTaskCard } from "../components/SwipeableTaskCard";
+import { SnoozeTooltip }    from "../components/SnoozeTooltip";
 import { HazardCard }  from "../components/HazardCard";
 import { LifeEventNudge } from "../components/LifeEventNudge";
 import { useProfileContext } from "../contexts/ProfileContext";
@@ -205,6 +206,7 @@ export function HomeView({
   onGoToAll,
   onSelectTask,
   onDoneTask,
+  onSnooze,
   onTrickleAnswer,
   onTrickleDismiss,
   onTrickleAssist,
@@ -257,19 +259,21 @@ export function HomeView({
           return (
             <div style={{ marginBottom: 4 }}>
               <SectionLabel label="Today" color="#1A5C3A" />
+              <SnoozeTooltip visible />
               <div style={{
                 borderRadius: 16,
                 border: '2px solid #1A5C3A',
                 padding: 4,
                 boxShadow: '0 2px 8px rgba(26, 92, 58, 0.08)',
               }}>
-                <TaskCard
+                <SwipeableTaskCard
                   task={{ ...todayTask, scheduledDate: taskState[todayTask.id]?.scheduledDate }}
                   status={getStatus(todayTask)}
                   days={getDays(todayTask)}
                   hasSavedProvider={!!providerHistory[todayTask.id]}
                   onSelect={onSelectTask}
                   onDone={onDoneTask}
+                  onSnooze={onSnooze}
                   showCategoryIcon
                   subtitle={getStatus(todayTask) === 'needed' ? '' : undefined}
                   stepProgress={taskState[todayTask.id]?.stepProgress}
@@ -291,7 +295,7 @@ export function HomeView({
               {weekTasks.map(task => {
                 const match = pendingCalendarMatches.find(m => m.taskId === task.id);
                 return (
-                  <TaskCard
+                  <SwipeableTaskCard
                     key={task.id}
                     task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate }}
                     status={getStatus(task)}
@@ -299,6 +303,7 @@ export function HomeView({
                     hasSavedProvider={!!providerHistory[task.id]}
                     onSelect={onSelectTask}
                     onDone={onDoneTask}
+                    onSnooze={onSnooze}
                     showCategoryIcon
                     subtitle={getStatus(task) === 'needed' ? '' : undefined}
                     stepProgress={taskState[task.id]?.stepProgress}

@@ -26,13 +26,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # Requires GitHub secrets (Settings → Secrets and variables → Actions):
-    #   VITE_SUPABASE_URL_DEV      — https://lrzheitfrltcyvllblmb.supabase.co
-    #   VITE_SUPABASE_ANON_KEY_DEV — anon key for the dev Supabase project
-    #   PLAYWRIGHT_TEST_EMAIL      — test user email (same account used for Maestro)
-    #   PLAYWRIGHT_TEST_PASSWORD   — test user password
+    #   VITE_SUPABASE_URL      — https://uftxbegrnlvlgkbitibp.supabase.co (prod project)
+    #   VITE_SUPABASE_ANON_KEY — anon key for the prod Supabase project
+    #   PLAYWRIGHT_TEST_EMAIL  — test user email
+    #   PLAYWRIGHT_TEST_PASSWORD — test user password
     env:
-      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL_DEV }}
-      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY_DEV }}
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
       PLAYWRIGHT_TEST_EMAIL: ${{ secrets.PLAYWRIGHT_TEST_EMAIL }}
       PLAYWRIGHT_TEST_PASSWORD: ${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}
     steps:
