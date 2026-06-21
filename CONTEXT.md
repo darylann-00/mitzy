@@ -80,7 +80,7 @@ Two Supabase projects:
 
 | Feature | Status |
 |---------|--------|
-| Google Calendar integration | Fully built. Phase 1: silent OAuth at startup, Haiku event-task matching via `/api/calendar-events` + `/api/calendar-match`. Phase 2: inline confirmation chips on task cards, `scheduled_date` persisted to Supabase. `/api/schedule` Edge Function creates all-day events. Requires `VITE_GOOGLE_CLIENT_ID` + Calendar API enabled in Google Cloud Console. |
+| Google Calendar integration | Fully built. Phase 1: silent OAuth at startup, Haiku event-task matching via `/api/calendar-events` + `/api/calendar-match`. Phase 2: inline confirmation chips on task cards, `scheduled_date` persisted to Supabase. `/api/schedule` Edge Function creates all-day events. Requires `VITE_GOOGLE_CLIENT_ID` + Calendar API enabled in Google Cloud Console. Grant flow: user connects once (onboarding step 7, Profile Account section, or ScheduleSurface contextual prompt); `CAL_GRANTED_KEY` persisted to localStorage; subsequent sessions use silent GIS token. Event window is 90 days forward. Detection pipeline runs once per (user, token) pair to avoid cancellation from task-state churn. |
 | Hazard zip lookup | Hardcoded zip ranges. Replace with FEMA API. |
 | Knowledge refresh | Stubbed. |
 | `task.why` + `task.guidance` fields | Null for all current tasks — UI falls back to `task.note` and generic copy. |
