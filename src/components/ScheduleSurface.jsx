@@ -154,6 +154,7 @@ export function ScheduleSurface({ task }) {
   const [mode, setMode] = useState('idle');
   const [date, setDate] = useState('');
   const [time, setTime] = useState(null);
+  const [title, setTitle] = useState('');
   const [provider, setProvider] = useState('');
   const [status, setStatus] = useState(null);
 
@@ -171,6 +172,7 @@ export function ScheduleSurface({ task }) {
   const reset = () => {
     setMode('idle');
     setDate('');
+    setTitle('');
     setProvider('');
     setTime(null);
   };
@@ -195,7 +197,7 @@ export function ScheduleSurface({ task }) {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          taskLabel: task.label,
+          taskLabel: title.trim() || task.label,
           taskNote: provider || task.note || null,
           date,
           ...(time ? { time, timeZone } : {}),
@@ -252,7 +254,7 @@ export function ScheduleSurface({ task }) {
           </div>
           <div style={{ display: 'flex', gap: 8, padding: '8px 14px 13px' }}>
             <button
-              onClick={() => setMode('gcal')}
+              onClick={() => { setMode('gcal'); setTitle(task.label); }}
               style={{ flex: 1, padding: '9px 8px', borderRadius: 10, border: '1px solid #EAE4DA', background: '#F0F4FF', fontSize: 12, fontWeight: 500, color: '#1C2B22', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
             >
               <GCal />
@@ -316,7 +318,7 @@ export function ScheduleSurface({ task }) {
             Other events
           </button>
           <button
-            onClick={() => { setMode('gcal'); setDate(''); setProvider(''); setTime(null); }}
+            onClick={() => { setMode('gcal'); setDate(''); setTitle(task.label); setProvider(''); setTime(null); }}
             style={{ flex: 1, padding: '9px 10px', borderRadius: 10, border: '1px solid #EAE4DA', background: '#fff', fontSize: 12, fontWeight: 500, color: '#1C2B22', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}
           >
             Create new
@@ -386,7 +388,7 @@ export function ScheduleSurface({ task }) {
       <div style={surf}>
         <div style={subHdr}>
           <button
-            onClick={() => { setMode('idle'); setDate(''); setProvider(''); setTime(null); }}
+            onClick={() => { setMode('idle'); setDate(''); setTitle(''); setProvider(''); setTime(null); }}
             style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', padding: '2px 6px 2px 0' }}
           >
             <Back />
@@ -400,6 +402,15 @@ export function ScheduleSurface({ task }) {
           </button>
         </div>
         <div style={formBody}>
+          <div style={fldGrp}>
+            <label style={fldLbl}>Title</label>
+            <input
+              type="text"
+              style={inp}
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+            />
+          </div>
           <div style={fldGrp}>
             <label style={fldLbl}>Date</label>
             <DateField value={date} onChange={setDate} min={todayIso} />
