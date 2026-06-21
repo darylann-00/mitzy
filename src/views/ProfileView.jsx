@@ -4,6 +4,7 @@ import { HouseIcon, CarIcon, PersonIcon, PetIcon } from "../components/CategoryI
 import { Sheet } from "../components/Sheet";
 import { useProfileContext } from "../contexts/ProfileContext";
 import { useTaskContext }    from "../contexts/TaskContext";
+import { useCalendarContext } from "../contexts/CalendarContext";
 import { C } from "../data/constants";
 import { LIFE_EVENT_DEFS } from "../data/lifeEvents";
 import { INSURANCE_PROVIDERS } from "../data/insuranceProviders";
@@ -177,6 +178,7 @@ function LifeEventsIcon({ size = 16 }) {
 export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTasks, user, onSignOut, onStartLifeEvent }) {
   const { profile, providerHistory, updateProfile: onUpdateProfile, lifeEvents } = useProfileContext();
   const { taskState } = useTaskContext();
+  const { calGranted, connectCalendar } = useCalendarContext();
   const [confirmReset,   setConfirmReset]   = useState(false);
   const [resetting,      setResetting]      = useState(false);
   const [resetError,     setResetError]     = useState(null);
@@ -699,6 +701,21 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'13px 16px', borderBottom:'1px solid #F5F0E8' }}>
               <span style={S.rowLabel}>Signed in as</span>
               <span style={S.rowValue(false)}>{user.email}</span>
+            </div>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'13px 16px', borderBottom:'1px solid #F5F0E8' }}>
+              <span style={S.rowLabel}>Google Calendar</span>
+              {calGranted ? (
+                <span style={{ fontSize:12, fontWeight:700, color:'#1A5C3A', background:'#E8F5EE', borderRadius:20, padding:'5px 12px', fontFamily:'DM Sans, sans-serif' }}>
+                  Connected
+                </span>
+              ) : (
+                <button
+                  onClick={connectCalendar}
+                  style={{ fontSize:12, fontWeight:700, color:'#4285F4', background:'#EEF2FF', border:'none', borderRadius:20, padding:'5px 12px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                >
+                  Connect
+                </button>
+              )}
             </div>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'13px 16px' }}>
               <span style={{ fontSize:13, fontWeight:500, color:'#9B9B9B', fontFamily:'DM Sans, sans-serif' }}>Sign out</span>

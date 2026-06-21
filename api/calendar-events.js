@@ -40,11 +40,11 @@ export default async function handler(req) {
   }
 
   const now = new Date();
-  const in30 = new Date(now.getTime() + 30 * 86400000);
+  const in90 = new Date(now.getTime() + 90 * 86400000);
 
   const url = new URL('https://www.googleapis.com/calendar/v3/calendars/primary/events');
   url.searchParams.set('timeMin', now.toISOString());
-  url.searchParams.set('timeMax', in30.toISOString());
+  url.searchParams.set('timeMax', in90.toISOString());
   url.searchParams.set('singleEvents', 'true');
   url.searchParams.set('orderBy', 'startTime');
   url.searchParams.set('maxResults', '50');
