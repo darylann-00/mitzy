@@ -17,6 +17,8 @@ export const CUSTOM_TASKS_KEY       = "mitzy-ct-v1";
 export const FOCUS_SEEN_KEY         = "mitzy-fs-v1";
 export const LIFE_EVENTS_KEY        = "mitzy-le-v1";
 export const LIFE_EVENTS_NUDGE_KEY  = "mitzy-len-v1";
+export const SNOOZE_TIP_KEY        = "mitzy-snztip-v1";
+export const CAL_GRANTED_KEY        = "mitzy-cal-v1";
 
 export const ASSIST_CACHE_TTL      = 7  * 24 * 60 * 60 * 1000; // 7 days
 export const KNOWLEDGE_REFRESH_TTL = 90 * 24 * 60 * 60 * 1000; // 90 days
@@ -27,6 +29,7 @@ const CURRENT_KEYS = new Set([
   "mitzy-v6", "mitzy-ob-v6", "mitzy-ob-v6-p", "mitzy-dis-v6", "mitzy-pro-v7",
   "mitzy-ph-v6", "mitzy-visits-v6", "mitzy-hz-v6", "mitzy-kr-v6", "mitzy-td-v6", "mitzy-tq-v6",
   "mitzy-welcome-v1", "mitzy-ct-v1", "mitzy-fs-v1", "mitzy-le-v1", "mitzy-len-v1",
+  "mitzy-snztip-v1", "mitzy-cal-v1",
 ]);
 
 export function cleanupOldKeys() {
@@ -57,6 +60,8 @@ const USER_KEYS = [
   "mitzy-fs-v1",      // FOCUS_SEEN_KEY
   "mitzy-le-v1",      // LIFE_EVENTS_KEY
   "mitzy-len-v1",     // LIFE_EVENTS_NUDGE_KEY
+  "mitzy-snztip-v1",  // SNOOZE_TIP_KEY
+  "mitzy-cal-v1",     // CAL_GRANTED_KEY
 ];
 
 export function clearLocalUserData() {

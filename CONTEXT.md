@@ -19,7 +19,7 @@ A household management PWA. Acts as a personal secretary that already knows what
 | Layer | Choice |
 |-------|--------|
 | UI | React 19 (Vite) |
-| State | Custom hooks + localStorage (cache/offline) + Supabase (`profiles`, `task_records`, `custom_tasks`) |
+| State | Custom hooks + localStorage (cache/offline) + Supabase (`profiles`, `task_records` incl. `snoozed_until`, `custom_tasks`) |
 | API | Vercel Edge Functions |
 | AI | Claude Haiku 4.5 via `/api/assist` + `/api/generate-task` |
 | Deployment | Vercel |
@@ -40,11 +40,13 @@ Two Supabase projects:
 
 - **Task library** — 60+ base tasks across 6 categories (home, car, health, finance, emergency, seasonal). Dynamically extended with per-car, per-kid, per-pet, and per-hazard tasks based on profile.
 
-- **Task status + scoring** — Each task gets status `due | needed | coming-up | scheduled | confirm | ok | unknown` based on last-done date, interval, and window. Scored by stakes × days overdue. `unknown` = no `lastDone` set yet; excluded from scoring. `needed` = one-time task confirmed not done; orange bar, no date text, high priority score.
+- **Task status + scoring** — Each task gets status `due | needed | coming-up | scheduled | confirm | ok | unknown | snoozed` based on last-done date, interval, and window. Scored by stakes × days overdue. `unknown` = no `lastDone` set yet; excluded from scoring. `needed` = one-time task confirmed not done; orange bar, no date text, high priority score. `snoozed` = consciously deferred until a future date; score 0, hidden from focus.
 
-- **HomeView** — Personal greeting header (`HomeHeader`), "Focus for today" section (top 3 scored tasks), trickle card, hazard card, all-clear state. `paddingBottom: 160px` to clear FABs + nav.
+- **Snooze (Zeigarnik relief)** — Swipe a task card left to snooze it until a chosen date. Consciously deferring a task relieves cognitive load (Zeigarnik effect). Touch-only swipe gesture (80px threshold) reveals a periwinkle blue (#6B8DD6) strip with closed-eye icon behind the card. Releasing past threshold opens SnoozePicker bottom sheet with presets (Next week, Next month, In 3 months, Pick a date). Snoozed tasks get score 0 and are hidden from focus. AllView shows a collapsible "X snoozed" section (collapsed by default) with "Wake up" button on each card. TaskDetailView shows a blue "Snoozed until [date]" chip with "Wake up early" button. First-use tooltip appears above focus tasks (gated by localStorage `mitzy-snztip-v1`). Data: `snoozed_until` DATE column on `task_records`, separate from `scheduled_date`. Expired snoozes (date ≤ today) fall through to normal status.
 
-- **AllView** — Three urgency groups. Category filter chips. Due-only toggle. `GroupDivider` between groups. Category icon tile on each card. "X tasks to explore" accordion section at bottom for `unknown`-status tasks with inline chip picker. `paddingBottom: 160px`.
+- **HomeView** — Personal greeting header (`HomeHeader`), "Focus for today" section (top 3 scored tasks, swipeable), trickle card, hazard card, all-clear state. `paddingBottom: 160px` to clear FABs + nav.
+
+- **AllView** — Three urgency groups (swipeable cards). Category filter chips. Due-only toggle. `GroupDivider` between groups. Category icon tile on each card. Collapsible "Snoozed" section between "All good" and "Explore". "X tasks to explore" accordion section at bottom for `unknown`-status tasks with inline chip picker. `paddingBottom: 160px`.
 
 - **ProfileView** — Sections: Home, Car, Kids, Pets, Health, Saved providers, Account. Health section shows/edits: Name, Birth year, Gender, Insurance provider. Gender chips match onboarding style; "prefer not to say" is hidden in view mode. Account section shows signed-in email + logout button. Reset deletes Supabase rows + clears localStorage.
 
@@ -78,7 +80,7 @@ Two Supabase projects:
 
 | Feature | Status |
 |---------|--------|
-| Google Calendar integration | Fully built. Phase 1: silent OAuth at startup, Haiku event-task matching via `/api/calendar-events` + `/api/calendar-match`. Phase 2: inline confirmation chips on task cards, `scheduled_date` persisted to Supabase. `/api/schedule` Edge Function creates all-day events. Requires `VITE_GOOGLE_CLIENT_ID` + Calendar API enabled in Google Cloud Console. |
+| Google Calendar integration | Fully built. Phase 1: silent OAuth at startup, Haiku event-task matching via `/api/calendar-events` + `/api/calendar-match`. Phase 2: inline confirmation chips on task cards, `scheduled_date` persisted to Supabase. `/api/schedule` Edge Function creates all-day events. Requires `VITE_GOOGLE_CLIENT_ID` + Calendar API enabled in Google Cloud Console. Grant flow: user connects once (onboarding step 7, Profile Account section, or ScheduleSurface contextual prompt); `CAL_GRANTED_KEY` persisted to localStorage; subsequent sessions use silent GIS token. Event window is 90 days forward. Detection pipeline runs once per (user, token) pair to avoid cancellation from task-state churn. |
 | Hazard zip lookup | Hardcoded zip ranges. Replace with FEMA API. |
 | Knowledge refresh | Stubbed. |
 | `task.why` + `task.guidance` fields | Null for all current tasks — UI falls back to `task.note` and generic copy. |
@@ -98,6 +100,7 @@ C.red         = '#D62828'  // due now
 C.orange      = '#F77F00'  // coming up, action buttons
 C.green       = '#06A77D'  // done
 C.yellow      = '#F4C430'  // trickle, scheduled
+C.periwinkle  = '#6B8DD6'  // snooze
 C.ink         = '#1C2B22'  // primary text
 C.muted       = '#4A6256'  // secondary text
 C.bg          = '#FDFAF2'  // warm off-white background
@@ -166,7 +169,7 @@ GitHub Actions at `.github/workflows/ci.yml`. Two jobs on every PR and push to m
 - **ci** — lint, build, unit tests (placeholder Supabase env, always runs)
 - **e2e** — Playwright acceptance tests against dev Supabase (`lrzheitfrltcyvllblmb`); skips until GitHub repo secrets are set (`VITE_SUPABASE_URL_DEV`, `VITE_SUPABASE_ANON_KEY_DEV`, `PLAYWRIGHT_TEST_EMAIL`, `PLAYWRIGHT_TEST_PASSWORD`). Uploads trace artifacts on failure.
 
-Three baseline e2e tests run on every PR: `sign_in`, `onboarding`, `mark_done`. PRs that touch a user-facing flow should include a feature test for that flow.
+Baseline e2e tests run on every PR: `sign_in`, `onboarding`, `mark_done`. Feature tests: `calendar_match`, `life_event_new_baby`, `snooze`. PRs that touch a user-facing flow should include a feature test for that flow.
 
 ---
 

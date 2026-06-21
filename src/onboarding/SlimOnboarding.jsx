@@ -1,5 +1,7 @@
 import { useState } from "react";
 import ZIP_CODES from "../data/zipCodes";
+import { getCalendarToken } from "../lib/googleCalendar";
+import { saveS, CAL_GRANTED_KEY } from "../utils/storage";
 
 // ─── Car data ──────────────────────────────────────────────────────────────────
 const CAR_DATA = {
@@ -157,8 +159,9 @@ export function SlimOnboarding({ onComplete, onBack }) {
   const [err,           setErr]           = useState('');
   const [showTransition, setShowTransition] = useState(false);
   const [completing,    setCompleting]    = useState(false);
+  const [calStatus,     setCalStatus]     = useState('idle'); // idle | connecting | done | error
 
-  const TOTAL_STEPS = 6;
+  const TOTAL_STEPS = 7;
   const go = n => setTimeout(() => { setStep(n); setErr(''); }, 200);
 
   const editCar = (i) => {
@@ -642,7 +645,7 @@ export function SlimOnboarding({ onComplete, onBack }) {
               {profile.hasPets === null ? (
                 <>
                   <OptionBtn label="Yes" selected={false} onClick={() => { setProfile(p => ({ ...p, hasPets: true })); setPetInputOpen(true); }} />
-                  <OptionBtn label="No"  selected={false} onClick={() => { setProfile(p => ({ ...p, hasPets: false })); setShowTransition(true); }} />
+                  <OptionBtn label="No"  selected={false} onClick={() => { setProfile(p => ({ ...p, hasPets: false })); go(6); }} />
                 </>
               ) : (
                 <>
@@ -725,15 +728,86 @@ export function SlimOnboarding({ onComplete, onBack }) {
                     if (petInputOpen) {
                       const isComplete = petInput.name.trim() && petInput.birthYear && petInput.type && (petInput.type !== 'dog' || editingPet !== null);
                       const hasPartial = petInput.name.trim() || petInput.birthYear || petInput.type;
-                      if (isComplete) { commitPet(petInput); setShowTransition(true); return; }
+                      if (isComplete) { commitPet(petInput); go(6); return; }
                       if (hasPartial) {
                         setErr(petInput.name.trim() ? `Finish adding ${petInput.name.trim()} or clear the fields to continue.` : 'Finish adding this entry or clear the fields to continue.');
                         return;
                       }
                     }
                     setPetInputOpen(false);
-                    setShowTransition(true);
+                    go(6);
                   }}>Let's go</NextBtn>
+                </>
+              )}
+            </QuestionScreen>
+          )}
+
+          {/* Step 6: Google Calendar */}
+          {step === 6 && (
+            <QuestionScreen step={7} total={TOTAL_STEPS} question="Connect Google Calendar">
+              <div style={{ fontSize:13, color:'#B8DCC8', marginBottom:20, fontFamily:'DM Sans, sans-serif', lineHeight:1.6 }}>
+                Mitzy can check your calendar for existing appointments and automatically match them to your tasks — so you don't have to enter things twice.
+              </div>
+              {calStatus === 'done' ? (
+                <>
+                  <div style={{ display:'flex', alignItems:'center', gap:10, background:'rgba(6,167,125,0.2)', border:'1.5px solid #06A77D', borderRadius:12, padding:'14px 16px', marginBottom:16 }}>
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                      <polyline points="4,10 8.5,14.5 16,6" stroke="#06A77D" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <span style={{ color:'#E8F5EE', fontSize:14, fontWeight:600, fontFamily:'DM Sans, sans-serif' }}>Google Calendar connected!</span>
+                  </div>
+                  <NextBtn onClick={() => setShowTransition(true)}>Continue</NextBtn>
+                </>
+              ) : (
+                <>
+                  {calStatus === 'error' && (
+                    <div style={{ fontSize:12, color:'#F4C430', marginBottom:12, fontFamily:'DM Sans, sans-serif' }}>
+                      Something went wrong — try again or skip for now.
+                    </div>
+                  )}
+                  <button
+                    disabled={calStatus === 'connecting'}
+                    onClick={async () => {
+                      setCalStatus('connecting');
+                      try {
+                        const token = await getCalendarToken({ silent: false });
+                        saveS(CAL_GRANTED_KEY, true);
+                        // Store token for CalendarContext to pick up on next render via silent flow
+                        setCalStatus('done');
+                      } catch {
+                        setCalStatus('error');
+                      }
+                    }}
+                    style={{ width:'100%', padding:'14px', fontSize:14, fontWeight:700, background: calStatus === 'connecting' ? 'rgba(255,255,255,0.1)' : '#fff', color: calStatus === 'connecting' ? '#B8DCC8' : '#1C2B22', border:'none', borderRadius:12, cursor: calStatus === 'connecting' ? 'default' : 'pointer', fontFamily:'DM Sans, sans-serif', marginBottom:10, display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}
+                  >
+                    {calStatus === 'connecting' ? (
+                      <>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ animation:'spin 0.7s linear infinite' }}>
+                          <circle cx="8" cy="8" r="6" stroke="#B8DCC8" strokeWidth="2" strokeOpacity="0.3" />
+                          <path d="M8 2 A6 6 0 0 1 14 8" stroke="#B8DCC8" strokeWidth="2" strokeLinecap="round" />
+                        </svg>
+                        Connecting…
+                      </>
+                    ) : (
+                      <>
+                        <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                          <rect width="20" height="20" rx="4" fill="#fff" stroke="#DADCE0" />
+                          <rect x="4" y="4" width="12" height="12" rx="1.5" stroke="#4285F4" strokeWidth="1.4" />
+                          <line x1="4" y1="8" x2="16" y2="8" stroke="#4285F4" strokeWidth="1.4" />
+                          <line x1="8" y1="4" x2="8" y2="7.5" stroke="#EA4335" strokeWidth="1.4" strokeLinecap="round" />
+                          <line x1="12" y1="4" x2="12" y2="7.5" stroke="#EA4335" strokeWidth="1.4" strokeLinecap="round" />
+                          <circle cx="10" cy="12" r="1.2" fill="#34A853" />
+                        </svg>
+                        Connect Google Calendar
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setShowTransition(true)}
+                    style={{ width:'100%', padding:'12px', fontSize:13, fontWeight:600, background:'transparent', color:'rgba(184,220,200,0.75)', border:'none', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                  >
+                    Skip for now
+                  </button>
                 </>
               )}
             </QuestionScreen>

@@ -1,5 +1,6 @@
 import { TrickleCard } from "../components/TrickleCard";
-import { TaskCard }    from "../components/TaskCard";
+import { SwipeableTaskCard } from "../components/SwipeableTaskCard";
+import { SnoozeTooltip }    from "../components/SnoozeTooltip";
 import { HazardCard }  from "../components/HazardCard";
 import { LifeEventNudge } from "../components/LifeEventNudge";
 import { useProfileContext } from "../contexts/ProfileContext";
@@ -205,6 +206,7 @@ export function HomeView({
   onGoToAll,
   onSelectTask,
   onDoneTask,
+  onSnooze,
   onTrickleAnswer,
   onTrickleDismiss,
   onTrickleAssist,
@@ -253,10 +255,11 @@ export function HomeView({
         {focusTasks.length > 0 && (
           <div style={{ marginBottom:4 }}>
             <SectionLabel label="Focus for today" color="#1A5C3A" />
+            <SnoozeTooltip visible={focusTasks.length > 0} />
             {focusTasks.map(task => {
               const match = pendingCalendarMatches.find(m => m.taskId === task.id);
               return (
-                <TaskCard
+                <SwipeableTaskCard
                   key={task.id}
                   task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate }}
                   status={getStatus(task)}
@@ -264,6 +267,7 @@ export function HomeView({
                   hasSavedProvider={!!providerHistory[task.id]}
                   onSelect={onSelectTask}
                   onDone={onDoneTask}
+                  onSnooze={onSnooze}
                   showCategoryIcon
                   subtitle={getStatus(task) === 'needed' ? '' : undefined}
                   stepProgress={taskState[task.id]?.stepProgress}
