@@ -16,6 +16,7 @@ export function TaskProvider({ user, children }) {
     taskState, setTaskState,
     disabledTasks, setDisabledTasks,
     markDone, markScheduled, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, setDueDate, setStepProgress,
+    snoozeTask, unsnoozeTask,
     loading, syncError,
   } = useTasks(user);
 
@@ -33,12 +34,19 @@ export function TaskProvider({ user, children }) {
   }), [activeTasks, taskState, region]);
 
   const scoredDue = useMemo(() => [...visibleTasks]
-    .filter(t => taskStatus(t, taskState) !== "ok")
+    .filter(t => {
+      const s = taskStatus(t, taskState);
+      return s !== "ok" && s !== "snoozed";
+    })
     .sort((a, b) => {
-      const sa = taskScore(a, taskState[a.id]?.lastDone, taskState[a.id]?.intervalDays, taskState[a.id]?.oneTime);
-      const sb = taskScore(b, taskState[b.id]?.lastDone, taskState[b.id]?.intervalDays, taskState[b.id]?.oneTime);
+      const sa = taskScore(a, taskState[a.id]?.lastDone, taskState[a.id]?.intervalDays, taskState[a.id]?.oneTime, taskState[a.id]?.snoozedUntil);
+      const sb = taskScore(b, taskState[b.id]?.lastDone, taskState[b.id]?.intervalDays, taskState[b.id]?.oneTime, taskState[b.id]?.snoozedUntil);
       return sb - sa;
     }), [visibleTasks, taskState]);
+
+  const snoozedTasks = useMemo(() =>
+    activeTasks.filter(t => taskStatus(t, taskState) === "snoozed"),
+    [activeTasks, taskState]);
 
   const [focusSeen, setFocusSeen] = useState(() => loadS(FOCUS_SEEN_KEY, {}));
 
@@ -115,8 +123,9 @@ export function TaskProvider({ user, children }) {
       taskState, setTaskState,
       disabledTasks, setDisabledTasks,
       activeTasks, visibleTasks, scoredDue, focusTasks, doneThisWeek,
-      nextUpcomingTask,
+      snoozedTasks, nextUpcomingTask,
       markDone, markScheduled, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, setDueDate, setStepProgress,
+      snoozeTask, unsnoozeTask,
       getStatus, getDays, getNext,
       loading, syncError,
     }}>

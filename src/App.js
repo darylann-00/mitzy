@@ -28,6 +28,8 @@ import { AITaskCreator } from "./components/AITaskCreator";
 import { ProfileConflictModal } from "./components/ProfileConflictModal";
 import { NewBabyIntake } from "./components/LifeEventIntake";
 import { tasksForIntake as newBabyTasksForIntake } from "./data/lifeEvents/newBaby";
+import { SnoozePicker } from "./components/SnoozePicker";
+import { SnoozeTooltip } from "./components/SnoozeTooltip";
 
 import { HomeView }       from "./views/HomeView";
 import { AllView }        from "./views/AllView";
@@ -211,7 +213,7 @@ export default function Mitzy() {
 // ─── Inner app — consumes contexts ─────────────────────────────────────────────
 function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, signInWithPassword, welcomeChoice, setWelcomeChoice }) {
   const { profile, taskLibrary, updateProfile, removeCustomTask, region, loading: profileLoading, syncError: profileSyncError, serverProfileChecked, serverProfileExists, lifeEvents } = useProfileContext();
-  const { activeTasks, taskState, setTaskState, setDisabledTasks, markDone, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, setDueDate, setStepProgress, markScheduled, nextUpcomingTask, loading: tasksLoading, syncError: tasksSyncError } = useTaskContext();
+  const { activeTasks, taskState, setTaskState, setDisabledTasks, markDone, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, setDueDate, setStepProgress, markScheduled, snoozeTask, unsnoozeTask, nextUpcomingTask, loading: tasksLoading, syncError: tasksSyncError } = useTaskContext();
   const { pendingCalendarMatches, dismissMatch } = useCalendarContext();
 
   // ─── Onboarding state ──────────────────────────────────────────────────────
@@ -229,6 +231,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
   const [activeCategory,  setActiveCategory]  = useState('all');
   const [dueOnly,         setDueOnly]         = useState(false);
   const [lifeEventIntake, setLifeEventIntake] = useState(null); // null | 'new-baby'
+  const [snoozePickerTask, setSnoozePickerTask] = useState(null);
   const [nudgeState, setNudgeState] = useState(() => loadS(LIFE_EVENTS_NUDGE_KEY, { discoveryDismissed: false, wrapupDismissed: {} }));
 
   // ─── Session (trickle + hazards) ───────────────────────────────────────────
@@ -432,6 +435,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
           onMarkNotApplicable={(id) => { markNotApplicable(id); setSelectedTask(null); }}
           onRemove={(id) => { removeCustomTask(id); setSelectedTask(null); }}
           onBack={() => setSelectedTask(null)}
+          onUnsnooze={(id) => { unsnoozeTask(id); }}
         />
       </>
     );
@@ -457,6 +461,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
           onGoToAll={() => setView('all')}
           onSelectTask={setSelectedTask}
           onDoneTask={setMarkDoneModal}
+          onSnooze={setSnoozePickerTask}
           onTrickleAnswer={(answer) => {
             if (answer.needed)             markNeeded(answer.taskId);
             else if (answer.notApplicable) markNotApplicable(answer.taskId);
@@ -482,6 +487,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
           setDueOnly={setDueOnly}
           onMatchConfirm={handleMatchConfirm}
           onMatchDismiss={handleMatchDismiss}
+          onSnooze={setSnoozePickerTask}
         />
       )}
 
@@ -493,6 +499,14 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
           user={user}
           onSignOut={signOut}
           onStartLifeEvent={(type) => setLifeEventIntake(type)}
+        />
+      )}
+
+      {snoozePickerTask && (
+        <SnoozePicker
+          task={snoozePickerTask}
+          onSnooze={(id, date) => { snoozeTask(id, date); setSnoozePickerTask(null); }}
+          onClose={() => setSnoozePickerTask(null)}
         />
       )}
 

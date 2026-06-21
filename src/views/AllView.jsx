@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { TaskCard } from "../components/TaskCard";
+import { SwipeableTaskCard } from "../components/SwipeableTaskCard";
+import { SnoozeIcon } from "../components/SnoozeIcon";
 import { HouseIcon, CarIcon, PersonIcon, CalendarIcon, StarIcon, PetIcon, CategoryTile } from "../components/CategoryIcons";
 import { TaskAnswerChips } from "../components/TaskAnswerChips";
 import { AppHeader } from "./HomeView";
@@ -238,10 +240,61 @@ function LifeEventGroup({ event, tasks, taskState, getStatus, getDays, providerH
   );
 }
 
+// ─── Snoozed section ──────────────────────────────────────────────────────
+function SnoozedSection({ tasks, taskState, onSelectTask, onUnsnooze }) {
+  const [open, setOpen] = useState(false);
+
+  if (tasks.length === 0) return null;
+
+  return (
+    <>
+      <GroupDivider />
+      <div style={{ marginTop: 18 }}>
+        <div
+          onClick={() => setOpen(o => !o)}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            cursor: 'pointer', padding: '0 2px', marginBottom: open ? 10 : 0,
+          }}
+        >
+          <div style={{
+            fontSize: 10, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase',
+            color: '#4A6256', fontFamily: "'Righteous', 'Trebuchet MS', cursive",
+            display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            <SnoozeIcon size={14} color="#4A6256" />
+            {tasks.length} snoozed
+            <div style={{ flex: 1, height: 1, background: '#EAE4DA' }} />
+          </div>
+          <svg
+            width="14" height="14" viewBox="0 0 14 14" fill="none"
+            style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s', flexShrink: 0, marginLeft: 6 }}
+          >
+            <polyline points="2,4 7,10 12,4" stroke="#4A6256" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+
+        {open && tasks.map(task => (
+          <TaskCard
+            key={task.id}
+            task={{ ...task, snoozedUntil: taskState[task.id]?.snoozedUntil }}
+            status="snoozed"
+            days={null}
+            onSelect={onSelectTask}
+            onDone={() => {}}
+            onUnsnooze={onUnsnooze}
+            showCategoryIcon
+          />
+        ))}
+      </div>
+    </>
+  );
+}
+
 // ─── AllView ───────────────────────────────────────────────────────────────────
-export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCategory, dueOnly, setDueOnly, onMatchConfirm, onMatchDismiss }) {
+export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCategory, dueOnly, setDueOnly, onMatchConfirm, onMatchDismiss, onSnooze }) {
   const { providerHistory, region, lifeEvents } = useProfileContext();
-  const { activeTasks: allActiveTasks, getStatus, getDays, markDone, markNeeded, markNotApplicable, taskState } = useTaskContext();
+  const { activeTasks: allActiveTasks, getStatus, getDays, markDone, markNeeded, markNotApplicable, taskState, snoozedTasks, unsnoozeTask } = useTaskContext();
   const { pendingCalendarMatches } = useCalendarContext();
 
   // Separate life-event tasks from the rest — they render in their own group at
@@ -379,7 +432,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
             {needsAttention.map(task => {
               const match = pendingCalendarMatches.find(m => m.taskId === task.id);
               return (
-                <TaskCard
+                <SwipeableTaskCard
                   key={task.id}
                   task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate }}
                   status={getStatus(task)}
@@ -387,6 +440,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
                   hasSavedProvider={!!providerHistory[task.id]}
                   onSelect={onSelectTask}
                   onDone={onDoneTask}
+                  onSnooze={onSnooze}
                   showCategoryIcon
                   subtitle={getStatus(task) === 'needed' ? '' : undefined}
                   pendingMatch={match}
@@ -406,7 +460,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
             {comingUp.map(task => {
               const match = pendingCalendarMatches.find(m => m.taskId === task.id);
               return (
-                <TaskCard
+                <SwipeableTaskCard
                   key={task.id}
                   task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate }}
                   status={getStatus(task)}
@@ -414,6 +468,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
                   hasSavedProvider={!!providerHistory[task.id]}
                   onSelect={onSelectTask}
                   onDone={onDoneTask}
+                  onSnooze={onSnooze}
                   showCategoryIcon
                   pendingMatch={match}
                   onMatchConfirm={match ? () => onMatchConfirm(task.id, match.eventDate) : undefined}
@@ -432,7 +487,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
             {allGood.map(task => {
               const match = pendingCalendarMatches.find(m => m.taskId === task.id);
               return (
-                <TaskCard
+                <SwipeableTaskCard
                   key={task.id}
                   task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate }}
                   status={getStatus(task)}
@@ -440,6 +495,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
                   hasSavedProvider={!!providerHistory[task.id]}
                   onSelect={onSelectTask}
                   onDone={onDoneTask}
+                  onSnooze={onSnooze}
                   showCategoryIcon
                   subtitle={seasonSubtitle(task)}
                   pendingMatch={match}
@@ -451,6 +507,8 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
             })}
           </>
         )}
+
+        <SnoozedSection tasks={snoozedTasks} taskState={taskState} onSelectTask={onSelectTask} onUnsnooze={unsnoozeTask} />
 
         <ExploreSection tasks={unknownFiltered} markDone={markDone} markNeeded={markNeeded} markNotApplicable={markNotApplicable} />
 
