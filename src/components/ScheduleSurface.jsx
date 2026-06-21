@@ -148,7 +148,7 @@ export function ScheduleSurface({ task }) {
   const pad = n => String(n).padStart(2, '0');
   const todayIso = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
 
-  const { pendingCalendarMatches, dismissMatch, accessToken, setAccessToken } = useCalendarContext();
+  const { pendingCalendarMatches, dismissMatch, accessToken, setAccessToken, calGranted, connectCalendar } = useCalendarContext();
   const { markScheduled, taskState } = useTaskContext();
 
   const [mode, setMode] = useState('idle');
@@ -249,7 +249,9 @@ export function ScheduleSurface({ task }) {
             </div>
             <div>
               <div style={{ fontSize: 14, fontWeight: 500, color: '#1C2B22' }}>Schedule this</div>
-              <div style={{ fontSize: 12, color: '#4A6256', marginTop: 1 }}>No matching events found on your calendar</div>
+              <div style={{ fontSize: 12, color: '#4A6256', marginTop: 1 }}>
+                {calGranted ? 'No matching events found on your calendar' : 'Connect Google Calendar to detect existing appointments'}
+              </div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, padding: '8px 14px 13px' }}>
@@ -260,13 +262,23 @@ export function ScheduleSurface({ task }) {
               <GCal />
               <span>Create event</span>
             </button>
-            <button
-              onClick={() => setMode('more')}
-              style={{ flex: 1, padding: '9px 8px', borderRadius: 10, border: '1px solid #EAE4DA', background: '#F8F5EE', fontSize: 12, fontWeight: 500, color: '#1C2B22', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
-            >
-              <CalSVG color="#4A6256" size={20} />
-              <span>Browse cal</span>
-            </button>
+            {calGranted ? (
+              <button
+                onClick={() => setMode('more')}
+                style={{ flex: 1, padding: '9px 8px', borderRadius: 10, border: '1px solid #EAE4DA', background: '#F8F5EE', fontSize: 12, fontWeight: 500, color: '#1C2B22', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
+              >
+                <CalSVG color="#4A6256" size={20} />
+                <span>Browse cal</span>
+              </button>
+            ) : (
+              <button
+                onClick={connectCalendar}
+                style={{ flex: 1, padding: '9px 8px', borderRadius: 10, border: '1px solid #C5D5F5', background: '#EEF2FF', fontSize: 12, fontWeight: 500, color: '#4285F4', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
+              >
+                <GCal />
+                <span>Connect</span>
+              </button>
+            )}
             <button
               onClick={() => setMode('manual')}
               style={{ flex: 1, padding: '9px 8px', borderRadius: 10, border: '1px solid #EAE4DA', background: '#F8F5EE', fontSize: 12, fontWeight: 500, color: '#1C2B22', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
