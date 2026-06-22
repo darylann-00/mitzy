@@ -50,15 +50,14 @@ export function TaskProvider({ user, children }) {
 
   const [focusSeen, setFocusSeen] = useState(() => loadS(FOCUS_SEEN_KEY, {}));
 
-  const focusTasks = useMemo(() => {
+  const homeTasks = useMemo(() => {
     const today = todayStr();
     return scoredDue
       .filter(t => {
         if (taskStatus(t, taskState) === "unknown") return false;
         const entry = focusSeen[t.id];
         return !(entry?.suppressUntil && entry.suppressUntil > today);
-      })
-      .slice(0, 3);
+      });
   }, [scoredDue, taskState, focusSeen]);
 
   useEffect(() => {
@@ -66,7 +65,7 @@ export function TaskProvider({ user, children }) {
     setFocusSeen(prev => {
       const next = { ...prev };
       let changed = false;
-      focusTasks.forEach(t => {
+      homeTasks.forEach(t => {
         const currentLastDone = taskState[t.id]?.lastDone ?? null;
         const entry = next[t.id];
         if (!entry || entry.lastDoneSeen !== currentLastDone) {
@@ -90,7 +89,7 @@ export function TaskProvider({ user, children }) {
       if (changed) saveS(FOCUS_SEEN_KEY, next);
       return changed ? next : prev;
     });
-  }, [focusTasks, taskState]);
+  }, [homeTasks, taskState]);
 
   const doneThisWeek = useMemo(() =>
     Object.values(taskState).filter(entry => {
@@ -122,7 +121,7 @@ export function TaskProvider({ user, children }) {
     <TaskContext.Provider value={{
       taskState, setTaskState,
       disabledTasks, setDisabledTasks,
-      activeTasks, visibleTasks, scoredDue, focusTasks, doneThisWeek,
+      activeTasks, visibleTasks, scoredDue, homeTasks, doneThisWeek,
       snoozedTasks, nextUpcomingTask,
       markDone, markScheduled, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, setDueDate, setStepProgress,
       snoozeTask, unsnoozeTask,
