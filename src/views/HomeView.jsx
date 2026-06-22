@@ -218,7 +218,17 @@ export function HomeView({
   const { profile, providerHistory } = useProfileContext();
   const { homeTasks, doneThisWeek, getStatus, getDays, taskState } = useTaskContext();
   const todayTask = homeTasks[0] ?? null;
-  const weekTasks = homeTasks.slice(1);
+  const isDueThisWeek = (t) => {
+    const s = getStatus(t);
+    if (s === 'due' || s === 'needed' || s === 'confirm') return true;
+    const d = getDays(t);
+    return d === null || d <= 7;
+  };
+  const remaining = homeTasks.slice(1);
+  const customWeek = remaining.filter(t => t.isCustom && isDueThisWeek(t));
+  const MAX_LIBRARY = Math.max(0, 3 - customWeek.length);
+  const libraryWeek = remaining.filter(t => !t.isCustom && isDueThisWeek(t)).slice(0, MAX_LIBRARY);
+  const weekTasks = [...customWeek, ...libraryWeek];
   const { pendingCalendarMatches } = useCalendarContext();
 
   return (
