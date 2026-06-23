@@ -251,29 +251,30 @@ export function HomeView({
 
         {/* Focus for today */}
         {focusTasks.length > 0 && (
-          <div style={{ marginBottom:4 }}>
+          <>
             <SectionLabel label="Focus for today" color="#1A5C3A" />
             {focusTasks.map(task => {
               const match = pendingCalendarMatches.find(m => m.taskId === task.id);
               return (
-                <TaskCard
-                  key={task.id}
-                  task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate }}
-                  status={getStatus(task)}
-                  days={getDays(task)}
-                  hasSavedProvider={!!providerHistory[task.id]}
-                  onSelect={onSelectTask}
-                  onDone={onDoneTask}
-                  showCategoryIcon
-                  subtitle={getStatus(task) === 'needed' ? '' : undefined}
-                  stepProgress={taskState[task.id]?.stepProgress}
-                  pendingMatch={match}
-                  onMatchConfirm={match ? () => onMatchConfirm(task.id, match.eventDate) : undefined}
-                  onMatchDismiss={match ? () => onMatchDismiss(task.id) : undefined}
-                />
+                <div key={task.id}>
+                  <TaskCard
+                    task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate }}
+                    status={getStatus(task)}
+                    days={getDays(task)}
+                    hasSavedProvider={!!providerHistory[task.id]}
+                    onSelect={onSelectTask}
+                    onDone={onDoneTask}
+                    showCategoryIcon
+                    subtitle={getStatus(task) === 'needed' ? '' : undefined}
+                    stepProgress={taskState[task.id]?.stepProgress}
+                    pendingMatch={match}
+                    onMatchConfirm={match ? () => onMatchConfirm(task.id, match.eventDate) : undefined}
+                    onMatchDismiss={match ? () => onMatchDismiss(task.id) : undefined}
+                  />
+                </div>
               );
             })}
-          </div>
+          </>
         )}
 
         {/* Hazard card */}
