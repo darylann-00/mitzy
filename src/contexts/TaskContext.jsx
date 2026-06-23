@@ -16,6 +16,7 @@ export function TaskProvider({ user, children }) {
     taskState, setTaskState,
     disabledTasks, setDisabledTasks,
     markDone, markScheduled, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, setDueDate, setStepProgress,
+    snoozeTask, unsnoozeTask,
     loading, syncError,
   } = useTasks(user);
 
@@ -33,24 +34,30 @@ export function TaskProvider({ user, children }) {
   }), [activeTasks, taskState, region]);
 
   const scoredDue = useMemo(() => [...visibleTasks]
-    .filter(t => taskStatus(t, taskState) !== "ok")
+    .filter(t => {
+      const s = taskStatus(t, taskState);
+      return s !== "ok" && s !== "snoozed";
+    })
     .sort((a, b) => {
-      const sa = taskScore(a, taskState[a.id]?.lastDone, taskState[a.id]?.intervalDays, taskState[a.id]?.oneTime);
-      const sb = taskScore(b, taskState[b.id]?.lastDone, taskState[b.id]?.intervalDays, taskState[b.id]?.oneTime);
+      const sa = taskScore(a, taskState[a.id]?.lastDone, taskState[a.id]?.intervalDays, taskState[a.id]?.oneTime, taskState[a.id]?.snoozedUntil);
+      const sb = taskScore(b, taskState[b.id]?.lastDone, taskState[b.id]?.intervalDays, taskState[b.id]?.oneTime, taskState[b.id]?.snoozedUntil);
       return sb - sa;
     }), [visibleTasks, taskState]);
 
+  const snoozedTasks = useMemo(() =>
+    activeTasks.filter(t => taskStatus(t, taskState) === "snoozed"),
+    [activeTasks, taskState]);
+
   const [focusSeen, setFocusSeen] = useState(() => loadS(FOCUS_SEEN_KEY, {}));
 
-  const focusTasks = useMemo(() => {
+  const homeTasks = useMemo(() => {
     const today = todayStr();
     return scoredDue
       .filter(t => {
         if (taskStatus(t, taskState) === "unknown") return false;
         const entry = focusSeen[t.id];
         return !(entry?.suppressUntil && entry.suppressUntil > today);
-      })
-      .slice(0, 3);
+      });
   }, [scoredDue, taskState, focusSeen]);
 
   useEffect(() => {
@@ -58,7 +65,7 @@ export function TaskProvider({ user, children }) {
     setFocusSeen(prev => {
       const next = { ...prev };
       let changed = false;
-      focusTasks.forEach(t => {
+      homeTasks.forEach(t => {
         const currentLastDone = taskState[t.id]?.lastDone ?? null;
         const entry = next[t.id];
         if (!entry || entry.lastDoneSeen !== currentLastDone) {
@@ -82,7 +89,7 @@ export function TaskProvider({ user, children }) {
       if (changed) saveS(FOCUS_SEEN_KEY, next);
       return changed ? next : prev;
     });
-  }, [focusTasks, taskState]);
+  }, [homeTasks, taskState]);
 
   const doneThisWeek = useMemo(() =>
     Object.values(taskState).filter(entry => {
@@ -114,9 +121,10 @@ export function TaskProvider({ user, children }) {
     <TaskContext.Provider value={{
       taskState, setTaskState,
       disabledTasks, setDisabledTasks,
-      activeTasks, visibleTasks, scoredDue, focusTasks, doneThisWeek,
-      nextUpcomingTask,
+      activeTasks, visibleTasks, scoredDue, homeTasks, doneThisWeek,
+      snoozedTasks, nextUpcomingTask,
       markDone, markScheduled, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, setDueDate, setStepProgress,
+      snoozeTask, unsnoozeTask,
       getStatus, getDays, getNext,
       loading, syncError,
     }}>
