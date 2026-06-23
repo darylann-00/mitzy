@@ -270,28 +270,21 @@ export function HomeView({
             <div style={{ marginBottom: 4 }}>
               <SectionLabel label="Today" color="#1A5C3A" />
               <SnoozeTooltip visible />
-              <div style={{
-                borderRadius: 16,
-                border: '2px solid #1A5C3A',
-                padding: 4,
-                boxShadow: '0 2px 8px rgba(26, 92, 58, 0.08)',
-              }}>
-                <SwipeableTaskCard
-                  task={{ ...todayTask, scheduledDate: taskState[todayTask.id]?.scheduledDate }}
-                  status={getStatus(todayTask)}
-                  days={getDays(todayTask)}
-                  hasSavedProvider={!!providerHistory[todayTask.id]}
-                  onSelect={onSelectTask}
-                  onDone={onDoneTask}
-                  onSnooze={onSnooze}
-                  showCategoryIcon
-                  subtitle={getStatus(todayTask) === 'needed' ? '' : undefined}
-                  stepProgress={taskState[todayTask.id]?.stepProgress}
-                  pendingMatch={match}
-                  onMatchConfirm={match ? () => onMatchConfirm(todayTask.id, match.eventDate) : undefined}
-                  onMatchDismiss={match ? () => onMatchDismiss(todayTask.id) : undefined}
-                />
-              </div>
+              <SwipeableTaskCard
+                task={{ ...todayTask, scheduledDate: taskState[todayTask.id]?.scheduledDate }}
+                status={getStatus(todayTask)}
+                days={getDays(todayTask)}
+                hasSavedProvider={!!providerHistory[todayTask.id]}
+                onSelect={onSelectTask}
+                onDone={onDoneTask}
+                onSnooze={onSnooze}
+                showCategoryIcon
+                subtitle={getStatus(todayTask) === 'needed' ? '' : undefined}
+                stepProgress={taskState[todayTask.id]?.stepProgress}
+                pendingMatch={match}
+                onMatchConfirm={match ? () => onMatchConfirm(todayTask.id, match.eventDate) : undefined}
+                onMatchDismiss={match ? () => onMatchDismiss(todayTask.id) : undefined}
+              />
             </div>
           );
         })()}
