@@ -176,7 +176,7 @@ function LifeEventsIcon({ size = 16 }) {
 
 // ─── Main view ─────────────────────────────────────────────────────────────────
 export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTasks, user, onSignOut, onStartLifeEvent }) {
-  const { profile, providerHistory, updateProfile: onUpdateProfile, lifeEvents } = useProfileContext();
+  const { profile, providerHistory, updateProfile: onUpdateProfile, lifeEvents, saveProvider, updateProvider, removeProvider } = useProfileContext();
   const { taskState } = useTaskContext();
   const { calGranted, connectCalendar } = useCalendarContext();
   const [confirmReset,   setConfirmReset]   = useState(false);
@@ -187,6 +187,16 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
   const [hazardPreview,  setHazardPreview]  = useState(null); // { hazards, tasks } | null
   const [pendingRemove,  setPendingRemove]  = useState(null); // { type: 'car'|'kid'|'pet', index: number }
   const [confirmDismissEvent, setConfirmDismissEvent] = useState(false);
+  const [editingProvider, setEditingProvider] = useState(null); // provider id being edited
+  const [editProviderVote, setEditProviderVote] = useState(null);
+  const [editProviderNotes, setEditProviderNotes] = useState('');
+  const [pendingRemoveProvider, setPendingRemoveProvider] = useState(null); // provider id
+  const [addingProvider, setAddingProvider] = useState(false);
+  const [newProviderName, setNewProviderName] = useState('');
+  const [newProviderFor, setNewProviderFor] = useState('');
+  const [newProviderPhone, setNewProviderPhone] = useState('');
+  const [newProviderNotes, setNewProviderNotes] = useState('');
+  const [newProviderVote, setNewProviderVote] = useState(null);
 
   // Edit state — all sections at once
   const [editHasHome,   setEditHasHome]   = useState(null);
@@ -239,7 +249,7 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
     setCarPicker(null);
   };
 
-  const allProviders = Object.entries(providerHistory || {}).map(([taskId, p]) => ({ taskId, ...p }));
+  const allProviders = Object.entries(providerHistory || {}).flatMap(([taskId, list]) => (list || []).map(p => ({ taskId, ...p })));
   const vehicleLabel = profile.cars?.length ? profile.cars.join(', ') : (profile.car || null);
 
   const HAZARD_LABELS = { earthquake:'Earthquake', wildfire:'Wildfire', hurricane:'Hurricane', tornado:'Tornado', winter:'Winter Storm', flood:'Flooding' };
@@ -580,28 +590,193 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
         )}
 
         {/* ── Saved providers ── */}
-        {allProviders.length > 0 && (
-          <div style={S.sectionCard}>
-            <div style={S.sectionHeader}>
-              <div style={S.iconWrap('#FDE8E8')}><ProvidersIcon size={16} /></div>
-              <span style={S.sectionTitle}>Saved providers</span>
-            </div>
-            {allProviders.map((p, i) => (
-              <div key={i} style={{ padding:'11px 16px', borderBottom: i < allProviders.length - 1 ? '1px solid #F5F0E8' : 'none' }}>
-                <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'#9B9B9B', marginBottom:3, fontFamily:'DM Sans, sans-serif' }}>
-                  {p.taskId.replace(/-/g, ' ')}
-                  {p.vote && (
-                    <span style={{ marginLeft:6, color: p.vote === 'good' ? '#06A77D' : '#D62828' }}>
-                      {p.vote === 'good' ? '· use again' : '· would avoid'}
-                    </span>
-                  )}
-                </div>
-                <div style={{ fontSize:13, fontWeight:700, color: p.vote === 'bad' ? '#9B9B9B' : '#1C2B22', fontFamily:'DM Sans, sans-serif' }}>{p.name}</div>
-                {p.notes && <div style={{ fontSize:12, color:'#4A6256', fontStyle:'italic', marginTop:2, fontFamily:'DM Sans, sans-serif' }}>{p.notes}</div>}
-              </div>
-            ))}
+        <div style={S.sectionCard}>
+          <div style={S.sectionHeader}>
+            <div style={S.iconWrap('#FDE8E8')}><ProvidersIcon size={16} /></div>
+            <span style={S.sectionTitle}>Saved providers</span>
           </div>
-        )}
+          {allProviders.length === 0 && !addingProvider && (
+            <div style={{ padding:'14px 16px', fontSize:13, color:'#9B9B9B', fontFamily:'DM Sans, sans-serif' }}>
+              No providers saved yet
+            </div>
+          )}
+          {allProviders.map((p, i) => (
+            <div key={p.id} style={{ borderBottom: i < allProviders.length - 1 || addingProvider ? '1px solid #F5F0E8' : 'none' }}>
+              <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', padding:'11px 16px', cursor:'pointer' }}
+                onClick={() => {
+                  if (editingProvider === p.id) {
+                    setEditingProvider(null);
+                  } else {
+                    setEditingProvider(p.id);
+                    setEditProviderVote(p.vote || null);
+                    setEditProviderNotes(p.notes || '');
+                    setPendingRemoveProvider(null);
+                  }
+                }}
+              >
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'#9B9B9B', marginBottom:3, fontFamily:'DM Sans, sans-serif' }}>
+                    {p.taskId.replace(/-/g, ' ')}
+                    {p.vote && (
+                      <span style={{ marginLeft:6, color: p.vote === 'good' ? '#06A77D' : '#D62828' }}>
+                        {p.vote === 'good' ? '· use again' : '· would avoid'}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize:13, fontWeight:700, color: p.vote === 'bad' ? '#9B9B9B' : '#1C2B22', fontFamily:'DM Sans, sans-serif' }}>{p.name}</div>
+                  {p.notes && <div style={{ fontSize:12, color:'#4A6256', fontStyle:'italic', marginTop:2, fontFamily:'DM Sans, sans-serif' }}>{p.notes}</div>}
+                </div>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ marginTop:6, flexShrink:0, transform: editingProvider === p.id ? 'rotate(180deg)' : 'none', transition:'transform 0.15s' }}>
+                  <polyline points="2,4 6,8 10,4" stroke="#9B9B9B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+
+              {editingProvider === p.id && (
+                <div style={{ padding:'0 16px 14px' }}>
+                  <div style={{ fontSize:12, fontWeight:700, color:'#1C2B22', marginBottom:8, fontFamily:'DM Sans, sans-serif' }}>How was it?</div>
+                  <div style={{ display:'flex', gap:7, marginBottom:8 }}>
+                    <button
+                      onClick={() => setEditProviderVote(editProviderVote === 'good' ? null : 'good')}
+                      style={{ flex:1, borderRadius:9, padding:'8px 0', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans, sans-serif', border:'1.5px solid #C8E8D4', background: editProviderVote==='good' ? '#1A5C3A' : '#E8F5EE', color: editProviderVote==='good' ? '#E8F5EE' : '#1A5C3A' }}
+                    >
+                      Use again
+                    </button>
+                    <button
+                      onClick={() => setEditProviderVote(editProviderVote === 'bad' ? null : 'bad')}
+                      style={{ flex:1, borderRadius:9, padding:'8px 0', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans, sans-serif', border:'1.5px solid #F5C4C4', background: editProviderVote==='bad' ? '#D62828' : '#FDE8E8', color: editProviderVote==='bad' ? '#fff' : '#D62828' }}
+                    >
+                      Would avoid
+                    </button>
+                  </div>
+                  <input
+                    placeholder="Any notes? (optional)"
+                    value={editProviderNotes}
+                    onChange={e => setEditProviderNotes(e.target.value)}
+                    style={{ ...S.input, marginBottom:10 }}
+                  />
+                  <div style={{ display:'flex', gap:8 }}>
+                    <button
+                      onClick={() => {
+                        updateProvider(p.taskId, p.id, { vote: editProviderVote, notes: editProviderNotes });
+                        setEditingProvider(null);
+                      }}
+                      style={{ flex:1, fontSize:13, fontWeight:700, color:'#fff', background:'#1A5C3A', border:'none', borderRadius:10, padding:'10px 0', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                    >
+                      Save
+                    </button>
+                    {pendingRemoveProvider === p.id ? (
+                      <>
+                        <button
+                          onClick={() => {
+                            removeProvider(p.taskId, p.id);
+                            setEditingProvider(null);
+                            setPendingRemoveProvider(null);
+                          }}
+                          style={{ fontSize:12, fontWeight:700, color:'#fff', background:'#D62828', border:'none', borderRadius:10, padding:'10px 14px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                        >
+                          Yes, remove
+                        </button>
+                        <button
+                          onClick={() => setPendingRemoveProvider(null)}
+                          style={{ fontSize:12, fontWeight:600, color:'#4A6256', background:'#F0EDE4', border:'none', borderRadius:10, padding:'10px 14px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => setPendingRemoveProvider(p.id)}
+                        style={{ fontSize:12, fontWeight:700, color:'#D62828', background:'#FDE8E8', border:'none', borderRadius:10, padding:'10px 14px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* Add provider form */}
+          {addingProvider ? (
+            <div style={{ padding:'12px 16px', borderTop: allProviders.length > 0 ? '1px solid #F5F0E8' : 'none' }}>
+              <EditField label="Provider name">
+                <input style={S.input} type="text" value={newProviderName} onChange={e => setNewProviderName(e.target.value)} placeholder="e.g. Dr. Smith, Joe's Plumbing" />
+              </EditField>
+              <EditField label="What for">
+                <input style={S.input} type="text" value={newProviderFor} onChange={e => setNewProviderFor(e.target.value)} placeholder="e.g. dentist, HVAC, plumber" />
+              </EditField>
+              <EditField label="Phone (optional)">
+                <input style={S.input} type="tel" value={newProviderPhone} onChange={e => setNewProviderPhone(e.target.value)} placeholder="(555) 123-4567" />
+              </EditField>
+              <EditField label="Notes (optional)">
+                <input style={S.input} type="text" value={newProviderNotes} onChange={e => setNewProviderNotes(e.target.value)} placeholder="Great bedside manner, fast service…" />
+              </EditField>
+              <div style={{ padding:'10px 16px 0' }}>
+                <div style={{ fontSize:12, fontWeight:700, color:'#1C2B22', marginBottom:8, fontFamily:'DM Sans, sans-serif' }}>How was it?</div>
+                <div style={{ display:'flex', gap:7, marginBottom:12 }}>
+                  <button
+                    onClick={() => setNewProviderVote(newProviderVote === 'good' ? null : 'good')}
+                    style={{ flex:1, borderRadius:9, padding:'8px 0', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans, sans-serif', border:'1.5px solid #C8E8D4', background: newProviderVote==='good' ? '#1A5C3A' : '#E8F5EE', color: newProviderVote==='good' ? '#E8F5EE' : '#1A5C3A' }}
+                  >
+                    Use again
+                  </button>
+                  <button
+                    onClick={() => setNewProviderVote(newProviderVote === 'bad' ? null : 'bad')}
+                    style={{ flex:1, borderRadius:9, padding:'8px 0', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans, sans-serif', border:'1.5px solid #F5C4C4', background: newProviderVote==='bad' ? '#D62828' : '#FDE8E8', color: newProviderVote==='bad' ? '#fff' : '#D62828' }}
+                  >
+                    Would avoid
+                  </button>
+                </div>
+              </div>
+              <div style={{ display:'flex', gap:8, padding:'0 16px 4px' }}>
+                <button
+                  disabled={!newProviderName.trim() || !newProviderFor.trim()}
+                  onClick={() => {
+                    const key = newProviderFor.trim().toLowerCase().replace(/\s+/g, '-');
+                    saveProvider(key, {
+                      name: newProviderName.trim(),
+                      phone: newProviderPhone.trim() || null,
+                      vote: newProviderVote,
+                      notes: newProviderNotes.trim() || '',
+                    });
+                    setAddingProvider(false);
+                    setNewProviderName('');
+                    setNewProviderFor('');
+                    setNewProviderPhone('');
+                    setNewProviderNotes('');
+                    setNewProviderVote(null);
+                  }}
+                  style={{ flex:1, fontSize:13, fontWeight:700, color:'#fff', background: newProviderName.trim() && newProviderFor.trim() ? '#1A5C3A' : '#D0C8C0', border:'none', borderRadius:10, padding:'10px 0', cursor: newProviderName.trim() && newProviderFor.trim() ? 'pointer' : 'default', fontFamily:'DM Sans, sans-serif' }}
+                >
+                  Save provider
+                </button>
+                <button
+                  onClick={() => {
+                    setAddingProvider(false);
+                    setNewProviderName('');
+                    setNewProviderFor('');
+                    setNewProviderPhone('');
+                    setNewProviderNotes('');
+                    setNewProviderVote(null);
+                  }}
+                  style={{ fontSize:13, fontWeight:600, color:'#4A6256', background:'#F0EDE4', border:'none', borderRadius:10, padding:'10px 16px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ padding:'10px 16px' }}>
+              <button
+                onClick={() => setAddingProvider(true)}
+                style={{ fontSize:12, fontWeight:700, color:'#1A5C3A', background:'#E8F5EE', border:'none', borderRadius:20, padding:'6px 14px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+              >
+                + Add provider
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* ── Life events ── */}
         {(() => {

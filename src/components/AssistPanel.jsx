@@ -375,7 +375,16 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
   useEffect(() => { fetchResult(false); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const cacheAgeHours = cached ? Math.floor((Date.now() - cached.ts) / (1000 * 60 * 60)) : null;
-  const savedProvider = providerHistory[task.id];
+  const savedProviders = providerHistory[task.id] || [];
+  // Most recently saved "use again" provider is the suggested one; disliked
+  // providers stay in history (visible in Profile) but aren't resurfaced here.
+  const goodProviders = savedProviders.filter(p => p.vote === 'good');
+  const savedProvider = goodProviders[goodProviders.length - 1] || null;
+  const avoidNames = new Set(savedProviders.filter(p => p.vote === 'bad').map(p => p.name?.trim().toLowerCase()));
+  const filteredParsedProviders = useMemo(
+    () => (parsedProviders || []).filter(p => !avoidNames.has(p.name?.trim().toLowerCase())),
+    [parsedProviders, providerHistory, task.id] // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   const handleSave = (provider, vote, notes) => {
     saveProvider(task.id, { ...provider, vote, notes });
@@ -483,7 +492,7 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
                     </>
                   )}
                   <SectionLabel label={savedProvider ? 'Other options nearby' : 'Services near you'} />
-                  {parsedProviders.map((p, i) => (
+                  {filteredParsedProviders.map((p, i) => (
                     <ProviderCard key={i} provider={p} isSaved={false} onSave={handleSave} />
                   ))}
                 </>
