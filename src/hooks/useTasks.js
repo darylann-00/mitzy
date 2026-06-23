@@ -35,6 +35,7 @@ export function useTasks(user) {
             interval_days:  localState[taskId]?.intervalDays  ?? null,
             needed:         localState[taskId]?.needed        ?? false,
             disabled:       localDisabled[taskId]             ?? false,
+            snoozed_until:  localState[taskId]?.snoozedUntil  ?? null,
           }));
           const { error: upsertError } = await supabase.from("task_records").upsert(rows, { onConflict: 'user_id,task_id' });
           if (upsertError) { setSyncError(upsertError); setLoading(false); return; }
@@ -43,15 +44,16 @@ export function useTasks(user) {
         const state    = {};
         const disabled = {};
         for (const row of data) {
-          if (row.last_done || row.scheduled_date || row.due_date || row.interval_days || row.needed || row.one_time != null || row.step_progress) {
+          if (row.last_done || row.scheduled_date || row.due_date || row.interval_days || row.needed || row.one_time != null || row.step_progress || row.snoozed_until) {
             state[row.task_id] = {
               lastDone:      row.last_done,
               scheduledDate: row.scheduled_date,
-              ...(row.due_date       ? { dueDate: row.due_date }            : {}),
-              ...(row.interval_days  ? { intervalDays: row.interval_days }  : {}),
-              ...(row.needed         ? { needed: true }                      : {}),
-              ...(row.one_time != null ? { oneTime: row.one_time }          : {}),
-              ...(row.step_progress  ? { stepProgress: row.step_progress }  : {}),
+              ...(row.due_date        ? { dueDate: row.due_date }            : {}),
+              ...(row.interval_days   ? { intervalDays: row.interval_days }  : {}),
+              ...(row.needed          ? { needed: true }                      : {}),
+              ...(row.one_time != null ? { oneTime: row.one_time }           : {}),
+              ...(row.step_progress   ? { stepProgress: row.step_progress }  : {}),
+              ...(row.snoozed_until   ? { snoozedUntil: row.snoozed_until } : {}),
             };
           }
           if (row.disabled) {
@@ -76,13 +78,13 @@ export function useTasks(user) {
     const iso = dateStr
       ? (() => { const [y,m,d] = dateStr.split('-').map(Number); return new Date(y, m-1, d).toISOString(); })()
       : new Date().toISOString();
-    const entry = { lastDone: iso, scheduledDate: null, needed: false, stepProgress: null };
+    const entry = { lastDone: iso, scheduledDate: null, needed: false, stepProgress: null, snoozedUntil: null };
     if (intervalDays) entry.intervalDays = intervalDays;
     const prev = taskState[id];
     setTaskState(s => ({ ...s, [id]: entry }));
     if (user) {
       const { error } = await supabase.from("task_records").upsert({
-        user_id: user.id, task_id: id, last_done: iso, scheduled_date: null, needed: false, step_progress: null,
+        user_id: user.id, task_id: id, last_done: iso, scheduled_date: null, needed: false, step_progress: null, snoozed_until: null,
         ...(intervalDays ? { interval_days: intervalDays } : {}),
       }, { onConflict: 'user_id,task_id' });
       if (error) { setTaskState(s => ({ ...s, [id]: prev })); return { error }; }
@@ -169,5 +171,31 @@ export function useTasks(user) {
     }
   };
 
-  return { taskState, setTaskState, disabledTasks, setDisabledTasks, markDone, markScheduled, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, setDueDate, setStepProgress, loading, syncError };
+  const snoozeTask = async (id, untilDate) => {
+    const prev = taskState[id];
+    setTaskState(s => ({ ...s, [id]: { ...s[id], snoozedUntil: untilDate } }));
+    if (user) {
+      const { error } = await supabase.from("task_records").upsert({
+        user_id: user.id, task_id: id, snoozed_until: untilDate,
+      }, { onConflict: 'user_id,task_id' });
+      if (error) setTaskState(s => ({ ...s, [id]: prev }));
+    }
+  };
+
+  const unsnoozeTask = async (id) => {
+    const prev = taskState[id];
+    setTaskState(s => {
+      const entry = { ...s[id] };
+      delete entry.snoozedUntil;
+      return { ...s, [id]: entry };
+    });
+    if (user) {
+      const { error } = await supabase.from("task_records").upsert({
+        user_id: user.id, task_id: id, snoozed_until: null,
+      }, { onConflict: 'user_id,task_id' });
+      if (error) setTaskState(s => ({ ...s, [id]: prev }));
+    }
+  };
+
+  return { taskState, setTaskState, disabledTasks, setDisabledTasks, markDone, markScheduled, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, setDueDate, setStepProgress, snoozeTask, unsnoozeTask, loading, syncError };
 }

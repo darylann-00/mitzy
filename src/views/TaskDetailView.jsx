@@ -8,6 +8,7 @@ import { useProfileContext } from "../contexts/ProfileContext";
 import { useTaskContext }    from "../contexts/TaskContext";
 import { parseGuidanceBlocks, renderGuidanceBlocks } from "../utils/renderMarkdown";
 import { GuidedSteps } from "../components/GuidedSteps";
+import { SnoozeIcon, SNOOZE_BLUE } from "../components/SnoozeIcon";
 
 function formatIntervalDays(days) {
   if (!days) return null;
@@ -576,7 +577,7 @@ function FourDots({ size = 7 }) {
   );
 }
 
-export function TaskDetailView({ task, taskState: taskStateProp, onAssist, onDone, onBack, onMarkDone, onSetIntervalOverride, onSetOneTimeOverride, onSetDueDate, onSetStepProgress, onMarkNotApplicable, onRemove }) {
+export function TaskDetailView({ task, taskState: taskStateProp, onAssist, onDone, onBack, onMarkDone, onSetIntervalOverride, onSetOneTimeOverride, onSetDueDate, onSetStepProgress, onMarkNotApplicable, onRemove, onUnsnooze }) {
   const { providerHistory } = useProfileContext();
   const { taskState, getStatus } = useTaskContext();
   const goodTaskProviders = (providerHistory[task.id] || []).filter(p => p.vote === 'good');
@@ -668,6 +669,35 @@ export function TaskDetailView({ task, taskState: taskStateProp, onAssist, onDon
               <div style={{ fontSize:13, fontWeight:700, color:'#1C2B22', fontFamily:'DM Sans, sans-serif' }}>{savedProvider.name}</div>
               {savedProvider.notes && <div style={{ fontSize:12, color:'#4A6256', fontStyle:'italic', fontFamily:'DM Sans, sans-serif' }}>{savedProvider.notes}</div>}
             </div>
+          </div>
+        )}
+
+        {/* Snoozed chip + wake up button */}
+        {status === 'snoozed' && entry?.snoozedUntil && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: 'rgba(107,141,214,0.12)',
+              border: '1px solid #6B8DD6',
+              borderRadius: 8, padding: '5px 10px',
+              fontSize: 12, fontWeight: 600, color: '#1C2B22',
+              fontFamily: 'DM Sans, sans-serif',
+            }}>
+              <SnoozeIcon size={14} />
+              <span>Snoozed until {new Date(entry.snoozedUntil + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+            </div>
+            <button
+              onClick={() => onUnsnooze?.(task.id)}
+              style={{
+                fontSize: 12, fontWeight: 700, color: SNOOZE_BLUE,
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontFamily: 'DM Sans, sans-serif',
+                textDecoration: 'underline', textDecorationColor: 'rgba(107,141,214,0.4)',
+                padding: 0,
+              }}
+            >
+              Wake up early
+            </button>
           </div>
         )}
 

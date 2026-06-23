@@ -681,6 +681,11 @@ export const ALL_TASKS = [
     why: "Engine oil breaks down over time and loses its ability to lubricate engine components. Running an engine on degraded oil causes accelerated wear.",
     guidance: "1. Check your owner's manual for your car's specific oil change interval — many newer cars go 5000-7500 miles. 2. Book at any oil change shop or dealership. 3. While you're there ask them to check your tire rotation, brake pad thickness, battery health, and cabin air filter — these are all quick checks most shops will do at the same visit. 4. Keep your service records.",
     lastGuidanceUpdate: "2025-01",
+    steps: [
+      { key: "check_interval", label: "Check your oil change interval", body: "Look in your owner's manual (or Google your car's year, make, and model + \"oil change interval\"). Many newer cars go 5,000–7,500 miles between changes. If you don't know your current mileage, check the sticker from your last oil change — it's usually on the inside of your windshield.", type: "action" },
+      { key: "find_shop", label: "Find an oil change shop", body: "Any quick-lube shop, mechanic, or dealership can do this. Find one near {{zip}} below.", type: "provider_search", providerSearchQuery: "oil change auto service", nameSearchOnly: false },
+      { key: "call_to_book", label: "Book your appointment", body: "Call {{provider.name}} to schedule your oil change. Ask if they can also check tire rotation, brake pads, battery, and cabin air filter — most shops do these quick checks at the same visit.", type: "call", phone: "{{provider.phone}}", callScript: "Hi, I'd like to schedule an oil change. Can you also check my tire rotation, brakes, and battery while it's in?", dependsOnProvider: true },
+    ],
   },
   {
     id: "car-tires",
@@ -705,6 +710,10 @@ export const ALL_TASKS = [
     why: "Tires wear unevenly depending on their position on the vehicle. Rotation evens out the wear and extends overall tire life.",
     guidance: "1. Ask for a rotation at your next oil change — most shops do it for $20-30 or include it with a tire purchase. 2. Tell the technician if you've noticed any pulling to one side or vibration at highway speeds — these can indicate a balance issue.",
     lastGuidanceUpdate: "2025-01",
+    steps: [
+      { key: "find_shop", label: "Find a tire shop", body: "Any tire shop or mechanic can do a rotation — it's usually $20–30, or free if you bought tires there. Find one near {{zip}} below.", type: "provider_search", providerSearchQuery: "tire shop auto service", nameSearchOnly: false },
+      { key: "call_to_book", label: "Book your rotation", body: "Call {{provider.name}} to schedule a tire rotation. Mention if you've noticed pulling to one side or vibration at highway speeds — that can indicate a balance or alignment issue they should check too.", type: "call", phone: "{{provider.phone}}", callScript: "Hi, I'd like to schedule a tire rotation. Do you have anything this week?", dependsOnProvider: true },
+    ],
   },
   {
     id: "car-press",
@@ -822,6 +831,10 @@ export const ALL_TASKS = [
     why: "Car batteries have a typical lifespan of 3-5 years. A battery that tests weak is likely to fail — often in cold weather.",
     guidance: "1. Drive to any auto parts store such as AutoZone or O'Reilly — they offer free battery testing. 2. Ask for a load test — this measures actual battery performance not just charge. 3. If the battery tests below 50% health consider replacing it before it fails. 4. You can also ask for a battery check at your next oil change.",
     lastGuidanceUpdate: "2025-01",
+    steps: [
+      { key: "find_shop", label: "Find an auto parts store", body: "AutoZone, O'Reilly, and most auto parts stores test batteries for free. Find one near {{zip}} below — no appointment needed, just drive in.", type: "provider_search", providerSearchQuery: "auto parts store battery test", nameSearchOnly: false },
+      { key: "get_tested", label: "Get a load test", body: "Walk in and ask for a battery load test — this measures actual performance, not just charge. It takes about 5 minutes. If the battery tests below 50% health, consider replacing it before it fails. Most batteries last 3–5 years.", type: "action" },
+    ],
   },
   {
     id: "car-brakes",
@@ -846,6 +859,11 @@ export const ALL_TASKS = [
     why: "Brake pad thickness determines stopping distance. Worn pads damage rotors which turns a pad replacement into a more expensive repair.",
     guidance: "1. Ask for a brake inspection at your next oil change — most shops do this at no charge. 2. Ask the technician to give you the pad thickness measurement in millimeters. 3. Under 3mm means plan to replace soon. 4. If you hear squealing or grinding do not wait for a scheduled appointment.",
     lastGuidanceUpdate: "2025-01",
+    steps: [
+      { key: "find_shop", label: "Find a mechanic", body: "Most shops do brake inspections for free or at a low cost. Find a mechanic near {{zip}} below — you can also ask for this at your next oil change.", type: "provider_search", providerSearchQuery: "brake inspection auto mechanic", nameSearchOnly: false },
+      { key: "call_to_book", label: "Book your inspection", body: "Call {{provider.name}} to schedule a brake inspection. If you hear squealing or grinding, don't wait — mention that when you call.", type: "call", phone: "{{provider.phone}}", callScript: "Hi, I'd like to schedule a brake inspection. Do you have anything this week?", dependsOnProvider: true },
+      { key: "ask_for_numbers", label: "Ask for the numbers", body: "When you pick up the car, ask the technician for the brake pad thickness in millimeters. Under 3mm means plan to replace soon. This gives you a concrete number to track instead of guessing.", type: "action" },
+    ],
   },
   {
     id: "car-emiss",
@@ -869,6 +887,11 @@ export const ALL_TASKS = [
     why: "Some states require emissions testing as part of the vehicle registration renewal process. Failing to test can block renewal.",
     guidance: "1. Check your registration renewal notice to see if emissions testing is required in your state. 2. Find a certified testing station — your state DMV website has a locator. 3. Bring your registration and insurance. 4. Most tests take 15-20 minutes and cost $20-40. 5. If your vehicle fails you'll receive a list of required repairs before you can retest.",
     lastGuidanceUpdate: "2025-01",
+    steps: [
+      { key: "check_requirement", label: "Check if your state requires it", body: "Look at your registration renewal notice — it'll say if emissions testing is required. Not all states require it. If yours does, complete the test before renewing your registration.", type: "action" },
+      { key: "find_station", label: "Find a testing station", body: "Search for a certified emissions testing station near {{zip}}. Your state DMV website also has a station locator.", type: "provider_search", providerSearchQuery: "emissions testing station smog check", nameSearchOnly: false },
+      { key: "go_get_tested", label: "Go get tested", body: "Bring your registration and insurance. Most tests take 15–20 minutes and cost $20–40 — no appointment needed at most stations. If your vehicle fails, you'll get a list of repairs needed before retesting.", type: "action" },
+    ],
   },
   {
     id: "car-kit-build",
@@ -986,6 +1009,11 @@ export const ALL_TASKS = [
     why: "Transmission fluid degrades over time and loses its ability to protect transmission components. Transmission repairs are among the most expensive automotive repairs.",
     guidance: "1. At your next service appointment ask your mechanic specifically to inspect the transmission fluid. 2. Do not assume it will be checked automatically — it often is not. 3. Ask them to describe the fluid condition — it should be red or pink and not smell burnt. 4. If service is needed ask for the fluid to be drained and refilled.",
     lastGuidanceUpdate: "2025-01",
+    steps: [
+      { key: "find_shop", label: "Find a transmission specialist", body: "A general mechanic or dealership can check transmission fluid, but for a full service, a transmission specialist is best. Find one near {{zip}} below.", type: "provider_search", providerSearchQuery: "transmission service auto repair", nameSearchOnly: false },
+      { key: "call_to_book", label: "Book your appointment", body: "Call {{provider.name}} to schedule a transmission fluid inspection. Ask specifically for this — it's not always included in a standard service.", type: "call", phone: "{{provider.phone}}", callScript: "Hi, I'd like to schedule a transmission fluid inspection and service if needed. What's your availability?", dependsOnProvider: true },
+      { key: "ask_about_fluid", label: "Ask about the fluid condition", body: "When you pick up the car, ask the technician to describe the fluid condition. Healthy transmission fluid is red or pink and doesn't smell burnt. Dark or burnt-smelling fluid means it was time — good catch.", type: "action" },
+    ],
   },
 
   // Health
@@ -1097,6 +1125,12 @@ export const ALL_TASKS = [
     why: "Skin cancer detected early is highly treatable. Changes to existing moles or new growths are not always noticeable without a full body examination.",
     guidance: "1. Call your insurance before booking and ask specifically whether a preventive skin check with a dermatologist is covered and at what cost. 2. At the appointment tell the dermatologist about any spots that have changed in size, color, or shape, or that bleed or do not heal. 3. Point out anything that concerns you.",
     lastGuidanceUpdate: "2025-01",
+    steps: [
+      { key: "check_coverage", label: "Check your insurance coverage", body: "Call the number on the back of your insurance card and ask: \"Is a preventive skin check with a dermatologist covered, and what's my cost?\" Some plans require a referral from your primary care doctor first.", type: "action" },
+      { key: "find_derm", label: "Find an in-network dermatologist", body: "Use your insurance portal's \"Find a Doctor\" tool to search for a dermatologist near {{zip}} accepting new patients. Once you've picked one, look them up below to save their info.", type: "provider_search", providerSearchQuery: "dermatologist", nameSearchOnly: true },
+      { key: "call_to_schedule", label: "Call to schedule", body: "Call {{provider.name}} to book a full-body skin exam.", type: "call", phone: "{{provider.phone}}", callScript: "Hi, I'd like to schedule a full-body skin check. What's your earliest availability?", dependsOnProvider: true },
+      { key: "prep_for_visit", label: "Prep for your appointment", body: "Before your visit, note any spots that have changed in size, color, or shape, or that bleed or don't heal. Remove nail polish from fingers and toes — the dermatologist checks under nails too. Wear loose clothing that's easy to change out of.", type: "action" },
+    ],
   },
   {
     id: "h-mammo",
@@ -1121,6 +1155,12 @@ export const ALL_TASKS = [
     why: "Mammograms detect breast changes that cannot be felt. Early detection significantly affects treatment outcomes.",
     guidance: "1. Ask your OB or primary care doctor for a referral or book directly at a radiology center. 2. Most insurance covers annual mammograms starting at 40 with no copay — confirm with your insurer. 3. Wear a two-piece outfit. 4. Do not apply deodorant or lotion on the day of the appointment as these can interfere with imaging.",
     lastGuidanceUpdate: "2025-01",
+    steps: [
+      { key: "check_coverage", label: "Confirm insurance coverage", body: "Most insurance covers annual mammograms starting at 40 with no copay. Call the number on your insurance card to confirm your plan covers it and whether you need a referral from your doctor.", type: "action" },
+      { key: "find_center", label: "Find an imaging center", body: "Search for a mammography center near {{zip}} — you can book directly at a radiology center or ask your OB or primary care doctor for a referral. Once you've picked one, look them up below to save their info.", type: "provider_search", providerSearchQuery: "mammography breast imaging center", nameSearchOnly: true },
+      { key: "call_to_schedule", label: "Call to schedule", body: "Call {{provider.name}} to book your mammogram.", type: "call", phone: "{{provider.phone}}", callScript: "Hi, I'd like to schedule a screening mammogram. What's your earliest availability?", dependsOnProvider: true },
+      { key: "prep_for_visit", label: "Prep for your appointment", body: "Wear a two-piece outfit — you'll change from the waist up. Do not apply deodorant, lotion, or powder on the day of the appointment, as these can interfere with imaging.", type: "action" },
+    ],
   },
   {
     id: "h-scrip",
@@ -1231,6 +1271,11 @@ export const ALL_TASKS = [
     why: "Annual gynecological visits allow for screening of conditions that develop without symptoms. Pap smear frequency is determined by age and individual history.",
     guidance: "1. Book with your OB-GYN or a women's health provider. 2. Mention any changes in your cycle, pain, or unusual discharge. 3. Ask your provider about your current Pap smear schedule if you're unsure. 4. This visit is also an appropriate time to discuss contraception, perimenopause symptoms, or bone health concerns.",
     lastGuidanceUpdate: "2025-01",
+    steps: [
+      { key: "find_obgyn", label: "Find an in-network OB-GYN", body: "Use your insurance portal's \"Find a Doctor\" tool to search for an OB-GYN or women's health provider near {{zip}} accepting new patients. Once you've picked one, look them up below to save their info.", type: "provider_search", providerSearchQuery: "OB-GYN gynecologist", nameSearchOnly: true },
+      { key: "call_to_schedule", label: "Call to schedule", body: "Call {{provider.name}} to book your annual exam.", type: "call", phone: "{{provider.phone}}", callScript: "Hi, I'd like to schedule an annual gynecological exam. What's your earliest availability?", dependsOnProvider: true },
+      { key: "prep_for_visit", label: "Prep for your appointment", body: "Note any changes in your cycle, pain, or unusual discharge. This visit is also a good time to discuss contraception, perimenopause symptoms, or bone health concerns. Ask about your Pap smear schedule if you're unsure when your last one was.", type: "action" },
+    ],
   },
   {
     id: "h-flu",
@@ -1278,6 +1323,12 @@ export const ALL_TASKS = [
     why: "Colorectal cancer is highly preventable through screening. Polyps detected during a colonoscopy can be removed before they develop into cancer.",
     guidance: "1. Ask your primary care doctor for a referral when you turn 45 or earlier if you have a family history. 2. You will need someone to drive you home — plan for a full day off. 3. The bowel prep the day before is the most uncomfortable part — follow the instructions from your doctor exactly. 4. Most insurance covers this fully as a preventive screening starting at 45.",
     lastGuidanceUpdate: "2025-01",
+    steps: [
+      { key: "get_referral", label: "Get a referral from your doctor", body: "Call your primary care doctor and ask for a colonoscopy referral. If you have a family history of colorectal cancer, mention it — you may need screening earlier or more frequently. Most insurance covers this fully as preventive starting at 45.", type: "action" },
+      { key: "find_gastro", label: "Find a gastroenterologist", body: "Your doctor may refer you to a specific gastroenterologist, or you can search your insurance portal for one near {{zip}}. Once you've picked one, look them up below to save their info.", type: "provider_search", providerSearchQuery: "gastroenterologist colonoscopy", nameSearchOnly: true },
+      { key: "call_to_schedule", label: "Call to schedule", body: "Call {{provider.name}} to book your colonoscopy.", type: "call", phone: "{{provider.phone}}", callScript: "Hi, I have a referral for a colonoscopy screening. What's your earliest availability?", dependsOnProvider: true },
+      { key: "plan_the_day", label: "Plan for the procedure day", body: "You'll need a full day off — the procedure takes about 30 minutes but you'll be sedated. Arrange for someone to drive you home afterward. Your doctor's office will send bowel prep instructions for the day before — follow them exactly. Stock up on clear liquids (broth, Jell-O, clear juice) for prep day.", type: "action" },
+    ],
   },
   {
     id: "h-hearing",
@@ -1301,6 +1352,11 @@ export const ALL_TASKS = [
     why: "Hearing loss is gradual and cumulative. A baseline hearing test at 50 provides a reference point for comparing future results.",
     guidance: "1. Ask your primary care doctor for a referral to an audiologist or ENT. 2. Mention any ringing in the ears or situations where you have difficulty following conversation. 3. A baseline test at 50 is useful for tracking any changes over time.",
     lastGuidanceUpdate: "2025-01",
+    steps: [
+      { key: "find_audiologist", label: "Find an audiologist", body: "Ask your primary care doctor for a referral, or use your insurance portal to search for an audiologist or ENT near {{zip}}. Once you've picked one, look them up below to save their info.", type: "provider_search", providerSearchQuery: "audiologist hearing test", nameSearchOnly: true },
+      { key: "call_to_schedule", label: "Call to schedule", body: "Call {{provider.name}} to book a hearing evaluation.", type: "call", phone: "{{provider.phone}}", callScript: "Hi, I'd like to schedule a hearing evaluation. What's your earliest availability?", dependsOnProvider: true },
+      { key: "prep_for_visit", label: "Prep for your appointment", body: "Note any situations where you have difficulty following conversations — noisy restaurants, phone calls, group settings. Also mention any ringing in your ears (tinnitus) or history of noise exposure. A baseline test at 50 is useful for tracking changes over time.", type: "action" },
+    ],
   },
   {
     id: "h-bone",
@@ -1324,6 +1380,11 @@ export const ALL_TASKS = [
     why: "Bone density decreases with age and the process has no symptoms. A fracture is often the first indication of significant bone loss.",
     guidance: "1. Ask your primary care doctor for a DEXA scan referral. 2. Medicare covers this at 65. 3. Tell your doctor if you have risk factors such as early menopause, a family history of osteoporosis, low body weight, or long-term steroid use — you may qualify for earlier screening.",
     lastGuidanceUpdate: "2025-01",
+    steps: [
+      { key: "get_referral", label: "Get a DEXA scan referral", body: "Call your primary care doctor and ask for a DEXA (bone density) scan referral. Medicare covers this at 65. If you have risk factors — early menopause, family history of osteoporosis, low body weight, or long-term steroid use — mention them, as you may qualify for earlier screening.", type: "action" },
+      { key: "find_imaging", label: "Find an imaging center", body: "Your doctor may refer you to a specific imaging center, or you can search your insurance portal for a DEXA scan location near {{zip}}. Once you've picked one, look them up below to save their info.", type: "provider_search", providerSearchQuery: "DEXA bone density scan imaging", nameSearchOnly: true },
+      { key: "call_to_schedule", label: "Call to schedule", body: "Call {{provider.name}} to book your bone density scan.", type: "call", phone: "{{provider.phone}}", callScript: "Hi, I have a referral for a DEXA bone density scan. What's your earliest availability?", dependsOnProvider: true },
+    ],
   },
 
   // Finance
