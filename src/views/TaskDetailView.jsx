@@ -580,7 +580,8 @@ function FourDots({ size = 7 }) {
 export function TaskDetailView({ task, taskState: taskStateProp, onAssist, onDone, onBack, onMarkDone, onSetIntervalOverride, onSetOneTimeOverride, onSetDueDate, onSetStepProgress, onMarkNotApplicable, onRemove, onUnsnooze }) {
   const { providerHistory } = useProfileContext();
   const { taskState, getStatus } = useTaskContext();
-  const savedProvider = providerHistory[task.id];
+  const goodTaskProviders = (providerHistory[task.id] || []).filter(p => p.vote === 'good');
+  const savedProvider = goodTaskProviders[goodTaskProviders.length - 1] || null;
   const status = getStatus(task);
   const entry    = taskState[task.id];
   const meta     = CAT_META[task.cat] || CAT_META.home;

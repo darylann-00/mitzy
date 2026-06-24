@@ -519,7 +519,8 @@ function InsurancePrompt({ onSave }) {
 export const GuidedSteps = memo(function GuidedSteps({ steps, taskId, stepProgress, onSetStepProgress }) {
   const { profile, providerHistory, saveProvider, updateProfile } = useProfileContext();
 
-  const savedProvider = providerHistory[taskId];
+  const goodProviders = (providerHistory[taskId] || []).filter(p => p.vote === 'good');
+  const savedProvider = goodProviders[goodProviders.length - 1] || null;
 
   const selectedProvider = useMemo(() => {
     if (!stepProgress) return savedProvider || null;

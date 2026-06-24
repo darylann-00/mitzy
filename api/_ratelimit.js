@@ -15,6 +15,14 @@ export const providersLimiter = new Ratelimit({
   prefix: 'rl:providers',
 });
 
+// Lighter-weight: a single Places lookup with no Claude synthesis, used by
+// live autocomplete-as-you-type, so it needs a much larger budget.
+export const providerSearchLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(60, '1 h'),
+  prefix: 'rl:providersearch',
+});
+
 export const generateTaskLimiter = new Ratelimit({
   redis,
   limiter: Ratelimit.slidingWindow(20, '1 h'),

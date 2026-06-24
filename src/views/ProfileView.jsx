@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { AppHeader } from "./HomeView";
 import { HouseIcon, CarIcon, PersonIcon, PetIcon } from "../components/CategoryIcons";
 import { Sheet } from "../components/Sheet";
@@ -8,6 +8,8 @@ import { useCalendarContext } from "../contexts/CalendarContext";
 import { C } from "../data/constants";
 import { LIFE_EVENT_DEFS } from "../data/lifeEvents";
 import { INSURANCE_PROVIDERS } from "../data/insuranceProviders";
+import { PROVIDER_TYPES } from "../data/providerTypes";
+import { supabase } from "../lib/supabase";
 
 // ─── Car data (shared with SlimOnboarding) ─────────────────────────────────────
 const CAR_DATA = {
@@ -94,6 +96,15 @@ function EditField({ label, last, children }) {
   );
 }
 
+// ─── Heart icon (for "Love" provider vote) ──────────────────────────────────────
+function HeartIcon({ size = 13, color = '#1B4DB3' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" style={{ flexShrink:0 }}>
+      <path d="M9 15.5 L2.8 9.6 Q0.5 7.2 2.6 4.7 Q4.8 2.3 9 6.3 Q13.2 2.3 15.4 4.7 Q17.5 7.2 15.2 9.6 Z" fill={color} />
+    </svg>
+  );
+}
+
 // ─── Saved providers icon ──────────────────────────────────────────────────────
 function ProvidersIcon({ size = 16 }) {
   return (
@@ -163,6 +174,199 @@ function InsurancePicker({ value, onChange }) {
   );
 }
 
+// ─── Provider type picker (searchable picklist, with custom add) ───────────────
+function ProviderTypePicker({ value, onChange }) {
+  const [query, setQuery] = useState(value || '');
+  const [open, setOpen]   = useState(false);
+  const [rect, setRect]   = useState(null);
+  const anchorRef = useRef(null);
+  const inputRef  = useRef(null);
+
+  useEffect(() => { if (!open) setQuery(value || ''); }, [value, open]);
+
+  const filtered = query.trim()
+    ? PROVIDER_TYPES.filter(t => t.toLowerCase().includes(query.toLowerCase()))
+    : PROVIDER_TYPES;
+
+  const select = (label) => {
+    onChange(label);
+    setQuery(label);
+    setOpen(false);
+    inputRef.current?.blur();
+  };
+
+  const closeDropdown = () => { setOpen(false); setQuery(value || ''); };
+
+  const openDropdown = () => {
+    if (anchorRef.current) setRect(anchorRef.current.getBoundingClientRect());
+    setOpen(true);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const updateRect = () => { if (anchorRef.current) setRect(anchorRef.current.getBoundingClientRect()); };
+    window.addEventListener('scroll', updateRect, true);
+    window.addEventListener('resize', updateRect);
+    return () => {
+      window.removeEventListener('scroll', updateRect, true);
+      window.removeEventListener('resize', updateRect);
+    };
+  }, [open]);
+
+  return (
+    <div>
+      <div ref={anchorRef} style={{ display:'flex', alignItems:'center', gap:6, border:'1px solid #D4CFC6', borderRadius:10, padding:'7px 11px', background:'#FDFAF2' }}>
+        <input
+          ref={inputRef}
+          style={{ flex:1, fontSize:14, fontFamily:'DM Sans, sans-serif', border:'none', outline:'none', background:'transparent', color:'#1C2B22' }}
+          placeholder="e.g. plumber, dentist, vet"
+          value={query}
+          onFocus={e => { e.target.select(); openDropdown(); }}
+          onChange={e => { setQuery(e.target.value); openDropdown(); }}
+        />
+        {value && !open && (
+          <button onClick={() => { onChange(''); setQuery(''); }} style={{ fontSize:16, lineHeight:1, border:'none', background:'none', cursor:'pointer', color:'#9B9B9B', padding:'0 2px' }}>×</button>
+        )}
+      </div>
+      {open && rect && (filtered.length > 0 || query.trim()) && (
+        <div style={{ position:'fixed', zIndex:1000, top: rect.bottom + 4, left: rect.left, width: rect.width, background:'#fff', border:'1px solid #D4CFC6', borderRadius:10, maxHeight:200, overflowY:'auto', boxShadow:'0 4px 12px rgba(0,0,0,0.12)' }}>
+          {filtered.map(label => (
+            <button
+              key={label}
+              onMouseDown={e => { e.preventDefault(); select(label); }}
+              style={{ display:'block', width:'100%', textAlign:'left', padding:'10px 14px', fontSize:13, fontFamily:'DM Sans, sans-serif', border:'none', borderBottom:'1px solid #F5F0E8', cursor:'pointer', background: label === value ? '#E8F5EE' : '#fff', color: label === value ? '#1A5C3A' : '#1C2B22', fontWeight: label === value ? 700 : 400 }}
+            >
+              {label}
+            </button>
+          ))}
+          {query.trim() && !PROVIDER_TYPES.some(t => t.toLowerCase() === query.trim().toLowerCase()) && (
+            <button
+              onMouseDown={e => { e.preventDefault(); select(query.trim()); }}
+              style={{ display:'block', width:'100%', textAlign:'left', padding:'10px 14px', fontSize:13, fontFamily:'DM Sans, sans-serif', border:'none', cursor:'pointer', background:'#F0EDE4', color:'#1A5C3A', fontWeight:700 }}
+            >
+              Add "{query.trim()}"
+            </button>
+          )}
+        </div>
+      )}
+      {open && <div style={{ position:'fixed', inset:0, zIndex:999 }} onMouseDown={closeDropdown} />}
+    </div>
+  );
+}
+
+// ─── Provider name search (live Google Places lookup, debounced) ───────────────
+function ProviderNameSearch({ value, onChange, zip, onSelectPlace }) {
+  const [query, setQuery]     = useState(value || '');
+  const [open, setOpen]       = useState(false);
+  const [rect, setRect]       = useState(null);
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState(null);
+  const anchorRef = useRef(null);
+  const inputRef  = useRef(null);
+  const timerRef  = useRef(null);
+
+  useEffect(() => { setQuery(value || ''); }, [value]);
+
+  useEffect(() => {
+    clearTimeout(timerRef.current);
+    const q = query.trim();
+    if (!open || q.length < 3 || !zip) { setResults([]); setLoading(false); setError(null); return; }
+    setLoading(true);
+    setError(null);
+    timerRef.current = setTimeout(async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) { setError('Not signed in'); return; }
+        const res = await fetch('/api/providers', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+          body: JSON.stringify({ taskLabel: q, zip, skipBlurbs: true, maxResults: 5 }),
+        });
+        if (!res.ok) {
+          setError(res.status === 429 ? 'Too many searches — wait a moment and try again' : `Search failed (${res.status})`);
+          setResults([]);
+          return;
+        }
+        const { text } = await res.json();
+        setResults(JSON.parse(text || '[]'));
+      } catch {
+        setError('Search failed — check your connection');
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 500);
+    return () => clearTimeout(timerRef.current);
+  }, [query, zip, open]);
+
+  const openDropdown = () => {
+    if (anchorRef.current) setRect(anchorRef.current.getBoundingClientRect());
+    setOpen(true);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const updateRect = () => { if (anchorRef.current) setRect(anchorRef.current.getBoundingClientRect()); };
+    window.addEventListener('scroll', updateRect, true);
+    window.addEventListener('resize', updateRect);
+    return () => {
+      window.removeEventListener('scroll', updateRect, true);
+      window.removeEventListener('resize', updateRect);
+    };
+  }, [open]);
+
+  const select = (place) => {
+    setQuery(place.name);
+    onChange(place.name);
+    onSelectPlace?.(place);
+    setOpen(false);
+    inputRef.current?.blur();
+  };
+
+  const showDropdown = open && query.trim().length >= 3 && zip && rect;
+
+  return (
+    <div>
+      <div ref={anchorRef} style={{ display:'flex', alignItems:'center', gap:6, border:'1px solid #D4CFC6', borderRadius:10, padding:'7px 11px', background:'#FDFAF2' }}>
+        <input
+          ref={inputRef}
+          style={{ flex:1, fontSize:14, fontFamily:'DM Sans, sans-serif', border:'none', outline:'none', background:'transparent', color:'#1C2B22' }}
+          type="text"
+          placeholder="e.g. Dr. Smith, Joe's Plumbing"
+          value={query}
+          onFocus={openDropdown}
+          onChange={e => { setQuery(e.target.value); onChange(e.target.value); openDropdown(); }}
+        />
+      </div>
+      {showDropdown && (
+        <div style={{ position:'fixed', zIndex:1000, top: rect.bottom + 4, left: rect.left, width: rect.width, background:'#fff', border:'1px solid #D4CFC6', borderRadius:10, maxHeight:240, overflowY:'auto', boxShadow:'0 4px 12px rgba(0,0,0,0.12)' }}>
+          {loading && <div style={{ padding:'10px 14px', fontSize:12, color:'#9B9B9B', fontFamily:'DM Sans, sans-serif' }}>Searching…</div>}
+          {!loading && error && (
+            <div style={{ padding:'10px 14px', fontSize:12, color:'#D62828', fontFamily:'DM Sans, sans-serif' }}>{error}</div>
+          )}
+          {!loading && !error && results.length === 0 && (
+            <div style={{ padding:'10px 14px', fontSize:12, color:'#9B9B9B', fontFamily:'DM Sans, sans-serif' }}>No matches found — you can still enter the name manually.</div>
+          )}
+          {!loading && results.map((r, i) => (
+            <button
+              key={i}
+              onMouseDown={e => { e.preventDefault(); select(r); }}
+              style={{ display:'block', width:'100%', textAlign:'left', padding:'9px 14px', border:'none', borderBottom:'1px solid #F5F0E8', cursor:'pointer', background:'#fff', fontFamily:'DM Sans, sans-serif' }}
+            >
+              <div style={{ fontSize:13, fontWeight:700, color:'#1C2B22' }}>{r.name}</div>
+              {(r.address || r.phone) && <div style={{ fontSize:11, color:'#7A8A80', marginTop:2 }}>{[r.address, r.phone].filter(Boolean).join(' · ')}</div>}
+            </button>
+          ))}
+        </div>
+      )}
+      {open && <div style={{ position:'fixed', inset:0, zIndex:999 }} onMouseDown={() => setOpen(false)} />}
+      {!zip && <div style={{ fontSize:11, color:'#9B9B9B', marginTop:4, fontFamily:'DM Sans, sans-serif' }}>Add your zip code above to search real businesses near you.</div>}
+    </div>
+  );
+}
+
 // ─── Life events icon ──────────────────────────────────────────────────────────
 function LifeEventsIcon({ size = 16 }) {
   return (
@@ -176,7 +380,7 @@ function LifeEventsIcon({ size = 16 }) {
 
 // ─── Main view ─────────────────────────────────────────────────────────────────
 export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTasks, user, onSignOut, onStartLifeEvent }) {
-  const { profile, providerHistory, updateProfile: onUpdateProfile, lifeEvents } = useProfileContext();
+  const { profile, providerHistory, updateProfile: onUpdateProfile, lifeEvents, saveProvider, updateProvider, removeProvider } = useProfileContext();
   const { taskState } = useTaskContext();
   const { calGranted, connectCalendar } = useCalendarContext();
   const [confirmReset,   setConfirmReset]   = useState(false);
@@ -187,6 +391,16 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
   const [hazardPreview,  setHazardPreview]  = useState(null); // { hazards, tasks } | null
   const [pendingRemove,  setPendingRemove]  = useState(null); // { type: 'car'|'kid'|'pet', index: number }
   const [confirmDismissEvent, setConfirmDismissEvent] = useState(false);
+  const [editingProvider, setEditingProvider] = useState(null); // provider id being edited
+  const [editProviderVote, setEditProviderVote] = useState(null);
+  const [editProviderNotes, setEditProviderNotes] = useState('');
+  const [pendingRemoveProvider, setPendingRemoveProvider] = useState(null); // provider id
+  const [addingProvider, setAddingProvider] = useState(false);
+  const [newProviderName, setNewProviderName] = useState('');
+  const [newProviderFor, setNewProviderFor] = useState('');
+  const [newProviderPhone, setNewProviderPhone] = useState('');
+  const [newProviderNotes, setNewProviderNotes] = useState('');
+  const [newProviderVote, setNewProviderVote] = useState(null);
 
   // Edit state — all sections at once
   const [editHasHome,   setEditHasHome]   = useState(null);
@@ -239,7 +453,7 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
     setCarPicker(null);
   };
 
-  const allProviders = Object.entries(providerHistory || {}).map(([taskId, p]) => ({ taskId, ...p }));
+  const allProviders = Object.entries(providerHistory || {}).flatMap(([taskId, list]) => (list || []).map(p => ({ taskId, ...p })));
   const vehicleLabel = profile.cars?.length ? profile.cars.join(', ') : (profile.car || null);
 
   const HAZARD_LABELS = { earthquake:'Earthquake', wildfire:'Wildfire', hurricane:'Hurricane', tornado:'Tornado', winter:'Winter Storm', flood:'Flooding' };
@@ -580,28 +794,200 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
         )}
 
         {/* ── Saved providers ── */}
-        {allProviders.length > 0 && (
-          <div style={S.sectionCard}>
-            <div style={S.sectionHeader}>
-              <div style={S.iconWrap('#FDE8E8')}><ProvidersIcon size={16} /></div>
-              <span style={S.sectionTitle}>Saved providers</span>
-            </div>
-            {allProviders.map((p, i) => (
-              <div key={i} style={{ padding:'11px 16px', borderBottom: i < allProviders.length - 1 ? '1px solid #F5F0E8' : 'none' }}>
-                <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'#9B9B9B', marginBottom:3, fontFamily:'DM Sans, sans-serif' }}>
-                  {p.taskId.replace(/-/g, ' ')}
-                  {p.vote && (
-                    <span style={{ marginLeft:6, color: p.vote === 'good' ? '#06A77D' : '#D62828' }}>
-                      {p.vote === 'good' ? '· use again' : '· would avoid'}
-                    </span>
-                  )}
-                </div>
-                <div style={{ fontSize:13, fontWeight:700, color: p.vote === 'bad' ? '#9B9B9B' : '#1C2B22', fontFamily:'DM Sans, sans-serif' }}>{p.name}</div>
-                {p.notes && <div style={{ fontSize:12, color:'#4A6256', fontStyle:'italic', marginTop:2, fontFamily:'DM Sans, sans-serif' }}>{p.notes}</div>}
-              </div>
-            ))}
+        <div style={S.sectionCard}>
+          <div style={S.sectionHeader}>
+            <div style={S.iconWrap('#FDE8E8')}><ProvidersIcon size={16} /></div>
+            <span style={S.sectionTitle}>Saved providers</span>
           </div>
-        )}
+          {allProviders.length === 0 && !addingProvider && (
+            <div style={{ padding:'14px 16px', fontSize:13, color:'#9B9B9B', fontFamily:'DM Sans, sans-serif' }}>
+              No providers saved yet
+            </div>
+          )}
+          {allProviders.map((p, i) => (
+            <div key={p.id} style={{ borderBottom: i < allProviders.length - 1 || addingProvider ? '1px solid #F5F0E8' : 'none' }}>
+              <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', padding:'11px 16px', cursor:'pointer' }}
+                onClick={() => {
+                  if (editingProvider === p.id) {
+                    setEditingProvider(null);
+                  } else {
+                    setEditingProvider(p.id);
+                    setEditProviderVote(p.vote || null);
+                    setEditProviderNotes(p.notes || '');
+                    setPendingRemoveProvider(null);
+                  }
+                }}
+              >
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'#9B9B9B', marginBottom:3, fontFamily:'DM Sans, sans-serif' }}>
+                    {p.taskId.replace(/-/g, ' ')}
+                    {p.vote && (
+                      <span style={{ marginLeft:6, color: p.vote === 'good' ? '#06A77D' : '#D62828' }}>
+                        {p.vote === 'good' ? '· use again' : '· would avoid'}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize:13, fontWeight:700, color: p.vote === 'bad' ? '#9B9B9B' : '#1C2B22', fontFamily:'DM Sans, sans-serif' }}>{p.name}</div>
+                  {p.notes && <div style={{ fontSize:12, color:'#4A6256', fontStyle:'italic', marginTop:2, fontFamily:'DM Sans, sans-serif' }}>{p.notes}</div>}
+                </div>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ marginTop:6, flexShrink:0, transform: editingProvider === p.id ? 'rotate(180deg)' : 'none', transition:'transform 0.15s' }}>
+                  <polyline points="2,4 6,8 10,4" stroke="#9B9B9B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+
+              {editingProvider === p.id && (
+                <div style={{ padding:'0 16px 14px' }}>
+                  <div style={{ fontSize:12, fontWeight:700, color:'#1C2B22', marginBottom:8, fontFamily:'DM Sans, sans-serif' }}>How was it?</div>
+                  <div style={{ display:'flex', gap:7, marginBottom:8 }}>
+                    <button
+                      onClick={() => setEditProviderVote(editProviderVote === 'good' ? null : 'good')}
+                      style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, borderRadius:9, padding:'8px 0', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans, sans-serif', border:'1.5px solid #C7D9F5', background: editProviderVote==='good' ? '#1B4DB3' : '#EAF1FD', color: editProviderVote==='good' ? '#EAF1FD' : '#1B4DB3' }}
+                    >
+                      <HeartIcon color={editProviderVote==='good' ? '#EAF1FD' : '#1B4DB3'} />
+                      Good
+                    </button>
+                    <button
+                      onClick={() => setEditProviderVote(editProviderVote === 'bad' ? null : 'bad')}
+                      style={{ flex:1, borderRadius:9, padding:'8px 0', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans, sans-serif', border:'1.5px solid #F5C4C4', background: editProviderVote==='bad' ? '#D62828' : '#FDE8E8', color: editProviderVote==='bad' ? '#fff' : '#D62828' }}
+                    >
+                      Not good
+                    </button>
+                  </div>
+                  <input
+                    placeholder="Any notes? (optional)"
+                    value={editProviderNotes}
+                    onChange={e => setEditProviderNotes(e.target.value)}
+                    style={{ ...S.input, marginBottom:10 }}
+                  />
+                  <div style={{ display:'flex', gap:8 }}>
+                    <button
+                      onClick={() => {
+                        updateProvider(p.taskId, p.id, { vote: editProviderVote, notes: editProviderNotes });
+                        setEditingProvider(null);
+                      }}
+                      style={{ flex:1, fontSize:13, fontWeight:700, color:'#fff', background:'#1A5C3A', border:'none', borderRadius:10, padding:'10px 0', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                    >
+                      Save
+                    </button>
+                    {pendingRemoveProvider === p.id ? (
+                      <>
+                        <button
+                          onClick={() => {
+                            removeProvider(p.taskId, p.id);
+                            setEditingProvider(null);
+                            setPendingRemoveProvider(null);
+                          }}
+                          style={{ fontSize:12, fontWeight:700, color:'#fff', background:'#D62828', border:'none', borderRadius:10, padding:'10px 14px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                        >
+                          Yes, remove
+                        </button>
+                        <button
+                          onClick={() => setPendingRemoveProvider(null)}
+                          style={{ fontSize:12, fontWeight:600, color:'#4A6256', background:'#F0EDE4', border:'none', borderRadius:10, padding:'10px 14px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => setPendingRemoveProvider(p.id)}
+                        style={{ fontSize:12, fontWeight:700, color:'#D62828', background:'#FDE8E8', border:'none', borderRadius:10, padding:'10px 14px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* Add provider form */}
+          {addingProvider ? (
+            <div style={{ padding:'12px 16px', borderTop: allProviders.length > 0 ? '1px solid #F5F0E8' : 'none' }}>
+              <EditField label="Provider name">
+                <ProviderNameSearch
+                  value={newProviderName}
+                  onChange={setNewProviderName}
+                  zip={profile.zip}
+                  onSelectPlace={place => { if (place.phone && !newProviderPhone) setNewProviderPhone(place.phone); }}
+                />
+              </EditField>
+              <EditField label="What for">
+                <ProviderTypePicker value={newProviderFor} onChange={setNewProviderFor} />
+              </EditField>
+              <EditField label="Phone (optional)">
+                <input style={S.input} type="tel" value={newProviderPhone} onChange={e => setNewProviderPhone(e.target.value)} placeholder="(555) 123-4567" />
+              </EditField>
+              <EditField label="Notes (optional)">
+                <input style={S.input} type="text" value={newProviderNotes} onChange={e => setNewProviderNotes(e.target.value)} placeholder="Great bedside manner, fast service…" />
+              </EditField>
+              <div style={{ padding:'10px 16px 0' }}>
+                <div style={{ fontSize:12, fontWeight:700, color:'#1C2B22', marginBottom:8, fontFamily:'DM Sans, sans-serif' }}>How was it?</div>
+                <div style={{ display:'flex', gap:7, marginBottom:12 }}>
+                  <button
+                    onClick={() => setNewProviderVote(newProviderVote === 'good' ? null : 'good')}
+                    style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, borderRadius:9, padding:'8px 0', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans, sans-serif', border:'1.5px solid #C7D9F5', background: newProviderVote==='good' ? '#1B4DB3' : '#EAF1FD', color: newProviderVote==='good' ? '#EAF1FD' : '#1B4DB3' }}
+                  >
+                    <HeartIcon color={newProviderVote==='good' ? '#EAF1FD' : '#1B4DB3'} />
+                    Good
+                  </button>
+                  <button
+                    onClick={() => setNewProviderVote(newProviderVote === 'bad' ? null : 'bad')}
+                    style={{ flex:1, borderRadius:9, padding:'8px 0', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans, sans-serif', border:'1.5px solid #F5C4C4', background: newProviderVote==='bad' ? '#D62828' : '#FDE8E8', color: newProviderVote==='bad' ? '#fff' : '#D62828' }}
+                  >
+                    Not good
+                  </button>
+                </div>
+              </div>
+              <div style={{ display:'flex', gap:8, padding:'0 16px 4px' }}>
+                <button
+                  disabled={!newProviderName.trim() || !newProviderFor.trim()}
+                  onClick={() => {
+                    const key = newProviderFor.trim().toLowerCase().replace(/\s+/g, '-');
+                    saveProvider(key, {
+                      name: newProviderName.trim(),
+                      phone: newProviderPhone.trim() || null,
+                      vote: newProviderVote,
+                      notes: newProviderNotes.trim() || '',
+                    });
+                    setAddingProvider(false);
+                    setNewProviderName('');
+                    setNewProviderFor('');
+                    setNewProviderPhone('');
+                    setNewProviderNotes('');
+                    setNewProviderVote(null);
+                  }}
+                  style={{ flex:1, fontSize:13, fontWeight:700, color:'#fff', background: newProviderName.trim() && newProviderFor.trim() ? '#1A5C3A' : '#D0C8C0', border:'none', borderRadius:10, padding:'10px 0', cursor: newProviderName.trim() && newProviderFor.trim() ? 'pointer' : 'default', fontFamily:'DM Sans, sans-serif' }}
+                >
+                  Save provider
+                </button>
+                <button
+                  onClick={() => {
+                    setAddingProvider(false);
+                    setNewProviderName('');
+                    setNewProviderFor('');
+                    setNewProviderPhone('');
+                    setNewProviderNotes('');
+                    setNewProviderVote(null);
+                  }}
+                  style={{ fontSize:13, fontWeight:600, color:'#4A6256', background:'#F0EDE4', border:'none', borderRadius:10, padding:'10px 16px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ padding:'10px 16px' }}>
+              <button
+                onClick={() => setAddingProvider(true)}
+                style={{ fontSize:12, fontWeight:700, color:'#1A5C3A', background:'#E8F5EE', border:'none', borderRadius:20, padding:'6px 14px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+              >
+                + Add provider
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* ── Life events ── */}
         {(() => {

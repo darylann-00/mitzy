@@ -226,15 +226,18 @@ function ProviderCard({ provider: p, isSaved, onSave }) {
           <div style={{ display:'flex', gap:7, marginBottom:8 }}>
             <button
               onClick={() => setVote('good')}
-              style={{ flex:1, borderRadius:9, padding:'8px 0', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans, sans-serif', border:'1.5px solid #C8E8D4', background: vote==='good' ? '#1A5C3A' : '#E8F5EE', color: vote==='good' ? '#E8F5EE' : '#1A5C3A' }}
+              style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, borderRadius:9, padding:'8px 0', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans, sans-serif', border:'1.5px solid #C7D9F5', background: vote==='good' ? '#1B4DB3' : '#EAF1FD', color: vote==='good' ? '#EAF1FD' : '#1B4DB3' }}
             >
-              Use again
+              <svg width="13" height="13" viewBox="0 0 18 18" fill="none" style={{ flexShrink:0 }}>
+                <path d="M9 15.5 L2.8 9.6 Q0.5 7.2 2.6 4.7 Q4.8 2.3 9 6.3 Q13.2 2.3 15.4 4.7 Q17.5 7.2 15.2 9.6 Z" fill={vote==='good' ? '#EAF1FD' : '#1B4DB3'} />
+              </svg>
+              Good
             </button>
             <button
               onClick={() => setVote('bad')}
               style={{ flex:1, borderRadius:9, padding:'8px 0', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans, sans-serif', border:'1.5px solid #F5C4C4', background: vote==='bad' ? '#D62828' : '#FDE8E8', color: vote==='bad' ? '#fff' : '#D62828' }}
             >
-              Would avoid
+              Not good
             </button>
           </div>
           <input
@@ -375,7 +378,16 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
   useEffect(() => { fetchResult(false); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const cacheAgeHours = cached ? Math.floor((Date.now() - cached.ts) / (1000 * 60 * 60)) : null;
-  const savedProvider = providerHistory[task.id];
+  const savedProviders = providerHistory[task.id] || [];
+  // Most recently saved "use again" provider is the suggested one; disliked
+  // providers stay in history (visible in Profile) but aren't resurfaced here.
+  const goodProviders = savedProviders.filter(p => p.vote === 'good');
+  const savedProvider = goodProviders[goodProviders.length - 1] || null;
+  const avoidNames = new Set(savedProviders.filter(p => p.vote === 'bad').map(p => p.name?.trim().toLowerCase()));
+  const filteredParsedProviders = useMemo(
+    () => (parsedProviders || []).filter(p => !avoidNames.has(p.name?.trim().toLowerCase())),
+    [parsedProviders, providerHistory, task.id] // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   const handleSave = (provider, vote, notes) => {
     saveProvider(task.id, { ...provider, vote, notes });
@@ -483,7 +495,7 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
                     </>
                   )}
                   <SectionLabel label={savedProvider ? 'Other options nearby' : 'Services near you'} />
-                  {parsedProviders.map((p, i) => (
+                  {filteredParsedProviders.map((p, i) => (
                     <ProviderCard key={i} provider={p} isSaved={false} onSave={handleSave} />
                   ))}
                 </>
