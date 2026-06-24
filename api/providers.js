@@ -1,5 +1,5 @@
 import { requireUser } from './_auth.js';
-import { providersLimiter } from './_ratelimit.js';
+import { providersLimiter, providerSearchLimiter } from './_ratelimit.js';
 
 export const config = { runtime: "edge" };
 
@@ -58,17 +58,6 @@ export default async function handler(req) {
     });
   }
 
-  const { success, reset } = await providersLimiter.limit(userId);
-  if (!success) {
-    return new Response('Rate limit exceeded', {
-      status: 429,
-      headers: {
-        'Retry-After': String(Math.ceil((reset - Date.now()) / 1000)),
-        ...corsHeaders(req),
-      },
-    });
-  }
-
   let taskLabel, taskCat, taskNote, zip, searchQuery, maxResults, skipBlurbs;
   try {
     ({ taskLabel, taskCat, taskNote, zip, searchQuery, maxResults, skipBlurbs } = await req.json());
@@ -79,6 +68,20 @@ export default async function handler(req) {
 
   if (!taskLabel || !zip) {
     return new Response("Missing taskLabel or zip", { status: 400 });
+  }
+
+  // skipBlurbs lookups (e.g. live autocomplete) are a single Places call with no
+  // Claude synthesis, so they get a much larger budget than full task searches.
+  const limiter = skipBlurbs ? providerSearchLimiter : providersLimiter;
+  const { success, reset } = await limiter.limit(userId);
+  if (!success) {
+    return new Response('Rate limit exceeded', {
+      status: 429,
+      headers: {
+        'Retry-After': String(Math.ceil((reset - Date.now()) / 1000)),
+        ...corsHeaders(req),
+      },
+    });
   }
 
   // Validate string fields — must be string or undefined, max 200 chars
