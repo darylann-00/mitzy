@@ -1068,6 +1068,37 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
                 </button>
               )}
             </div>
+            <div style={{ padding:'13px 16px', borderBottom:'1px solid #F5F0E8' }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+                <span style={S.rowLabel}>My bandwidth</span>
+              </div>
+              <div style={{ display:'flex', gap:6 }}>
+                {[
+                  { key: 'low',    label: 'Light' },
+                  { key: 'normal', label: 'Normal' },
+                  { key: 'high',   label: 'All in' },
+                ].map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => onUpdateProfile({ ...profile, capacity: key })}
+                    style={{
+                      flex:1, padding:'8px 6px', fontSize:12, fontWeight:700, textAlign:'center',
+                      borderRadius:10, cursor:'pointer', fontFamily:'DM Sans, sans-serif',
+                      border: (profile.capacity || 'normal') === key ? '2px solid #1A5C3A' : '1.5px solid #EAE4DA',
+                      background: (profile.capacity || 'normal') === key ? '#E8F5EE' : '#fff',
+                      color: (profile.capacity || 'normal') === key ? '#1A5C3A' : '#4A6256',
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div style={{ fontSize:11, color:'#9B9B9B', marginTop:6, fontFamily:'DM Sans, sans-serif' }}>
+                {(profile.capacity || 'normal') === 'low' ? 'Showing only critical tasks' :
+                 (profile.capacity || 'normal') === 'high' ? 'Showing everything you can get ahead on' :
+                 'Balanced — a few tasks at a time'}
+              </div>
+            </div>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'13px 16px' }}>
               <span style={{ fontSize:13, fontWeight:500, color:'#9B9B9B', fontFamily:'DM Sans, sans-serif' }}>Sign out</span>
               <button

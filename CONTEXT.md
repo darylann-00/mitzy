@@ -36,7 +36,7 @@ Two Supabase projects:
 
 ## What's Built and Working
 
-- **Onboarding** — `SlimOnboarding`: full-screen green, 3 phases: welcome → 6 question screens (name/age/gender, own/rent, cars, zip, kids, pets) → transition summary. `PrioritySetup`: 12 key tasks, slide transitions, full green screen. Recurring tasks show fuzzy time chips + date picker (exact date shows a "Use" confirm button to prevent arrow-click from advancing the slide); one-time tasks show "Have you done this? Yes / Not yet".
+- **Onboarding** — `SlimOnboarding`: full-screen green, 3 phases: welcome → 8 question screens (name/age/gender, own/rent, cars, zip, kids, pets, Google Calendar, capacity/bandwidth) → transition summary. `PrioritySetup`: 12 key tasks, slide transitions, full green screen. Recurring tasks show fuzzy time chips + date picker (exact date shows a "Use" confirm button to prevent arrow-click from advancing the slide); one-time tasks show "Have you done this? Yes / Not yet".
 
 - **Task library** — 60+ base tasks across 6 categories (home, car, health, finance, emergency, seasonal). Dynamically extended with per-car, per-kid, per-pet, and per-hazard tasks based on profile.
 
@@ -44,7 +44,9 @@ Two Supabase projects:
 
 - **Snooze (Zeigarnik relief)** — Swipe a task card left to snooze it until a chosen date. Consciously deferring a task relieves cognitive load (Zeigarnik effect). Touch-only swipe gesture (80px threshold) reveals a periwinkle blue (#6B8DD6) strip with closed-eye icon behind the card. Releasing past threshold opens SnoozePicker bottom sheet with presets (Next week, Next month, In 3 months, Pick a date). Snoozed tasks get score 0 and are hidden from focus. AllView shows a collapsible "X snoozed" section (collapsed by default) with "Wake up" button on each card. TaskDetailView shows a blue "Snoozed until [date]" chip with "Wake up early" button. First-use tooltip appears above focus tasks (gated by localStorage `mitzy-snztip-v1`). Data: `snoozed_until` DATE column on `task_records`, separate from `scheduled_date`. Expired snoozes (date ≤ today) fall through to normal status.
 
-- **HomeView** — Personal greeting header (`HomeHeader`), "Focus for today" section (top 3 scored tasks, swipeable), trickle card, hazard card, all-clear state. `paddingBottom: 160px` to clear FABs + nav.
+- **HomeView** — Personal greeting header (`HomeHeader`), Today section (top scored task) + This week section (remaining), trickle card, hazard card, capacity nudge card, all-clear state. Focus task count calibrated by capacity setting: low=1, normal=3, high=5. `paddingBottom: 160px` to clear FABs + nav.
+
+- **Capacity / Bandwidth** — Profile field `capacity` (`low | normal | high`, default `normal`). Set during onboarding step 8, toggleable in Profile > Account > "My bandwidth". Controls `homeTasks` slice count in `TaskContext` via `CAPACITY_FOCUS_COUNT`. Smart nudge (`useCapacityNudge`) tracks weekly stats in localStorage (`mitzy-cs-v1`); after 2+ weeks, suggests dialing up if user clears everything or down if barely completing. Nudge dismisses for 3 weeks. Supabase column: `profiles.capacity TEXT`.
 
 - **AllView** — Three urgency groups (swipeable cards). Category filter chips. Due-only toggle. `GroupDivider` between groups. Category icon tile on each card. Collapsible "Snoozed" section between "All good" and "Explore". "X tasks to explore" accordion section at bottom for `unknown`-status tasks with inline chip picker. `paddingBottom: 160px`.
 
