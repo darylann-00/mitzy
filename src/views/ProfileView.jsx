@@ -167,16 +167,26 @@ function InsurancePicker({ value, onChange }) {
 
 // ─── Provider type picker (searchable picklist, with custom add) ───────────────
 function ProviderTypePicker({ value, onChange }) {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(value || '');
   const [open, setOpen]   = useState(false);
   const [rect, setRect]   = useState(null);
   const anchorRef = useRef(null);
+  const inputRef  = useRef(null);
+
+  useEffect(() => { if (!open) setQuery(value || ''); }, [value, open]);
 
   const filtered = query.trim()
     ? PROVIDER_TYPES.filter(t => t.toLowerCase().includes(query.toLowerCase()))
     : PROVIDER_TYPES;
 
-  const select = (label) => { onChange(label); setQuery(''); setOpen(false); };
+  const select = (label) => {
+    onChange(label);
+    setQuery(label);
+    setOpen(false);
+    inputRef.current?.blur();
+  };
+
+  const closeDropdown = () => { setOpen(false); setQuery(value || ''); };
 
   const openDropdown = () => {
     if (anchorRef.current) setRect(anchorRef.current.getBoundingClientRect());
@@ -198,14 +208,15 @@ function ProviderTypePicker({ value, onChange }) {
     <div>
       <div ref={anchorRef} style={{ display:'flex', alignItems:'center', gap:6, border:'1px solid #D4CFC6', borderRadius:10, padding:'7px 11px', background:'#FDFAF2' }}>
         <input
+          ref={inputRef}
           style={{ flex:1, fontSize:14, fontFamily:'DM Sans, sans-serif', border:'none', outline:'none', background:'transparent', color:'#1C2B22' }}
-          placeholder={value || 'e.g. plumber, dentist, vet'}
+          placeholder="e.g. plumber, dentist, vet"
           value={query}
-          onFocus={openDropdown}
+          onFocus={e => { e.target.select(); openDropdown(); }}
           onChange={e => { setQuery(e.target.value); openDropdown(); }}
         />
-        {value && !query && (
-          <button onClick={() => { onChange(''); setQuery(''); setOpen(false); }} style={{ fontSize:16, lineHeight:1, border:'none', background:'none', cursor:'pointer', color:'#9B9B9B', padding:'0 2px' }}>×</button>
+        {value && !open && (
+          <button onClick={() => { onChange(''); setQuery(''); }} style={{ fontSize:16, lineHeight:1, border:'none', background:'none', cursor:'pointer', color:'#9B9B9B', padding:'0 2px' }}>×</button>
         )}
       </div>
       {open && rect && (filtered.length > 0 || query.trim()) && (
@@ -229,7 +240,7 @@ function ProviderTypePicker({ value, onChange }) {
           )}
         </div>
       )}
-      {open && <div style={{ position:'fixed', inset:0, zIndex:999 }} onMouseDown={() => setOpen(false)} />}
+      {open && <div style={{ position:'fixed', inset:0, zIndex:999 }} onMouseDown={closeDropdown} />}
     </div>
   );
 }
@@ -242,6 +253,7 @@ function ProviderNameSearch({ value, onChange, zip, onSelectPlace }) {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const anchorRef = useRef(null);
+  const inputRef  = useRef(null);
   const timerRef  = useRef(null);
 
   useEffect(() => { setQuery(value || ''); }, [value]);
@@ -294,6 +306,7 @@ function ProviderNameSearch({ value, onChange, zip, onSelectPlace }) {
     onChange(place.name);
     onSelectPlace?.(place);
     setOpen(false);
+    inputRef.current?.blur();
   };
 
   const showDropdown = open && query.trim().length >= 3 && zip && rect;
@@ -302,6 +315,7 @@ function ProviderNameSearch({ value, onChange, zip, onSelectPlace }) {
     <div>
       <div ref={anchorRef} style={{ display:'flex', alignItems:'center', gap:6, border:'1px solid #D4CFC6', borderRadius:10, padding:'7px 11px', background:'#FDFAF2' }}>
         <input
+          ref={inputRef}
           style={{ flex:1, fontSize:14, fontFamily:'DM Sans, sans-serif', border:'none', outline:'none', background:'transparent', color:'#1C2B22' }}
           type="text"
           placeholder="e.g. Dr. Smith, Joe's Plumbing"
