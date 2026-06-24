@@ -844,13 +844,13 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
                       style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, borderRadius:9, padding:'8px 0', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans, sans-serif', border:'1.5px solid #C7D9F5', background: editProviderVote==='good' ? '#1B4DB3' : '#EAF1FD', color: editProviderVote==='good' ? '#EAF1FD' : '#1B4DB3' }}
                     >
                       <HeartIcon color={editProviderVote==='good' ? '#EAF1FD' : '#1B4DB3'} />
-                      Love
+                      Good
                     </button>
                     <button
                       onClick={() => setEditProviderVote(editProviderVote === 'bad' ? null : 'bad')}
                       style={{ flex:1, borderRadius:9, padding:'8px 0', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans, sans-serif', border:'1.5px solid #F5C4C4', background: editProviderVote==='bad' ? '#D62828' : '#FDE8E8', color: editProviderVote==='bad' ? '#fff' : '#D62828' }}
                     >
-                      Nope
+                      Not good
                     </button>
                   </div>
                   <input
@@ -930,13 +930,13 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
                     style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, borderRadius:9, padding:'8px 0', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans, sans-serif', border:'1.5px solid #C7D9F5', background: newProviderVote==='good' ? '#1B4DB3' : '#EAF1FD', color: newProviderVote==='good' ? '#EAF1FD' : '#1B4DB3' }}
                   >
                     <HeartIcon color={newProviderVote==='good' ? '#EAF1FD' : '#1B4DB3'} />
-                    Love
+                    Good
                   </button>
                   <button
                     onClick={() => setNewProviderVote(newProviderVote === 'bad' ? null : 'bad')}
                     style={{ flex:1, borderRadius:9, padding:'8px 0', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans, sans-serif', border:'1.5px solid #F5C4C4', background: newProviderVote==='bad' ? '#D62828' : '#FDE8E8', color: newProviderVote==='bad' ? '#fff' : '#D62828' }}
                   >
-                    Nope
+                    Not good
                   </button>
                 </div>
               </div>

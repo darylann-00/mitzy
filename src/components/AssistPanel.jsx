@@ -231,13 +231,13 @@ function ProviderCard({ provider: p, isSaved, onSave }) {
               <svg width="13" height="13" viewBox="0 0 18 18" fill="none" style={{ flexShrink:0 }}>
                 <path d="M9 15.5 L2.8 9.6 Q0.5 7.2 2.6 4.7 Q4.8 2.3 9 6.3 Q13.2 2.3 15.4 4.7 Q17.5 7.2 15.2 9.6 Z" fill={vote==='good' ? '#EAF1FD' : '#1B4DB3'} />
               </svg>
-              Love
+              Good
             </button>
             <button
               onClick={() => setVote('bad')}
               style={{ flex:1, borderRadius:9, padding:'8px 0', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans, sans-serif', border:'1.5px solid #F5C4C4', background: vote==='bad' ? '#D62828' : '#FDE8E8', color: vote==='bad' ? '#fff' : '#D62828' }}
             >
-              Nope
+              Not good
             </button>
           </div>
           <input
