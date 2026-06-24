@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { AppHeader } from "./HomeView";
 import { HouseIcon, CarIcon, PersonIcon, PetIcon } from "../components/CategoryIcons";
 import { Sheet } from "../components/Sheet";
@@ -8,6 +8,8 @@ import { useCalendarContext } from "../contexts/CalendarContext";
 import { C } from "../data/constants";
 import { LIFE_EVENT_DEFS } from "../data/lifeEvents";
 import { INSURANCE_PROVIDERS } from "../data/insuranceProviders";
+import { PROVIDER_TYPES } from "../data/providerTypes";
+import { supabase } from "../lib/supabase";
 
 // ─── Car data (shared with SlimOnboarding) ─────────────────────────────────────
 const CAR_DATA = {
@@ -159,6 +161,148 @@ function InsurancePicker({ value, onChange }) {
         </div>
       )}
       {open && <div style={{ position:'fixed', inset:0, zIndex:999 }} onMouseDown={() => setOpen(false)} />}
+    </div>
+  );
+}
+
+// ─── Provider type picker (searchable picklist, with custom add) ───────────────
+function ProviderTypePicker({ value, onChange }) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen]   = useState(false);
+  const [rect, setRect]   = useState(null);
+  const anchorRef = useRef(null);
+
+  const filtered = query.trim()
+    ? PROVIDER_TYPES.filter(t => t.toLowerCase().includes(query.toLowerCase()))
+    : PROVIDER_TYPES;
+
+  const select = (label) => { onChange(label); setQuery(''); setOpen(false); };
+
+  const openDropdown = () => {
+    if (anchorRef.current) setRect(anchorRef.current.getBoundingClientRect());
+    setOpen(true);
+  };
+
+  return (
+    <div>
+      <div ref={anchorRef} style={{ display:'flex', alignItems:'center', gap:6, border:'1px solid #D4CFC6', borderRadius:10, padding:'7px 11px', background:'#FDFAF2' }}>
+        <input
+          style={{ flex:1, fontSize:14, fontFamily:'DM Sans, sans-serif', border:'none', outline:'none', background:'transparent', color:'#1C2B22' }}
+          placeholder={value || 'e.g. plumber, dentist, vet'}
+          value={query}
+          onFocus={openDropdown}
+          onChange={e => { setQuery(e.target.value); openDropdown(); }}
+        />
+        {value && !query && (
+          <button onClick={() => { onChange(''); setQuery(''); setOpen(false); }} style={{ fontSize:16, lineHeight:1, border:'none', background:'none', cursor:'pointer', color:'#9B9B9B', padding:'0 2px' }}>×</button>
+        )}
+      </div>
+      {open && rect && (filtered.length > 0 || query.trim()) && (
+        <div style={{ position:'fixed', zIndex:1000, top: rect.bottom + 4, left: rect.left, width: rect.width, background:'#fff', border:'1px solid #D4CFC6', borderRadius:10, maxHeight:200, overflowY:'auto', boxShadow:'0 4px 12px rgba(0,0,0,0.12)' }}>
+          {filtered.map(label => (
+            <button
+              key={label}
+              onMouseDown={e => { e.preventDefault(); select(label); }}
+              style={{ display:'block', width:'100%', textAlign:'left', padding:'10px 14px', fontSize:13, fontFamily:'DM Sans, sans-serif', border:'none', borderBottom:'1px solid #F5F0E8', cursor:'pointer', background: label === value ? '#E8F5EE' : '#fff', color: label === value ? '#1A5C3A' : '#1C2B22', fontWeight: label === value ? 700 : 400 }}
+            >
+              {label}
+            </button>
+          ))}
+          {query.trim() && !PROVIDER_TYPES.some(t => t.toLowerCase() === query.trim().toLowerCase()) && (
+            <button
+              onMouseDown={e => { e.preventDefault(); select(query.trim()); }}
+              style={{ display:'block', width:'100%', textAlign:'left', padding:'10px 14px', fontSize:13, fontFamily:'DM Sans, sans-serif', border:'none', cursor:'pointer', background:'#F0EDE4', color:'#1A5C3A', fontWeight:700 }}
+            >
+              Add "{query.trim()}"
+            </button>
+          )}
+        </div>
+      )}
+      {open && <div style={{ position:'fixed', inset:0, zIndex:999 }} onMouseDown={() => setOpen(false)} />}
+    </div>
+  );
+}
+
+// ─── Provider name search (live Google Places lookup, debounced) ───────────────
+function ProviderNameSearch({ value, onChange, zip, onSelectPlace }) {
+  const [query, setQuery]     = useState(value || '');
+  const [open, setOpen]       = useState(false);
+  const [rect, setRect]       = useState(null);
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const anchorRef = useRef(null);
+  const timerRef  = useRef(null);
+
+  useEffect(() => { setQuery(value || ''); }, [value]);
+
+  useEffect(() => {
+    clearTimeout(timerRef.current);
+    const q = query.trim();
+    if (!open || q.length < 3 || !zip) { setResults([]); setLoading(false); return; }
+    timerRef.current = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) return;
+        const res = await fetch('/api/providers', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+          body: JSON.stringify({ taskLabel: q, zip, skipBlurbs: true, maxResults: 5 }),
+        });
+        if (!res.ok) { setResults([]); return; }
+        const { text } = await res.json();
+        setResults(JSON.parse(text || '[]'));
+      } catch {
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 500);
+    return () => clearTimeout(timerRef.current);
+  }, [query, zip, open]);
+
+  const openDropdown = () => {
+    if (anchorRef.current) setRect(anchorRef.current.getBoundingClientRect());
+    setOpen(true);
+  };
+
+  const select = (place) => {
+    setQuery(place.name);
+    onChange(place.name);
+    onSelectPlace?.(place);
+    setOpen(false);
+  };
+
+  return (
+    <div>
+      <div ref={anchorRef} style={{ display:'flex', alignItems:'center', gap:6, border:'1px solid #D4CFC6', borderRadius:10, padding:'7px 11px', background:'#FDFAF2' }}>
+        <input
+          style={{ flex:1, fontSize:14, fontFamily:'DM Sans, sans-serif', border:'none', outline:'none', background:'transparent', color:'#1C2B22' }}
+          type="text"
+          placeholder="e.g. Dr. Smith, Joe's Plumbing"
+          value={query}
+          onFocus={openDropdown}
+          onChange={e => { setQuery(e.target.value); onChange(e.target.value); openDropdown(); }}
+        />
+      </div>
+      {open && query.trim().length >= 3 && zip && (loading || results.length > 0) && rect && (
+        <div style={{ position:'fixed', zIndex:1000, top: rect.bottom + 4, left: rect.left, width: rect.width, background:'#fff', border:'1px solid #D4CFC6', borderRadius:10, maxHeight:240, overflowY:'auto', boxShadow:'0 4px 12px rgba(0,0,0,0.12)' }}>
+          {loading && <div style={{ padding:'10px 14px', fontSize:12, color:'#9B9B9B', fontFamily:'DM Sans, sans-serif' }}>Searching…</div>}
+          {!loading && results.map((r, i) => (
+            <button
+              key={i}
+              onMouseDown={e => { e.preventDefault(); select(r); }}
+              style={{ display:'block', width:'100%', textAlign:'left', padding:'9px 14px', border:'none', borderBottom:'1px solid #F5F0E8', cursor:'pointer', background:'#fff', fontFamily:'DM Sans, sans-serif' }}
+            >
+              <div style={{ fontSize:13, fontWeight:700, color:'#1C2B22' }}>{r.name}</div>
+              {(r.address || r.phone) && <div style={{ fontSize:11, color:'#7A8A80', marginTop:2 }}>{[r.address, r.phone].filter(Boolean).join(' · ')}</div>}
+            </button>
+          ))}
+        </div>
+      )}
+      {open && <div style={{ position:'fixed', inset:0, zIndex:999 }} onMouseDown={() => setOpen(false)} />}
+      {!zip && <div style={{ fontSize:11, color:'#9B9B9B', marginTop:4, fontFamily:'DM Sans, sans-serif' }}>Add your zip code above to search real businesses near you.</div>}
     </div>
   );
 }
@@ -701,10 +845,15 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
           {addingProvider ? (
             <div style={{ padding:'12px 16px', borderTop: allProviders.length > 0 ? '1px solid #F5F0E8' : 'none' }}>
               <EditField label="Provider name">
-                <input style={S.input} type="text" value={newProviderName} onChange={e => setNewProviderName(e.target.value)} placeholder="e.g. Dr. Smith, Joe's Plumbing" />
+                <ProviderNameSearch
+                  value={newProviderName}
+                  onChange={setNewProviderName}
+                  zip={profile.zip}
+                  onSelectPlace={place => { if (place.phone && !newProviderPhone) setNewProviderPhone(place.phone); }}
+                />
               </EditField>
               <EditField label="What for">
-                <input style={S.input} type="text" value={newProviderFor} onChange={e => setNewProviderFor(e.target.value)} placeholder="e.g. dentist, HVAC, plumber" />
+                <ProviderTypePicker value={newProviderFor} onChange={setNewProviderFor} />
               </EditField>
               <EditField label="Phone (optional)">
                 <input style={S.input} type="tel" value={newProviderPhone} onChange={e => setNewProviderPhone(e.target.value)} placeholder="(555) 123-4567" />
