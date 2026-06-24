@@ -146,7 +146,7 @@ function NextBtn({ onClick, disabled, children }) {
 // ─── Main component ────────────────────────────────────────────────────────────
 export function SlimOnboarding({ onComplete, onBack }) {
   const [step,     setStep]     = useState(-1); // -1 = welcome
-  const [profile,  setProfile]  = useState({ name: '', birthYear: '', gender: '', hasHome: null, hasCar: null, cars: [], zip: '', hasKids: null, kids: [], hasPets: null, pets: [] });
+  const [profile,  setProfile]  = useState({ name: '', birthYear: '', gender: '', hasHome: null, hasCar: null, cars: [], zip: '', hasKids: null, kids: [], hasPets: null, pets: [], capacity: null });
   const [carInput,     setCarInput]     = useState({ year: '', make: '', model: '' });
   const [carInputOpen, setCarInputOpen] = useState(false);
   const [kidInputOpen, setKidInputOpen] = useState(false);
@@ -161,7 +161,7 @@ export function SlimOnboarding({ onComplete, onBack }) {
   const [completing,    setCompleting]    = useState(false);
   const [calStatus,     setCalStatus]     = useState('idle'); // idle | connecting | done | error
 
-  const TOTAL_STEPS = 7;
+  const TOTAL_STEPS = 8;
   const go = n => setTimeout(() => { setStep(n); setErr(''); }, 200);
 
   const editCar = (i) => {
@@ -744,7 +744,7 @@ export function SlimOnboarding({ onComplete, onBack }) {
 
           {/* Step 6: Google Calendar */}
           {step === 6 && (
-            <QuestionScreen step={7} total={TOTAL_STEPS} question="Connect Google Calendar">
+            <QuestionScreen step={7} total={TOTAL_STEPS} question="Connect Google Calendar?">
               <div style={{ fontSize:13, color:'#B8DCC8', marginBottom:20, fontFamily:'DM Sans, sans-serif', lineHeight:1.6 }}>
                 Mitzy can check your calendar for existing appointments and automatically match them to your tasks — so you don't have to enter things twice.
               </div>
@@ -756,7 +756,7 @@ export function SlimOnboarding({ onComplete, onBack }) {
                     </svg>
                     <span style={{ color:'#E8F5EE', fontSize:14, fontWeight:600, fontFamily:'DM Sans, sans-serif' }}>Google Calendar connected!</span>
                   </div>
-                  <NextBtn onClick={() => setShowTransition(true)}>Continue</NextBtn>
+                  <NextBtn onClick={() => go(7)}>Continue</NextBtn>
                 </>
               ) : (
                 <>
@@ -803,13 +803,41 @@ export function SlimOnboarding({ onComplete, onBack }) {
                     )}
                   </button>
                   <button
-                    onClick={() => setShowTransition(true)}
+                    onClick={() => go(7)}
                     style={{ width:'100%', padding:'12px', fontSize:13, fontWeight:600, background:'transparent', color:'rgba(184,220,200,0.75)', border:'none', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
                   >
                     Skip for now
                   </button>
                 </>
               )}
+            </QuestionScreen>
+          )}
+
+          {/* Step 7: Capacity / Bandwidth */}
+          {step === 7 && (
+            <QuestionScreen step={8} total={TOTAL_STEPS} question="How's your bandwidth right now?">
+              <div style={{ fontSize:13, color:'#B8DCC8', marginBottom:8, fontFamily:'DM Sans, sans-serif', lineHeight:1.6 }}>
+                Take a second to think about this one.
+              </div>
+              <div style={{ fontSize:13, color:'#B8DCC8', marginBottom:20, fontFamily:'DM Sans, sans-serif', lineHeight:1.6 }}>
+                This helps Mitzy decide how much to put on your plate. You can always change it later in your profile.
+              </div>
+              {[
+                { key: 'low',    label: "I'm maxed out", sub: "Only flag what's critical — I can't take on anything extra right now" },
+                { key: 'normal', label: 'Keeping up',    sub: "Show me what needs attention, but keep it manageable" },
+                { key: 'high',   label: 'Ready to crush it', sub: "I've got bandwidth — show me everything I can get ahead on" },
+              ].map(({ key, label, sub }) => (
+                <OptionBtn
+                  key={key}
+                  label={label}
+                  sub={sub}
+                  selected={profile.capacity === key}
+                  onClick={() => {
+                    setProfile(p => ({ ...p, capacity: key }));
+                    setTimeout(() => setShowTransition(true), 300);
+                  }}
+                />
+              ))}
             </QuestionScreen>
           )}
 

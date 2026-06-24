@@ -8,10 +8,12 @@ const FOCUS_SUPPRESS_AFTER_DAYS = 7;
 const FOCUS_SUPPRESS_FOR_DAYS   = 7;
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
+export const CAPACITY_FOCUS_COUNT = { low: 1, normal: 3, high: 5 };
+
 const TaskContext = createContext(null);
 
 export function TaskProvider({ user, children }) {
-  const { taskLibrary, region } = useProfileContext();
+  const { taskLibrary, region, profile } = useProfileContext();
   const {
     taskState, setTaskState,
     disabledTasks, setDisabledTasks,
@@ -50,6 +52,9 @@ export function TaskProvider({ user, children }) {
 
   const [focusSeen, setFocusSeen] = useState(() => loadS(FOCUS_SEEN_KEY, {}));
 
+  const capacity = profile?.capacity || 'normal';
+  const focusCount = CAPACITY_FOCUS_COUNT[capacity] ?? 3;
+
   const homeTasks = useMemo(() => {
     const today = todayStr();
     return scoredDue
@@ -57,8 +62,9 @@ export function TaskProvider({ user, children }) {
         if (taskStatus(t, taskState) === "unknown") return false;
         const entry = focusSeen[t.id];
         return !(entry?.suppressUntil && entry.suppressUntil > today);
-      });
-  }, [scoredDue, taskState, focusSeen]);
+      })
+      .slice(0, focusCount);
+  }, [scoredDue, taskState, focusSeen, focusCount]);
 
   useEffect(() => {
     const today = todayStr();

@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { TrickleCard } from "../components/TrickleCard";
 import { SwipeableTaskCard } from "../components/SwipeableTaskCard";
 import { SnoozeTooltip }    from "../components/SnoozeTooltip";
@@ -6,6 +7,7 @@ import { LifeEventNudge } from "../components/LifeEventNudge";
 import { useProfileContext } from "../contexts/ProfileContext";
 import { useTaskContext }    from "../contexts/TaskContext";
 import { useCalendarContext } from "../contexts/CalendarContext";
+import { useCapacityNudge, recordWeeklyStats, dismissCapacityNudge } from "../hooks/useCapacityNudge";
 
 // ─── Shared header pattern ─────────────────────────────────────────────────────
 export function AppHeader({ rightContent }) {
@@ -215,7 +217,7 @@ export function HomeView({
   onMatchConfirm,
   onMatchDismiss,
 }) {
-  const { profile, providerHistory } = useProfileContext();
+  const { profile, providerHistory, updateProfile } = useProfileContext();
   const { homeTasks, doneThisWeek, getStatus, getDays, taskState } = useTaskContext();
   const todayTask = homeTasks[0] ?? null;
   const isDueThisWeek = (t) => {
@@ -230,6 +232,12 @@ export function HomeView({
   const libraryWeek = remaining.filter(t => !t.isCustom && isDueThisWeek(t)).slice(0, MAX_LIBRARY);
   const weekTasks = [...customWeek, ...libraryWeek];
   const { pendingCalendarMatches } = useCalendarContext();
+  const capacityNudge = useCapacityNudge(profile.capacity, homeTasks.length, doneThisWeek);
+  const [nudgeDismissed, setNudgeDismissed] = useState(false);
+
+  useEffect(() => {
+    recordWeeklyStats(homeTasks.length, doneThisWeek);
+  }, [homeTasks.length, doneThisWeek]);
 
   return (
     <div style={{ background:'#FDFAF2' }}>
@@ -259,6 +267,36 @@ export function HomeView({
               onDismiss={onTrickleDismiss}
               onAssist={onTrickleAssist}
             />
+            <Divider />
+          </>
+        )}
+
+        {/* Capacity nudge */}
+        {capacityNudge && !nudgeDismissed && (
+          <>
+            <div style={{ background:'#fff', borderRadius:14, border:'1px solid #EAE4DA', padding:'16px 18px', marginBottom:4 }}>
+              <div style={{ fontSize:14, fontWeight:600, color:'#1C2B22', marginBottom:10, fontFamily:'DM Sans, sans-serif', lineHeight:1.5 }}>
+                {capacityNudge.message}
+              </div>
+              <div style={{ display:'flex', gap:8 }}>
+                <button
+                  onClick={() => {
+                    updateProfile({ ...profile, capacity: capacityNudge.suggestion });
+                    dismissCapacityNudge();
+                    setNudgeDismissed(true);
+                  }}
+                  style={{ flex:1, padding:'10px', fontSize:13, fontWeight:700, background:'#1A5C3A', color:'#E8F5EE', border:'none', borderRadius:10, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                >
+                  {capacityNudge.direction === 'up' ? 'Show me more' : 'Dial it back'}
+                </button>
+                <button
+                  onClick={() => { dismissCapacityNudge(); setNudgeDismissed(true); }}
+                  style={{ flex:1, padding:'10px', fontSize:13, fontWeight:600, background:'#F0EDE4', color:'#4A6256', border:'none', borderRadius:10, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                >
+                  I'm good
+                </button>
+              </div>
+            </div>
             <Divider />
           </>
         )}
