@@ -6,6 +6,7 @@ import { supabase } from "../lib/supabase";
 const PROFILE_FIELDS = [
   'name', 'zip', 'hasHome', 'birthYear', 'gender',
   'cars', 'hasCar', 'kids', 'hasKids', 'pets', 'hasPets',
+  'capacity',
 ];
 
 function isProfileNonEmpty(p) {
@@ -291,6 +292,7 @@ function toRow(p) {
     visit_count:       p.visitCount       ?? 0,
     hazard_done:       p.hazardDone       ?? false,
     profile_questions: p.profileQuestions ?? null,
+    capacity:          p.capacity ?? null,
   };
 }
 
@@ -311,5 +313,6 @@ function fromRow(row) {
     visitCount:       row.visit_count,
     hazardDone:       row.hazard_done,
     profileQuestions: row.profile_questions,
+    capacity:         row.capacity ?? null,
   };
 }
