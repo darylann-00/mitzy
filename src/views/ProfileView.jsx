@@ -96,6 +96,15 @@ function EditField({ label, last, children }) {
   );
 }
 
+// ─── Heart icon (for "Love" provider vote) ──────────────────────────────────────
+function HeartIcon({ size = 13, color = '#1B4DB3' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" style={{ flexShrink:0 }}>
+      <path d="M9 15.5 L2.8 9.6 Q0.5 7.2 2.6 4.7 Q4.8 2.3 9 6.3 Q13.2 2.3 15.4 4.7 Q17.5 7.2 15.2 9.6 Z" fill={color} />
+    </svg>
+  );
+}
+
 // ─── Saved providers icon ──────────────────────────────────────────────────────
 function ProvidersIcon({ size = 16 }) {
   return (
@@ -832,15 +841,16 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
                   <div style={{ display:'flex', gap:7, marginBottom:8 }}>
                     <button
                       onClick={() => setEditProviderVote(editProviderVote === 'good' ? null : 'good')}
-                      style={{ flex:1, borderRadius:9, padding:'8px 0', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans, sans-serif', border:'1.5px solid #C8E8D4', background: editProviderVote==='good' ? '#1A5C3A' : '#E8F5EE', color: editProviderVote==='good' ? '#E8F5EE' : '#1A5C3A' }}
+                      style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, borderRadius:9, padding:'8px 0', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans, sans-serif', border:'1.5px solid #C7D9F5', background: editProviderVote==='good' ? '#1B4DB3' : '#EAF1FD', color: editProviderVote==='good' ? '#EAF1FD' : '#1B4DB3' }}
                     >
-                      Use again
+                      <HeartIcon color={editProviderVote==='good' ? '#EAF1FD' : '#1B4DB3'} />
+                      Love
                     </button>
                     <button
                       onClick={() => setEditProviderVote(editProviderVote === 'bad' ? null : 'bad')}
                       style={{ flex:1, borderRadius:9, padding:'8px 0', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans, sans-serif', border:'1.5px solid #F5C4C4', background: editProviderVote==='bad' ? '#D62828' : '#FDE8E8', color: editProviderVote==='bad' ? '#fff' : '#D62828' }}
                     >
-                      Would avoid
+                      Nope
                     </button>
                   </div>
                   <input
@@ -917,15 +927,16 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
                 <div style={{ display:'flex', gap:7, marginBottom:12 }}>
                   <button
                     onClick={() => setNewProviderVote(newProviderVote === 'good' ? null : 'good')}
-                    style={{ flex:1, borderRadius:9, padding:'8px 0', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans, sans-serif', border:'1.5px solid #C8E8D4', background: newProviderVote==='good' ? '#1A5C3A' : '#E8F5EE', color: newProviderVote==='good' ? '#E8F5EE' : '#1A5C3A' }}
+                    style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, borderRadius:9, padding:'8px 0', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans, sans-serif', border:'1.5px solid #C7D9F5', background: newProviderVote==='good' ? '#1B4DB3' : '#EAF1FD', color: newProviderVote==='good' ? '#EAF1FD' : '#1B4DB3' }}
                   >
-                    Use again
+                    <HeartIcon color={newProviderVote==='good' ? '#EAF1FD' : '#1B4DB3'} />
+                    Love
                   </button>
                   <button
                     onClick={() => setNewProviderVote(newProviderVote === 'bad' ? null : 'bad')}
                     style={{ flex:1, borderRadius:9, padding:'8px 0', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans, sans-serif', border:'1.5px solid #F5C4C4', background: newProviderVote==='bad' ? '#D62828' : '#FDE8E8', color: newProviderVote==='bad' ? '#fff' : '#D62828' }}
                   >
-                    Would avoid
+                    Nope
                   </button>
                 </div>
               </div>
