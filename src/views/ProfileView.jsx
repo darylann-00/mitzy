@@ -183,6 +183,17 @@ function ProviderTypePicker({ value, onChange }) {
     setOpen(true);
   };
 
+  useEffect(() => {
+    if (!open) return;
+    const updateRect = () => { if (anchorRef.current) setRect(anchorRef.current.getBoundingClientRect()); };
+    window.addEventListener('scroll', updateRect, true);
+    window.addEventListener('resize', updateRect);
+    return () => {
+      window.removeEventListener('scroll', updateRect, true);
+      window.removeEventListener('resize', updateRect);
+    };
+  }, [open]);
+
   return (
     <div>
       <div ref={anchorRef} style={{ display:'flex', alignItems:'center', gap:6, border:'1px solid #D4CFC6', borderRadius:10, padding:'7px 11px', background:'#FDFAF2' }}>
@@ -239,8 +250,8 @@ function ProviderNameSearch({ value, onChange, zip, onSelectPlace }) {
     clearTimeout(timerRef.current);
     const q = query.trim();
     if (!open || q.length < 3 || !zip) { setResults([]); setLoading(false); return; }
+    setLoading(true);
     timerRef.current = setTimeout(async () => {
-      setLoading(true);
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
@@ -267,12 +278,25 @@ function ProviderNameSearch({ value, onChange, zip, onSelectPlace }) {
     setOpen(true);
   };
 
+  useEffect(() => {
+    if (!open) return;
+    const updateRect = () => { if (anchorRef.current) setRect(anchorRef.current.getBoundingClientRect()); };
+    window.addEventListener('scroll', updateRect, true);
+    window.addEventListener('resize', updateRect);
+    return () => {
+      window.removeEventListener('scroll', updateRect, true);
+      window.removeEventListener('resize', updateRect);
+    };
+  }, [open]);
+
   const select = (place) => {
     setQuery(place.name);
     onChange(place.name);
     onSelectPlace?.(place);
     setOpen(false);
   };
+
+  const showDropdown = open && query.trim().length >= 3 && zip && rect;
 
   return (
     <div>
@@ -286,9 +310,12 @@ function ProviderNameSearch({ value, onChange, zip, onSelectPlace }) {
           onChange={e => { setQuery(e.target.value); onChange(e.target.value); openDropdown(); }}
         />
       </div>
-      {open && query.trim().length >= 3 && zip && (loading || results.length > 0) && rect && (
+      {showDropdown && (
         <div style={{ position:'fixed', zIndex:1000, top: rect.bottom + 4, left: rect.left, width: rect.width, background:'#fff', border:'1px solid #D4CFC6', borderRadius:10, maxHeight:240, overflowY:'auto', boxShadow:'0 4px 12px rgba(0,0,0,0.12)' }}>
           {loading && <div style={{ padding:'10px 14px', fontSize:12, color:'#9B9B9B', fontFamily:'DM Sans, sans-serif' }}>Searching…</div>}
+          {!loading && results.length === 0 && (
+            <div style={{ padding:'10px 14px', fontSize:12, color:'#9B9B9B', fontFamily:'DM Sans, sans-serif' }}>No matches found — you can still enter the name manually.</div>
+          )}
           {!loading && results.map((r, i) => (
             <button
               key={i}
