@@ -252,6 +252,7 @@ function ProviderNameSearch({ value, onChange, zip, onSelectPlace }) {
   const [rect, setRect]       = useState(null);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState(null);
   const anchorRef = useRef(null);
   const inputRef  = useRef(null);
   const timerRef  = useRef(null);
@@ -261,22 +262,28 @@ function ProviderNameSearch({ value, onChange, zip, onSelectPlace }) {
   useEffect(() => {
     clearTimeout(timerRef.current);
     const q = query.trim();
-    if (!open || q.length < 3 || !zip) { setResults([]); setLoading(false); return; }
+    if (!open || q.length < 3 || !zip) { setResults([]); setLoading(false); setError(null); return; }
     setLoading(true);
+    setError(null);
     timerRef.current = setTimeout(async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
-        if (!token) return;
+        if (!token) { setError('Not signed in'); return; }
         const res = await fetch('/api/providers', {
           method: 'POST',
           headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
           body: JSON.stringify({ taskLabel: q, zip, skipBlurbs: true, maxResults: 5 }),
         });
-        if (!res.ok) { setResults([]); return; }
+        if (!res.ok) {
+          setError(res.status === 429 ? 'Too many searches — wait a moment and try again' : `Search failed (${res.status})`);
+          setResults([]);
+          return;
+        }
         const { text } = await res.json();
         setResults(JSON.parse(text || '[]'));
       } catch {
+        setError('Search failed — check your connection');
         setResults([]);
       } finally {
         setLoading(false);
@@ -327,7 +334,10 @@ function ProviderNameSearch({ value, onChange, zip, onSelectPlace }) {
       {showDropdown && (
         <div style={{ position:'fixed', zIndex:1000, top: rect.bottom + 4, left: rect.left, width: rect.width, background:'#fff', border:'1px solid #D4CFC6', borderRadius:10, maxHeight:240, overflowY:'auto', boxShadow:'0 4px 12px rgba(0,0,0,0.12)' }}>
           {loading && <div style={{ padding:'10px 14px', fontSize:12, color:'#9B9B9B', fontFamily:'DM Sans, sans-serif' }}>Searching…</div>}
-          {!loading && results.length === 0 && (
+          {!loading && error && (
+            <div style={{ padding:'10px 14px', fontSize:12, color:'#D62828', fontFamily:'DM Sans, sans-serif' }}>{error}</div>
+          )}
+          {!loading && !error && results.length === 0 && (
             <div style={{ padding:'10px 14px', fontSize:12, color:'#9B9B9B', fontFamily:'DM Sans, sans-serif' }}>No matches found — you can still enter the name manually.</div>
           )}
           {!loading && results.map((r, i) => (
