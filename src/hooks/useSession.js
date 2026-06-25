@@ -6,7 +6,7 @@ import {
 } from "../utils/storage";
 import { detectHazards } from "../utils/hazards";
 
-export function useSession({ onboarded, profile, activeTasks, taskState }) {
+export function useSession({ onboarded, profile, activeTasks, taskState, tasksLoading }) {
   const [visitCount,     setVisitCount]   = useState(() => loadS(VISIT_COUNT_KEY, 0));
   const [trickleTask,    setTrickleTask]  = useState(null);
   const [pendingHazards, setPendingHazards] = useState(null);
@@ -14,6 +14,10 @@ export function useSession({ onboarded, profile, activeTasks, taskState }) {
 
   useEffect(() => {
     if (!onboarded) return;
+    // Wait for taskState to finish syncing from the server before deciding what's
+    // "unknown" — otherwise a stale/empty local cache can make an already-answered
+    // task look unanswered and surface a stale trickle question.
+    if (tasksLoading) return;
 
     const next = visitCount + 1;
     setVisitCount(next);
@@ -62,7 +66,7 @@ export function useSession({ onboarded, profile, activeTasks, taskState }) {
     if (next >= 3 && Date.now() - lastRefresh > KNOWLEDGE_REFRESH_TTL) {
       setTimeout(() => saveS(KNOWLEDGE_REFRESH_KEY, Date.now()), 1000);
     }
-  }, [onboarded]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [onboarded, tasksLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const dismissTrickle = () => setTrickleTask(null);
   const answerTrickle  = () => setTrickleTask(null);

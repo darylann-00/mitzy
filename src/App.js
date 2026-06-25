@@ -235,7 +235,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
   const [nudgeState, setNudgeState] = useState(() => loadS(LIFE_EVENTS_NUDGE_KEY, { discoveryDismissed: false, wrapupDismissed: {} }));
 
   // ─── Session (trickle + hazards) ───────────────────────────────────────────
-  const { trickleTask, dismissTrickle, answerTrickle, pendingHazards, setPendingHazards } = useSession({ onboarded, profile, activeTasks, taskState });
+  const { trickleTask, dismissTrickle, answerTrickle, pendingHazards, setPendingHazards } = useSession({ onboarded, profile, activeTasks, taskState, tasksLoading });
 
   // ─── Returning user with no server profile → drop into new-user onboarding ─
   useEffect(() => {
