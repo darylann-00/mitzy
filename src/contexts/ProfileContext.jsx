@@ -22,7 +22,7 @@ export function ProfileProvider({ user, welcomeChoice, children }) {
   return (
     <ProfileContext.Provider value={{
       profile, setProfile, taskLibrary, customTasks,
-      updateProfile, addCustomTask, removeCustomTask,
+      updateProfile, addCustomTask, addCustomTasksBulk, removeCustomTask,
       loading, syncError,
       pendingConflict, resolveConflict,
       serverProfileChecked, serverProfileExists,

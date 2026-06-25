@@ -55,9 +55,26 @@ function buildProfileContext(profile) {
   return parts.length ? parts.join('; ') : 'No profile context.';
 }
 
-const SYSTEM_PROMPT = `You are Mitzy's task generator. The user describes a household, vehicle, family, financial, health, or seasonal task they want tracked. Convert it into a single structured task object Mitzy can schedule.
+const SYSTEM_PROMPT = `You are Mitzy's task generator. The user describes one or more household, vehicle, family, financial, health, or seasonal tasks they want tracked. Convert each into a structured task object Mitzy can schedule.
 
 CRITICAL: Return ONLY valid JSON. No markdown code fences. No prose outside the JSON object.
+
+# Step 0: Count tasks — THIS STEP IS MANDATORY, DO IT FIRST
+Read the user's prompt carefully and count how many distinct tasks they mentioned.
+
+CRITICAL RULE: If the user mentioned 2 or more distinct tasks, you MUST use the multi-task response format (Step 3b). NEVER pick just one task and discard the rest. Every task the user mentioned must appear in your response.
+
+Examples of MULTIPLE tasks (use Step 3b):
+- "change HVAC filter, schedule dentist, and get car inspected" → 3 tasks
+- "I need to winterize sprinklers, get flu shots, and clean the gutters" → 3 tasks
+- "schedule oil change. also need to call about the roof and renew my license" → 3 tasks
+- "get the dog groomed, take kids to dentist, change air filter, pay property tax" → 4 tasks
+
+Examples of ONE task (use Step 3):
+- "change the HVAC filter" → 1 task
+- "I need to winterize the house" → 1 task (do NOT split into sub-tasks)
+
+Do NOT split a single task into sub-tasks. "Replace the kitchen faucet" is ONE task, not three (buy faucet, remove old, install new). But if the user listed separate things to do, each one is its own task. Cap at 10 tasks per prompt.
 
 # Step 1: Safety scan
 If the prompt indicates the user is in crisis, in danger, or describing harm, return tier 4 and stop:
@@ -111,6 +128,7 @@ Return shape (success):
     "why": "<1–2 sentence plain-English why this matters>",
     "guidance": "<markdown with ## headers, bullets where natural, under 250 words>",
     "oneTime": <boolean>,
+    "dueDate": "<YYYY-MM-DD string if the user mentioned a specific date/day, else null>",
     "riskTier": 1 | 2 | 3 | 3.5,
     "suppressCelebration": <boolean — true ONLY for sensitive/somber tasks where confetti on completion would feel inappropriate>,
     "assumptions": [
@@ -158,6 +176,9 @@ Personalize using profile context (vehicles, kids, pets, climate region, age) on
 
 For seasonal tasks, set activeMonths matching the user's climate region. For one-time tasks, set intervalDays: null and oneTime: true.
 
+# dueDate rules
+If the user mentions a specific day or date (e.g. "Saturday", "next Tuesday", "June 30", "tomorrow"), resolve it to a YYYY-MM-DD string using today's date provided in the user message. Set oneTime: true and intervalDays: null for date-specific tasks — "go to the store on Saturday" is a one-time task due this Saturday, NOT a recurring weekly task. Only set dueDate: null when no date or day was mentioned.
+
 Generate 1–2 assumptions max — only when flipping the value would meaningfully change intervalDays, activeMonths, riskTier, or the guidance content. If no such assumption exists, return an empty array. Each assumption's "label" is the current chosen value (must appear in "options"). Good example: { key: "plant_location", label: "Houseplant", options: ["Houseplant", "Garden"] } — changes watering frequency. Bad example: { key: "issue_type", options: ["leaking", "broken"] } — both produce the same task, so omit it.
 
 # Parse-failure / out-of-scope path
@@ -166,6 +187,22 @@ If the prompt is too vague to generate a meaningful task (e.g. "uhhh do the thin
   "tier": 0,
   "manual": { "label": "<best guess label>", "cat": "<best guess cat>", "needsManualSetup": true }
 }
+
+# Step 3b: Multi-task response format (REQUIRED when Step 0 found 2+ tasks)
+If you counted 2 or more distinct tasks in Step 0, you MUST return this format:
+{
+  "tier": "multi",
+  "tasks": [
+    { "tier": 1 | 2 | 3 | 3.5 | 4, "task": { ...same fields as Step 3... } },
+    ...
+  ]
+}
+
+IMPORTANT: "tier" at the top level MUST be the string "multi" (not a number). Each item in the "tasks" array has its own numeric tier.
+
+Apply the safety scan (Step 1) and risk tier (Step 2) independently to each task. If any single task is tier 4, include it in the array with its refusal object instead of a task object. The client will filter these out.
+
+Omit the "steps" array from each task to keep the response compact. Include all other fields (label, cat, intervalDays, windowDays, stakes, activeMonths, assistType, searchQuery, why, guidance, oneTime, riskTier, suppressCelebration, assumptions).
 
 # Regenerate path
 If the request includes "regenerate": {key, value}, the user flipped one assumption. Re-derive the affected fields (frequency, season, guidance) and return the full updated task object. Keep label and cat consistent unless the flip changes them fundamentally.`;
@@ -210,7 +247,7 @@ export default async function handler(req) {
   if (!prompt || typeof prompt !== 'string') {
     return new Response("Missing prompt", { status: 400, headers: corsHeaders(req) });
   }
-  if (prompt.length > 1000) {
+  if (prompt.length > 2000) {
     return new Response("Prompt too large", { status: 413, headers: corsHeaders(req) });
   }
   if (existingTaskLabels !== undefined && !Array.isArray(existingTaskLabels)) {
@@ -234,7 +271,7 @@ export default async function handler(req) {
     return new Response("API key not configured", { status: 500, headers: corsHeaders(req) });
   }
 
-  const cleanPrompt = sanitize(prompt).slice(0, 1000);
+  const cleanPrompt = sanitize(prompt).slice(0, 2000);
   const profileCtx = buildProfileContext(profile);
   const safeLabels = Array.isArray(existingTaskLabels)
     ? existingTaskLabels.slice(0, 200).map(sanitize).filter(Boolean).slice(0, 200)
@@ -247,7 +284,11 @@ export default async function handler(req) {
     ? `\n\nThe user flipped an assumption. Regenerate the task with: ${sanitize(regenerate.key)} = ${sanitize(regenerate.value)}. Re-derive frequency, season, and guidance accordingly.`
     : '';
 
+  const today = new Date().toISOString().slice(0, 10);
+  const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+
   const userMessage = `User prompt: "${cleanPrompt}"
+Today is ${dayName}, ${today}.
 Profile context: ${profileCtx}
 ${labelsLine}${regenLine}`;
 
@@ -260,7 +301,7 @@ ${labelsLine}${regenLine}`;
     },
     body: JSON.stringify({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 2000,
+      max_tokens: 4000,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: userMessage }],
     }),

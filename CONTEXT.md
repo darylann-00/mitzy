@@ -66,9 +66,9 @@ Two Supabase projects:
 
 - **Hazard detection** — Zip → hazard type → prep tasks. Runs on visit 2+.
 
-- **Bottom dock** — Fixed nav: `[Today|All|Profile]` pill + sparkle AI FAB circle to the right (always visible). White `+` add FAB floats above nav on Today and All tabs.
+- **Bottom dock** — Fixed nav: `[Today|All|Profile]` pill + sparkle FAB circle to the right (always visible). Single entry point for adding tasks (no separate white `+` FAB).
 
-- **AI Task Creator** — Sparkle FAB opens `AITaskCreator` full-screen sheet. User describes a task in plain English → `/api/generate-task` (Haiku 4.5) returns a structured task with category, frequency, guidance, safety tier, and assumption chips. `TaskConfirmCard` shows the draft — label is tap-to-edit, category is a dropdown, frequency opens `FrequencyPicker`, assumption chips cycle their options on tap and re-fire the API (debounced 400ms, AbortController cancels in-flight). T2 tasks show a silent DIY toggle (swaps `assistType`). T3 tasks are locked (no DIY). T4 prompts (crisis indicators) return a refusal screen with a single resource link and no save option. T0 (parse failure) shows a manual fallback form. On save, task is written to localStorage and upserted to `custom_tasks` in Supabase. `useProfile` exposes `addCustomTask` (async, with rollback on error) and `removeCustomTask`. Rate limited at 20 req/hr per user (`rl:gentask` prefix in Upstash). AssistPanel shows a small "Mitzy's guidance is general — when in doubt, call a pro." disclaimer for AI-generated tasks.
+- **Task Creator** — Sparkle FAB opens `TaskCreator` full-screen overlay with two modes: "Mitzy magic" (AI, default) and "Do it myself" (manual). AI mode: user types or dictates naturally → `/api/generate-task` (Haiku 4.5) auto-detects one vs many tasks. Single task → `TaskConfirmCard` review. Multiple tasks → `BrainDumpReview` compact checklist (checkbox, category emoji, label, frequency + category text, tap-to-edit via `TaskConfirmCard` with custom button labels). Batch save calls `addCustomTasksBulk`. Manual mode: inline form with category/frequency/stakes pills, no API call. AI features: assumption chips cycle on tap and re-fire the API (debounced 400ms, AbortController cancels in-flight). T2 tasks show a silent DIY toggle. T3 locked. T4 (crisis) shows refusal + hotline. T0 (parse failure) shows manual fallback. Prompt limit 2000 chars, max_tokens 4000. Rate limited at 20 req/hr per user (`rl:gentask` prefix in Upstash). `useProfile` exposes `addCustomTask`, `addCustomTasksBulk`, and `removeCustomTask`.
 
 - **Auth UX** — Supabase Google OAuth (primary) + magic link (fallback). `BrandSplash` (full green background + Memphis shapes + four-dot wordmark) renders during `authLoading` to avoid flash-of-white on PWA cold launches. `LoginGate` normalizes magic-link emails (`trim().toLowerCase()`) at submit so case/whitespace variants resolve to one Supabase auth record. Success screen has a "Resend" button gated by a 30s cooldown (`RESEND_COOLDOWN_MS`) — cooldown starts on first send; restarts on each successful resend; re-enables immediately on error.
 
@@ -148,14 +148,16 @@ WelcomeGate → (new) SlimOnboarding → PrioritySetup → LoginGate → App (3-
                                    │   ├─ AssistPanel → /api/assist → Claude
                                    │   ├─ SchedulePanel (mocked)
                                    │   └─ MarkDoneModal → Celebration confetti
-                                   └─ AITaskCreator → /api/generate-task → Claude → custom_tasks
+                                   └─ TaskCreator → /api/generate-task → Claude → custom_tasks
+                                       ├─ Single task → TaskConfirmCard
+                                       └─ Multi-task → BrainDumpReview (tap-to-edit)
 ```
 
 ---
 
 ## Navigation
 
-Three tabs in `BottomDock` (fixed, `#E8F0EC` pill). Sparkle AI FAB sits to the right of the pill at the same level. White `+` FAB floats above nav (`bottom: 96px, right: 20px`) on Today and All tabs.
+Three tabs in `BottomDock` (fixed, `#E8F0EC` pill). Sparkle FAB sits to the right of the pill at the same level — single entry point for adding tasks (opens TaskCreator).
 
 | Tab key | Icon | Label |
 |---------|------|-------|
@@ -179,7 +181,7 @@ Baseline e2e tests run on every PR: `sign_in`, `onboarding`, `mark_done`. Featur
 
 1. Replace hardcoded hazard zip ranges in `hazards.js` with FEMA API.
 2. Zip error message copy in onboarding (deferred).
-3. AI Task Creator V1.5 — multi-task split for prompts like "winterize the house".
+3. Task Creator polish — edge cases in multi-task review, speech-to-text testing.
 
 ## Known Gaps / Mocked
 

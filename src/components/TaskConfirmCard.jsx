@@ -4,7 +4,7 @@ import { CategoryTile } from "./CategoryIcons";
 import { FrequencyPicker, formatIntervalDays } from "./FrequencyPicker";
 import { parseGuidanceBlocks, renderGuidanceBlocks } from "../utils/renderMarkdown";
 
-export function TaskConfirmCard({ task, onChange, onSave, onCancel, regenerating, regenError }) {
+export function TaskConfirmCard({ task, onChange, onSave, onCancel, regenerating, regenError, saveLabel, cancelLabel }) {
   const [editingLabel, setEditingLabel] = useState(false);
   const [labelDraft, setLabelDraft] = useState(task.label || '');
   const [editingCat, setEditingCat] = useState(false);
@@ -263,7 +263,7 @@ export function TaskConfirmCard({ task, onChange, onSave, onCancel, regenerating
             fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans, sans-serif',
           }}
         >
-          Cancel
+          {cancelLabel || 'Cancel'}
         </button>
         <button
           onClick={handleSave}
@@ -275,7 +275,7 @@ export function TaskConfirmCard({ task, onChange, onSave, onCancel, regenerating
             fontFamily:'DM Sans, sans-serif',
           }}
         >
-          Add to my tasks
+          {saveLabel || 'Add to my tasks'}
         </button>
       </div>
     </div>
