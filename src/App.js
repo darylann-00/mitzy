@@ -23,8 +23,7 @@ import { PrioritySetup }  from "./onboarding/PrioritySetup";
 import { Celebration }   from "./components/Celebration";
 import { AssistPanel }   from "./components/AssistPanel";
 import { MarkDoneModal } from "./components/MarkDoneModal";
-import { AddTaskPanel }  from "./components/AddTaskPanel";
-import { AITaskCreator } from "./components/AITaskCreator";
+import { TaskCreator }   from "./components/TaskCreator";
 import { ProfileConflictModal } from "./components/ProfileConflictModal";
 import { NewBabyIntake } from "./components/LifeEventIntake";
 import { tasksForIntake as newBabyTasksForIntake } from "./data/lifeEvents/newBaby";
@@ -52,7 +51,7 @@ function SyncBanner({ loading, error }) {
 }
 
 // ─── Bottom nav ────────────────────────────────────────────────────────────────
-function BottomDock({ view, setView, onAI }) {
+function BottomDock({ view, setView, onAdd }) {
   const TodayIcon = ({ active }) => (
     <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
       <polygon points="11,1 13.5,8.5 21,8.5 15,13.5 17,21 11,16.5 5,21 7,13.5 1,8.5 8.5,8.5"
@@ -110,8 +109,8 @@ function BottomDock({ view, setView, onAI }) {
         </div>
 
         <button
-          onClick={onAI}
-          aria-label="AI assistant"
+          onClick={onAdd}
+          aria-label="Add a task"
           style={{
             width: 56, height: 56, borderRadius: '50%', flexShrink: 0,
             background: '#1A5C3A', border: 'none', cursor: 'pointer',
@@ -130,47 +129,22 @@ function BottomDock({ view, setView, onAI }) {
   );
 }
 
-// ─── FAB ───────────────────────────────────────────────────────────────────────
-function FABGroup({ showAdd, onAdd }) {
-  if (!showAdd) return null;
-  return (
-    <button
-      onClick={onAdd}
-      aria-label="Add a task"
-      style={{
-        position: 'fixed', bottom: 96, right: 20, zIndex: 190,
-        width: 56, height: 56, borderRadius: '50%',
-        background: '#fff', border: '1.5px solid #1A5C3A',
-        cursor: 'pointer', padding: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}
-    >
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-        <line x1="11" y1="3" x2="11" y2="19" stroke="#1A5C3A" strokeWidth="2.5" strokeLinecap="round" />
-        <line x1="3"  y1="11" x2="19" y2="11" stroke="#1A5C3A" strokeWidth="2.5" strokeLinecap="round" />
-      </svg>
-    </button>
-  );
-}
-
 // ─── Overlay stack ─────────────────────────────────────────────────────────────
 function Overlays({
   celebration, onCelebrationDone,
   markDoneModal, onMarkDone, onMarkDoneClose,
   assistTask, onAssistClose,
-  addingTask, onAddClose,
-  aiCreatorOpen, onAiCreatorClose,
+  creatorOpen, onCreatorClose,
   lifeEventIntake, onLifeEventIntakeClose, onStartLifeEventConfirm,
 }) {
-  const { addCustomTask, pendingConflict, resolveConflict } = useProfileContext();
+  const { pendingConflict, resolveConflict } = useProfileContext();
 
   return (
     <>
       {celebration   && <Celebration onDone={onCelebrationDone} />}
       {markDoneModal && <MarkDoneModal task={markDoneModal} onDone={onMarkDone} onClose={onMarkDoneClose} />}
       {assistTask    && <AssistPanel task={assistTask} onClose={onAssistClose} />}
-      {addingTask    && <AddTaskPanel onAdd={addCustomTask} onClose={onAddClose} />}
-      {aiCreatorOpen && <AITaskCreator onClose={onAiCreatorClose} />}
+      {creatorOpen   && <TaskCreator onClose={onCreatorClose} />}
       {pendingConflict && <ProfileConflictModal onResolve={resolveConflict} />}
       {lifeEventIntake === 'new-baby' && (
         <NewBabyIntake
@@ -226,8 +200,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
   const [celebration,     setCelebration]     = useState(false);
   const [assistTask,      setAssistTask]      = useState(null);
   const [markDoneModal,   setMarkDoneModal]   = useState(null);
-  const [addingTask,      setAddingTask]      = useState(false);
-  const [aiCreatorOpen,   setAiCreatorOpen]   = useState(false);
+  const [creatorOpen,     setCreatorOpen]     = useState(false);
   const [activeCategory,  setActiveCategory]  = useState('all');
   const [dueOnly,         setDueOnly]         = useState(false);
   const [lifeEventIntake, setLifeEventIntake] = useState(null); // null | 'new-baby'
@@ -386,8 +359,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
     celebration, onCelebrationDone: () => setCelebration(false),
     markDoneModal, onMarkDone: handleMarkDone, onMarkDoneClose: handleMarkDoneClose,
     assistTask, onAssistClose: () => setAssistTask(null),
-    addingTask, onAddClose: () => setAddingTask(false),
-    aiCreatorOpen, onAiCreatorClose: () => setAiCreatorOpen(false),
+    creatorOpen, onCreatorClose: () => setCreatorOpen(false),
     lifeEventIntake,
     onLifeEventIntakeClose: () => setLifeEventIntake(null),
     onStartLifeEventConfirm: handleStartLifeEventConfirm,
@@ -510,8 +482,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
         />
       )}
 
-      <FABGroup showAdd={view === 'home' || view === 'all'} onAdd={() => setAddingTask(true)} />
-      <BottomDock view={view} setView={setView} onAI={() => setAiCreatorOpen(true)} />
+      <BottomDock view={view} setView={setView} onAdd={() => setCreatorOpen(true)} />
     </div>
   );
 }

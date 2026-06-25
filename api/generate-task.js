@@ -55,9 +55,14 @@ function buildProfileContext(profile) {
   return parts.length ? parts.join('; ') : 'No profile context.';
 }
 
-const SYSTEM_PROMPT = `You are Mitzy's task generator. The user describes a household, vehicle, family, financial, health, or seasonal task they want tracked. Convert it into a single structured task object Mitzy can schedule.
+const SYSTEM_PROMPT = `You are Mitzy's task generator. The user describes one or more household, vehicle, family, financial, health, or seasonal tasks they want tracked. Convert each into a structured task object Mitzy can schedule.
 
 CRITICAL: Return ONLY valid JSON. No markdown code fences. No prose outside the JSON object.
+
+# Step 0: Count tasks
+Read the user's prompt carefully. If they listed multiple distinct tasks (e.g. "change HVAC filter, schedule dentist, and get car inspected"), return ALL of them using the multi-task response format in Step 3b. If they described a single task, use the single-task format in Step 3.
+
+Do NOT split a single task into sub-tasks. "Replace the kitchen faucet" is ONE task, not three (buy faucet, remove old, install new). Each distinct item the user listed should become exactly one task. Cap at 10 tasks per prompt.
 
 # Step 1: Safety scan
 If the prompt indicates the user is in crisis, in danger, or describing harm, return tier 4 and stop:
@@ -167,6 +172,20 @@ If the prompt is too vague to generate a meaningful task (e.g. "uhhh do the thin
   "manual": { "label": "<best guess label>", "cat": "<best guess cat>", "needsManualSetup": true }
 }
 
+# Step 3b: Multi-task response format
+When the user's prompt contains multiple distinct tasks, return:
+{
+  "tier": "multi",
+  "tasks": [
+    { "tier": 1 | 2 | 3 | 3.5 | 4, "task": { ...same fields as Step 3... } },
+    ...
+  ]
+}
+
+Apply the safety scan (Step 1) and risk tier (Step 2) independently to each task. If any single task is tier 4, include it in the array with its refusal object instead of a task object. The client will filter these out.
+
+For multi-task responses, you may omit the "steps" array from each task to keep the response compact — the client will not show step-by-step guidance in the batch review. Still include all other fields (label, cat, intervalDays, windowDays, stakes, activeMonths, assistType, searchQuery, why, guidance, oneTime, riskTier, suppressCelebration, assumptions).
+
 # Regenerate path
 If the request includes "regenerate": {key, value}, the user flipped one assumption. Re-derive the affected fields (frequency, season, guidance) and return the full updated task object. Keep label and cat consistent unless the flip changes them fundamentally.`;
 
@@ -210,7 +229,7 @@ export default async function handler(req) {
   if (!prompt || typeof prompt !== 'string') {
     return new Response("Missing prompt", { status: 400, headers: corsHeaders(req) });
   }
-  if (prompt.length > 1000) {
+  if (prompt.length > 2000) {
     return new Response("Prompt too large", { status: 413, headers: corsHeaders(req) });
   }
   if (existingTaskLabels !== undefined && !Array.isArray(existingTaskLabels)) {
@@ -234,7 +253,7 @@ export default async function handler(req) {
     return new Response("API key not configured", { status: 500, headers: corsHeaders(req) });
   }
 
-  const cleanPrompt = sanitize(prompt).slice(0, 1000);
+  const cleanPrompt = sanitize(prompt).slice(0, 2000);
   const profileCtx = buildProfileContext(profile);
   const safeLabels = Array.isArray(existingTaskLabels)
     ? existingTaskLabels.slice(0, 200).map(sanitize).filter(Boolean).slice(0, 200)
@@ -260,7 +279,7 @@ ${labelsLine}${regenLine}`;
     },
     body: JSON.stringify({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 2000,
+      max_tokens: 4000,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: userMessage }],
     }),
