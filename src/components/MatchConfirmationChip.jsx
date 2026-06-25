@@ -1,3 +1,5 @@
+import { CalendarIcon } from "./CategoryIcons";
+
 export function MatchConfirmationChip({ match, onConfirm, onDismiss }) {
   return (
     <div style={{
@@ -12,8 +14,9 @@ export function MatchConfirmationChip({ match, onConfirm, onDismiss }) {
       fontFamily: 'DM Sans, sans-serif',
       color: '#1C2B22',
     }}>
-      <span style={{ flex: 1 }}>
-        📅 Found: <span style={{ fontWeight: 600 }}>{match.eventTitle}</span> — yours?
+      <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 5 }}>
+        <CalendarIcon size={12} />
+        Found: <span style={{ fontWeight: 600 }}>{match.eventTitle}</span> — yours?
       </span>
       <button
         onClick={onConfirm}

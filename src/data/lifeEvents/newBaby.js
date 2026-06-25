@@ -79,7 +79,6 @@ const BUNDLE = [
 export const NEW_BABY = {
   id:    'new-baby',
   label: 'New baby',
-  emoji: '👶',
   bundle: BUNDLE,
   phaseLabels: NEW_BABY_PHASE_LABELS,
 };

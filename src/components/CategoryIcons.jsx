@@ -78,6 +78,110 @@ export function SchoolIcon({ color = '#4A6256', bg = '#F0EDE4', size = 18 }) {
   );
 }
 
+export function PinIcon({ color = '#1A5C3A', size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <path d="M9 1C5.7 1 3 3.6 3 6.8 3 11 9 17 9 17S15 11 15 6.8C15 3.6 12.3 1 9 1Z" fill={color} />
+      <circle cx="9" cy="6.8" r="2.2" fill="#fff" />
+    </svg>
+  );
+}
+
+export function LightningIcon({ color = '#F4C430', size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <polygon points="10,1 3,11 8,11 7,17 15,7 10,7" fill={color} />
+    </svg>
+  );
+}
+
+export function BabyIcon({ color = '#06A77D', bg = '#E8F5EE', size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="10" r="6" fill={color} />
+      <path d="M5 5.5 Q9 2 13 5.5" stroke={color} strokeWidth="1.8" strokeLinecap="round" fill="none" />
+      <circle cx="6.7" cy="9.5" r="1" fill={bg} />
+      <circle cx="11.3" cy="9.5" r="1" fill={bg} />
+      <path d="M7 12.3 Q9 13.6 11 12.3" stroke={bg} strokeWidth="1.4" strokeLinecap="round" fill="none" />
+    </svg>
+  );
+}
+
+export function EarthquakeIcon({ color = '#D62828', bg = '#FDE8E8', size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="8" fill={bg} />
+      <path d="M1 9 L5 9 L7 5 L9.5 13 L11.5 7 L13 9 L17 9" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </svg>
+  );
+}
+
+export function WildfireIcon({ color = '#D62828', bg = '#FDE8E8', size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="8" fill={bg} />
+      <path d="M9 2 C6 6 5 8 6 11 C6.5 12.6 8 13.5 9.5 13 C8.5 11.5 8.7 10.3 9.5 9.5 C10.8 11 11.5 11.8 11 13.2 C12.6 12.2 13.3 10 12.3 7.8 C12.1 9 11.4 9.4 11 9 C11.4 6.5 10.6 4 9 2Z" fill={color} />
+    </svg>
+  );
+}
+
+export function HurricaneIcon({ color = '#1A5C3A', bg = '#E8F5EE', size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="8" fill={bg} />
+      <path d="M9 3 C12.5 3 15 5 14.5 7.5 C14.2 9 12.5 9.3 12 8 C11.7 7.2 12.3 6.5 13 6.6" stroke={color} strokeWidth="1.8" strokeLinecap="round" fill="none" />
+      <path d="M9 9 C5.5 9 3 11 3.5 13.5 C3.8 15 5.5 15.3 6 14 C6.3 13.2 5.7 12.5 5 12.6" stroke={color} strokeWidth="1.8" strokeLinecap="round" fill="none" />
+      <path d="M3.5 7 C5 4.5 8 4 9 6" stroke={color} strokeWidth="1.8" strokeLinecap="round" fill="none" />
+      <path d="M14.5 11 C13 13.5 10 14 9 12" stroke={color} strokeWidth="1.8" strokeLinecap="round" fill="none" />
+    </svg>
+  );
+}
+
+export function TornadoIcon({ color = '#4A6256', bg = '#F0EDE4', size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="8" fill={bg} />
+      <path d="M3 4 L15 4 L11.5 7.3 L13 7.3 L10 10.3 L11 10.3 L8.5 16" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </svg>
+  );
+}
+
+export function WinterStormIcon({ color = '#6B8DD6', bg = '#EAF0FB', size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="8" fill={bg} />
+      <g stroke={color} strokeWidth="1.6" strokeLinecap="round">
+        <line x1="9" y1="3" x2="9" y2="15" />
+        <line x1="3.9" y1="6" x2="14.1" y2="12" />
+        <line x1="3.9" y1="12" x2="14.1" y2="6" />
+      </g>
+    </svg>
+  );
+}
+
+export function FloodIcon({ color = '#06A77D', bg = '#E8F5EE', size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="8" fill={bg} />
+      <path d="M2 8 Q4.5 6 7 8 Q9.5 10 12 8 Q14.5 6 16 8" stroke={color} strokeWidth="1.8" strokeLinecap="round" fill="none" />
+      <path d="M2 12 Q4.5 10 7 12 Q9.5 14 12 12 Q14.5 10 16 12" stroke={color} strokeWidth="1.8" strokeLinecap="round" fill="none" />
+    </svg>
+  );
+}
+
+export const HAZARD_ICON_CONFIG = {
+  earthquake: { Icon: EarthquakeIcon,  color: '#D62828' },
+  wildfire:   { Icon: WildfireIcon,    color: '#D62828' },
+  hurricane:  { Icon: HurricaneIcon,   color: '#1A5C3A' },
+  tornado:    { Icon: TornadoIcon,     color: '#4A6256' },
+  winter:     { Icon: WinterStormIcon, color: '#6B8DD6' },
+  flood:      { Icon: FloodIcon,       color: '#06A77D' },
+};
+
+export const LIFE_EVENT_ICON_CONFIG = {
+  'new-baby': BabyIcon,
+};
+
 // Map category key → icon component + colors
 export const CAT_ICON_CONFIG = {
   home:      { Icon: HouseIcon,    color: '#1A5C3A', bg: '#E8F5EE', tileBg: '#E8F5EE'  },

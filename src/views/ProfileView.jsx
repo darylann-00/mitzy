@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { AppHeader } from "./HomeView";
-import { HouseIcon, CarIcon, PersonIcon, PetIcon } from "../components/CategoryIcons";
+import { HouseIcon, CarIcon, PersonIcon, PetIcon, LIFE_EVENT_ICON_CONFIG } from "../components/CategoryIcons";
 import { Sheet } from "../components/Sheet";
 import { useProfileContext } from "../contexts/ProfileContext";
 import { useTaskContext }    from "../contexts/TaskContext";
@@ -1005,7 +1005,10 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
                   <div style={{ padding:'13px 16px', borderBottom: '1px solid #F5F0E8' }}>
                     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom: 4 }}>
                       <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                        <span style={{ fontSize: 22 }}>{def.emoji}</span>
+                        {(() => {
+                          const EventIcon = LIFE_EVENT_ICON_CONFIG[def.id];
+                          return EventIcon ? <EventIcon size={22} /> : null;
+                        })()}
                         <span style={{ fontSize:14, fontWeight:700, color:C.ink, fontFamily:'DM Sans, sans-serif' }}>
                           {def.label}
                         </span>
@@ -1057,7 +1060,9 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
                   <div style={{ fontSize:12, color:C.muted, fontFamily:'DM Sans, sans-serif', marginBottom: 8 }}>
                     Going through something big? Mitzy can walk you through the admin.
                   </div>
-                  {Object.entries(LIFE_EVENT_DEFS).map(([key, eventDef]) => (
+                  {Object.entries(LIFE_EVENT_DEFS).map(([key, eventDef]) => {
+                    const EventIcon = LIFE_EVENT_ICON_CONFIG[eventDef.id];
+                    return (
                     <button
                       key={key}
                       onClick={() => onStartLifeEvent(key)}
@@ -1068,13 +1073,13 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
                         textAlign:'left', fontFamily:'DM Sans, sans-serif',
                       }}
                     >
-                      <span style={{ fontSize: 22 }}>{eventDef.emoji}</span>
+                      {EventIcon && <EventIcon size={22} />}
                       <span style={{ fontSize:13, fontWeight:700, color:C.ink, flex:1 }}>{eventDef.label}</span>
                       <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                         <polyline points="4,2 10,7 4,12" stroke="#4A6256" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </button>
-                  ))}
+                  );})}
                 </div>
               )}
             </div>
