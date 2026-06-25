@@ -241,6 +241,103 @@ function MiniProviderCard({ provider: p, onSelect }) {
   );
 }
 
+// ─── Decision card ──────────────────────────────────────────────────────────
+function DecisionCard({ step, index, isDone, isActive, isFuture, chosenPath, onChoose, onUndo }) {
+  const circleSize = 26;
+
+  return (
+    <div style={{
+      background: isDone ? '#F8F6F0' : '#fff',
+      border: `1px solid ${isActive ? C.brand : C.cardBorder}`,
+      borderRadius: 12,
+      padding: '12px 14px',
+      marginBottom: 8,
+      opacity: isFuture ? 0.6 : 1,
+      transition: 'opacity 0.2s, border-color 0.2s',
+    }}>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+        {isDone ? (
+          <button
+            onClick={onUndo}
+            style={{
+              width: circleSize, height: circleSize, borderRadius: '50%', flexShrink: 0,
+              background: C.green, border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 1,
+            }}
+            aria-label="Undo step"
+          >
+            <svg width="13" height="13" viewBox="0 0 18 18" fill="none">
+              <polyline points="4,9 7.5,12.5 14,5.5" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        ) : (
+          <div style={{
+            width: circleSize, height: circleSize, borderRadius: '50%', flexShrink: 0,
+            background: isActive ? C.brandLight : '#F0EDE4',
+            border: `2px solid ${isActive ? C.brand : '#D0C8C0'}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 1,
+          }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: isActive ? C.brand : '#9A9080', fontFamily: 'DM Sans, sans-serif' }}>
+              {index + 1}
+            </span>
+          </div>
+        )}
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontSize: 14, fontWeight: 700, fontFamily: 'DM Sans, sans-serif',
+            color: isDone ? C.muted : C.ink,
+            textDecoration: isDone ? 'line-through' : 'none',
+            marginBottom: 3,
+          }}>
+            {step.label}
+          </div>
+
+          <div style={{
+            fontSize: 13, color: isDone ? '#8A9A90' : C.muted, lineHeight: 1.55,
+            fontFamily: 'DM Sans, sans-serif',
+          }}>
+            {step.body}
+          </div>
+
+          {isDone && chosenPath && (
+            <div style={{
+              marginTop: 6, display: 'inline-block', padding: '4px 10px',
+              background: C.brandLight, borderRadius: 6, fontSize: 12,
+              fontWeight: 600, color: C.brand, fontFamily: 'DM Sans, sans-serif',
+            }}>
+              {step.options.find(o => o.value === chosenPath)?.label}
+            </div>
+          )}
+
+          {isActive && (
+            <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {step.options.map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => onChoose(opt.value)}
+                  style={{
+                    width: '100%', padding: '12px 14px', background: '#fff',
+                    border: `1.5px solid ${C.brand}`, borderRadius: 10, cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.brand, fontFamily: 'DM Sans, sans-serif' }}>
+                    {opt.label}
+                  </div>
+                  <div style={{ fontSize: 12, color: C.muted, fontFamily: 'DM Sans, sans-serif', marginTop: 2 }}>
+                    {opt.description}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Step card ────────────────────────────────────────────────────────────────
 function StepCard({ step, index, isDone, isActive, isFuture, context, onComplete, onUndo, onSelectProvider, onSaveProvider, cachedResults, onChangeProvider }) {
   const resolvedBody = resolveStepVars(step.body, context);
@@ -522,29 +619,49 @@ export const GuidedSteps = memo(function GuidedSteps({ steps, taskId, taskCat, s
   const goodProviders = (providerHistory[taskId] || []).filter(p => p.vote === 'good');
   const savedProvider = goodProviders[goodProviders.length - 1] || null;
 
+  const chosenPath = useMemo(() => {
+    if (!stepProgress) return null;
+    const decisionStep = steps.find(s => s.type === 'decision');
+    return decisionStep ? stepProgress[decisionStep.key]?.choice ?? null : null;
+  }, [stepProgress, steps]);
+
+  const visibleSteps = useMemo(() => {
+    return steps.filter(s => !s.path || s.path === chosenPath);
+  }, [steps, chosenPath]);
+
   const selectedProvider = useMemo(() => {
     if (!stepProgress) return savedProvider || null;
-    for (const step of steps) {
+    for (const step of visibleSteps) {
       const entry = stepProgress[step.key];
       if (entry?.provider) return entry.provider;
     }
     return savedProvider || null;
-  }, [stepProgress, steps, savedProvider]);
+  }, [stepProgress, visibleSteps, savedProvider]);
 
   const context = useMemo(() => ({
     ...profile,
     provider: selectedProvider,
   }), [profile, selectedProvider]);
 
-  const completedCount = steps.filter(s => stepProgress?.[s.key]?.done).length;
-  const allDone = completedCount === steps.length;
+  const completedCount = visibleSteps.filter(s => stepProgress?.[s.key]?.done).length;
+  const allDone = completedCount === visibleSteps.length;
 
   const handleComplete = (step) => {
     onSetStepProgress(step.key, { done: true, completedAt: new Date().toISOString() });
   };
 
   const handleUndo = (step) => {
-    onSetStepProgress(step.key, { done: false });
+    if (step.type === 'decision') {
+      onSetStepProgress(step.key, { done: false, choice: null });
+      const pathStepKeys = steps.filter(s => s.path).map(s => s.key);
+      pathStepKeys.forEach(key => onSetStepProgress(key, { done: false }));
+    } else {
+      onSetStepProgress(step.key, { done: false });
+    }
+  };
+
+  const handleDecision = (step, value) => {
+    onSetStepProgress(step.key, { done: true, choice: value, completedAt: new Date().toISOString() });
   };
 
   const handleSelectProvider = (step, provider, results) => {
@@ -563,7 +680,7 @@ export const GuidedSteps = memo(function GuidedSteps({ steps, taskId, taskCat, s
         </div>
         {completedCount > 0 && !allDone && (
           <div style={{ fontSize: 11, color: C.green, fontWeight: 600, fontFamily: 'DM Sans, sans-serif' }}>
-            {completedCount} of {steps.length} done
+            {completedCount} of {visibleSteps.length} done
           </div>
         )}
         {allDone && (
@@ -574,7 +691,7 @@ export const GuidedSteps = memo(function GuidedSteps({ steps, taskId, taskCat, s
       </div>
 
       {/* Insurance prompt — only for health tasks with a call step */}
-      {!profile?.insurance && taskCat === 'health' && steps.some(s => s.type === 'call') && (
+      {!profile?.insurance && taskCat === 'health' && visibleSteps.some(s => s.type === 'call') && (
         <InsurancePrompt onSave={(val) => updateProfile({ insurance: val })} />
       )}
 
@@ -588,14 +705,30 @@ export const GuidedSteps = memo(function GuidedSteps({ steps, taskId, taskCat, s
         </div>
       )}
 
-      {steps.map((step, i) => {
+      {visibleSteps.map((step, i) => {
         const isDone = !!stepProgress?.[step.key]?.done;
-        const firstIncomplete = steps.findIndex(s => !stepProgress?.[s.key]?.done);
+        const firstIncomplete = visibleSteps.findIndex(s => !stepProgress?.[s.key]?.done);
         const isActive = i === firstIncomplete;
         const isFuture = !isDone && !isActive;
 
+        if (step.type === 'decision') {
+          return (
+            <DecisionCard
+              key={step.key}
+              step={step}
+              index={i}
+              isDone={isDone}
+              isActive={isActive}
+              isFuture={isFuture}
+              chosenPath={chosenPath}
+              onChoose={(value) => handleDecision(step, value)}
+              onUndo={() => handleUndo(step)}
+            />
+          );
+        }
+
         const providerStepEntry = step.dependsOnProvider
-          ? steps.map(s => stepProgress?.[s.key]).find(e => e?.results)
+          ? visibleSteps.map(s => stepProgress?.[s.key]).find(e => e?.results)
           : null;
 
         return (
@@ -613,7 +746,7 @@ export const GuidedSteps = memo(function GuidedSteps({ steps, taskId, taskCat, s
             onSaveProvider={(provider) => saveProvider(taskId, provider)}
             cachedResults={providerStepEntry?.results}
             onChangeProvider={(newProvider) => {
-              const providerStep = steps.find(s => s.type === 'provider_search');
+              const providerStep = visibleSteps.find(s => s.type === 'provider_search');
               if (providerStep) {
                 handleSelectProvider(providerStep, newProvider, providerStepEntry?.results);
                 saveProvider(taskId, newProvider);
