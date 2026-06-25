@@ -108,9 +108,13 @@ export function TaskProvider({ user, children }) {
 
   const getDays = useCallback((t) => {
     const entry = taskState[t.id];
-    if (!entry?.lastDone) return 0;
     const isOneTime = entry?.oneTime !== undefined ? entry.oneTime : t.oneTime;
-    if (isOneTime) return null;
+    if (isOneTime) {
+      if (entry?.lastDone) return null;
+      if (entry?.dueDate) return Math.ceil((new Date(entry.dueDate) - Date.now()) / 86400000);
+      return null;
+    }
+    if (!entry?.lastDone) return 0;
     const intervalDays = entry?.intervalDays ?? t.intervalDays;
     return intervalDays - Math.floor((Date.now() - new Date(entry.lastDone)) / 86400000);
   }, [taskState]);

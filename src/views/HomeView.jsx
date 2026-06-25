@@ -317,7 +317,7 @@ export function HomeView({
                 onDone={onDoneTask}
                 onSnooze={onSnooze}
                 showCategoryIcon
-                subtitle={getStatus(todayTask) === 'needed' ? '' : undefined}
+                subtitle={getStatus(todayTask) === 'needed' && getDays(todayTask) === null ? '' : undefined}
                 stepProgress={taskState[todayTask.id]?.stepProgress}
                 pendingMatch={match}
                 onMatchConfirm={match ? () => onMatchConfirm(todayTask.id, match.eventDate) : undefined}
@@ -346,7 +346,7 @@ export function HomeView({
                     onDone={onDoneTask}
                     onSnooze={onSnooze}
                     showCategoryIcon
-                    subtitle={getStatus(task) === 'needed' ? '' : undefined}
+                    subtitle={getStatus(task) === 'needed' && getDays(task) === null ? '' : undefined}
                     stepProgress={taskState[task.id]?.stepProgress}
                     pendingMatch={match}
                     onMatchConfirm={match ? () => onMatchConfirm(task.id, match.eventDate) : undefined}

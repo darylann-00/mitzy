@@ -58,7 +58,6 @@ export function taskStatus(task, taskState) {
   if (entry?.scheduledDate && new Date(entry.scheduledDate) > new Date()) return "scheduled";
   if (entry?.scheduledDate && new Date(entry.scheduledDate) <= new Date()) return "confirm";
   if (isOneTime) {
-    if (entry?.needed)   return "needed";
     if (entry?.lastDone) return "ok";
     if (entry?.dueDate) {
       const leadDays = task.reminderLeadDays ?? task.windowDays ?? 7;
@@ -66,6 +65,7 @@ export function taskStatus(task, taskState) {
       if (daysUntil < 0)        return "due";
       if (daysUntil <= leadDays) return "coming-up";
     }
+    if (entry?.needed) return "needed";
     return "unknown";
   }
 
