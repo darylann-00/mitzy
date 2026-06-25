@@ -4,6 +4,7 @@ import { DateField } from "./DateField";
 import { getCalendarToken } from "../lib/googleCalendar";
 import { useCalendarContext } from "../contexts/CalendarContext";
 import { useTaskContext } from "../contexts/TaskContext";
+import { PinIcon } from "./CategoryIcons";
 
 const CalSVG = ({ color = '#1A5C3A', size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
@@ -510,7 +511,7 @@ export function ScheduleSurface({ task }) {
             Save in Mitzy
           </button>
           <div style={{ display: 'flex', gap: 9, padding: '10px 12px', background: '#FFF8E1', border: '1px solid #F4C430', borderRadius: 10, fontSize: 12, color: '#1C2B22', lineHeight: 1.45, fontFamily: 'DM Sans, sans-serif' }}>
-            <span style={{ flexShrink: 0, fontSize: 14, lineHeight: 1.2 }}>📍</span>
+            <span style={{ flexShrink: 0, lineHeight: 1.2 }}><PinIcon color="#1A5C3A" size={14} /></span>
             <span>This only saves a date in Mitzy — it won't add anything to your Google Calendar.</span>
           </div>
         </div>

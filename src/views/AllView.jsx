@@ -2,7 +2,7 @@ import { useState } from "react";
 import { TaskCard } from "../components/TaskCard";
 import { SwipeableTaskCard } from "../components/SwipeableTaskCard";
 import { SnoozeIcon } from "../components/SnoozeIcon";
-import { HouseIcon, CarIcon, PersonIcon, CalendarIcon, StarIcon, PetIcon, CategoryTile } from "../components/CategoryIcons";
+import { HouseIcon, CarIcon, PersonIcon, CalendarIcon, StarIcon, PetIcon, CategoryTile, LIFE_EVENT_ICON_CONFIG } from "../components/CategoryIcons";
 import { TaskAnswerChips } from "../components/TaskAnswerChips";
 import { AppHeader } from "./HomeView";
 import { useProfileContext } from "../contexts/ProfileContext";
@@ -187,6 +187,7 @@ function LifeEventGroup({ event, tasks, taskState, getStatus, getDays, providerH
   const def = LIFE_EVENT_DEFS[event.type];
   if (!def || tasks.length === 0) return null;
   const doneCount = tasks.filter(t => taskState[t.id]?.lastDone).length;
+  const EventIcon = LIFE_EVENT_ICON_CONFIG[def.id];
 
   return (
     <div style={{ marginTop: 16, marginBottom: 4 }}>
@@ -199,7 +200,7 @@ function LifeEventGroup({ event, tasks, taskState, getStatus, getDays, providerH
           cursor:'pointer',
         }}
       >
-        <span style={{ fontSize: 22 }}>{def.emoji}</span>
+        {EventIcon && <EventIcon size={22} />}
         <div style={{ flex:1 }}>
           <div style={{ fontSize:13, fontWeight:700, color:'#1C2B22', fontFamily:'DM Sans, sans-serif' }}>
             {def.label}

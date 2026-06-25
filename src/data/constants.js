@@ -32,13 +32,13 @@ export const C = {
 export const KID_COLORS = [C.red, C.orange, C.green, C.yellow, C.brand, C.muted];
 
 export const CAT_META = {
-  home:      { label: "Home",      emoji: "🏠", color: C.red    },
-  car:       { label: "Car",       emoji: "🚗", color: C.brand  },
-  health:    { label: "Health",    emoji: "💊", color: C.green  },
-  school:    { label: "School",    emoji: "🎒", color: C.orange },
-  finance:   { label: "Finance",   emoji: "💰", color: C.orange },
-  emergency: { label: "Emergency", emoji: "⚡", color: C.red    },
-  pet:       { label: "Pet",       emoji: "🐾", color: C.yellow },
+  home:      { label: "Home",      color: C.red    },
+  car:       { label: "Car",       color: C.brand  },
+  health:    { label: "Health",    color: C.green  },
+  school:    { label: "School",    color: C.orange },
+  finance:   { label: "Finance",   color: C.orange },
+  emergency: { label: "Emergency", color: C.red    },
+  pet:       { label: "Pet",       color: C.yellow },
 };
 
 export const RAD_WORDS = [

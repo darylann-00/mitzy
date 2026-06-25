@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { CAT_META } from "../data/constants";
-import { CAT_ICON_CONFIG } from "../components/CategoryIcons";
+import { CAT_ICON_CONFIG, CalendarIcon } from "../components/CategoryIcons";
 import { MonthCalendar } from "../components/MonthCalendar";
 import { DateField } from "../components/DateField";
 import { ScheduleSurface } from "../components/ScheduleSurface";
@@ -711,7 +711,8 @@ export function TaskDetailView({ task, taskState: taskStateProp, onAssist, onDon
             fontSize:12, fontWeight:600, color:'#1C2B22',
             fontFamily:'DM Sans, sans-serif',
           }}>
-            <span>📅 Scheduled: {scheduledStr}</span>
+            <CalendarIcon size={13} />
+            <span>Scheduled: {scheduledStr}</span>
           </div>
         )}
 

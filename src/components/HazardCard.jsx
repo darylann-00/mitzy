@@ -1,27 +1,33 @@
 import { C } from "../data/constants";
+import { HAZARD_ICON_CONFIG, LightningIcon } from "./CategoryIcons";
 
 const HAZARD_LABELS = {
-  earthquake: "🌍 Earthquake",
-  wildfire:   "🔥 Wildfire",
-  hurricane:  "🌀 Hurricane",
-  tornado:    "🌪 Tornado",
-  winter:     "❄️ Winter Storm",
-  flood:      "🌊 Flooding",
+  earthquake: "Earthquake",
+  wildfire:   "Wildfire",
+  hurricane:  "Hurricane",
+  tornado:    "Tornado",
+  winter:     "Winter Storm",
+  flood:      "Flooding",
 };
 
 export function HazardCard({ hazards, onAccept, onDismiss }) {
   return (
     <div style={{ background: C.white, borderRadius: 20, padding: "16px 18px", marginBottom: 12, border: `1.5px solid ${C.coral}`, boxShadow: `0 4px 16px ${C.coral}30` }}>
-      <div className="mf" style={{ background: C.coral, color: C.white, padding: "3px 10px", borderRadius: 20, fontSize: 12, marginBottom: 10, display: "inline-block" }}>
-        mitzy checked your area ⚡
+      <div className="mf" style={{ display: "inline-flex", alignItems: "center", gap: 4, background: C.coral, color: C.white, padding: "3px 10px", borderRadius: 20, fontSize: 12, marginBottom: 10 }}>
+        <LightningIcon color={C.white} size={12} />
+        mitzy checked your area
       </div>
       <div style={{ fontSize: 15, color: C.ink, fontWeight: 600, marginBottom: 10 }}>Your zip shows risk for:</div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-        {hazards.map(h => (
-          <div key={h} style={{ fontSize: 13, color: C.coral, background: `${C.coral}15`, padding: "4px 12px", borderRadius: 20, fontWeight: 600 }}>
-            {HAZARD_LABELS[h] || h}
-          </div>
-        ))}
+        {hazards.map(h => {
+          const HazIcon = HAZARD_ICON_CONFIG[h]?.Icon;
+          return (
+            <div key={h} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: C.coral, background: `${C.coral}15`, padding: "4px 12px", borderRadius: 20, fontWeight: 600 }}>
+              {HazIcon && <HazIcon size={14} />}
+              {HAZARD_LABELS[h] || h}
+            </div>
+          );
+        })}
       </div>
       <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.7, marginBottom: 14 }}>
         I've put together prep tasks for each. Want me to add them to your list?
