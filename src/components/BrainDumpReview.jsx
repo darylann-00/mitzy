@@ -67,9 +67,14 @@ export function BrainDumpReview({ tasks: initialTasks, onSave, onCancel, saving,
       {tasks.map((task, idx) => {
         const meta = CAT_META[task.cat] || CAT_META.home;
         const isChecked = checked[idx];
-        const freqText = task.oneTime
-          ? 'One time'
-          : (formatIntervalDays(task.intervalDays) || 'Not set');
+        const freqText = (() => {
+          if (task.dueDate) {
+            const d = new Date(task.dueDate + 'T00:00:00');
+            return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          }
+          if (task.oneTime) return 'One time';
+          return formatIntervalDays(task.intervalDays) || 'Not set';
+        })();
 
         return (
           <div

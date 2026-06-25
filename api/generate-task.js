@@ -128,6 +128,7 @@ Return shape (success):
     "why": "<1–2 sentence plain-English why this matters>",
     "guidance": "<markdown with ## headers, bullets where natural, under 250 words>",
     "oneTime": <boolean>,
+    "dueDate": "<YYYY-MM-DD string if the user mentioned a specific date/day, else null>",
     "riskTier": 1 | 2 | 3 | 3.5,
     "suppressCelebration": <boolean — true ONLY for sensitive/somber tasks where confetti on completion would feel inappropriate>,
     "assumptions": [
@@ -174,6 +175,9 @@ Default is false. Routine home/car/health/finance maintenance is celebratable.
 Personalize using profile context (vehicles, kids, pets, climate region, age) only when directly relevant to the task. Do not mention profile context in the task otherwise. IMPORTANT: If the prompt mentions a specific age that does not match any profile child's age, the task is for someone outside the household — do not reference, tag, or link to the user's children in any field.
 
 For seasonal tasks, set activeMonths matching the user's climate region. For one-time tasks, set intervalDays: null and oneTime: true.
+
+# dueDate rules
+If the user mentions a specific day or date (e.g. "Saturday", "next Tuesday", "June 30", "tomorrow"), resolve it to a YYYY-MM-DD string using today's date provided in the user message. Set oneTime: true and intervalDays: null for date-specific tasks — "go to the store on Saturday" is a one-time task due this Saturday, NOT a recurring weekly task. Only set dueDate: null when no date or day was mentioned.
 
 Generate 1–2 assumptions max — only when flipping the value would meaningfully change intervalDays, activeMonths, riskTier, or the guidance content. If no such assumption exists, return an empty array. Each assumption's "label" is the current chosen value (must appear in "options"). Good example: { key: "plant_location", label: "Houseplant", options: ["Houseplant", "Garden"] } — changes watering frequency. Bad example: { key: "issue_type", options: ["leaking", "broken"] } — both produce the same task, so omit it.
 
@@ -280,7 +284,11 @@ export default async function handler(req) {
     ? `\n\nThe user flipped an assumption. Regenerate the task with: ${sanitize(regenerate.key)} = ${sanitize(regenerate.value)}. Re-derive frequency, season, and guidance accordingly.`
     : '';
 
+  const today = new Date().toISOString().slice(0, 10);
+  const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+
   const userMessage = `User prompt: "${cleanPrompt}"
+Today is ${dayName}, ${today}.
 Profile context: ${profileCtx}
 ${labelsLine}${regenLine}`;
 

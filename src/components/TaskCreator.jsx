@@ -54,7 +54,7 @@ function genTaskId() {
 
 export function TaskCreator({ onClose }) {
   const { profile, taskLibrary, addCustomTask, addCustomTasksBulk } = useProfileContext();
-  const { markNeeded } = useTaskContext();
+  const { markNeeded, setDueDate } = useTaskContext();
 
   const [mode, setMode] = useState('ai');
   const [stage, setStage] = useState('input');
@@ -232,9 +232,10 @@ export function TaskCreator({ onClose }) {
     setSaving(true);
     setSaveError(null);
     try {
-      const { includeInFocus: _ignored, ...task } = taskToSave;
+      const { includeInFocus: _ignored, dueDate, ...task } = taskToSave;
       await addCustomTask(task);
       try { await markNeeded(task.id); } catch {}
+      if (dueDate) { try { await setDueDate(task.id, dueDate); } catch {} }
       onClose();
     } catch {
       setSaveError("Couldn't save — try again");
@@ -246,9 +247,11 @@ export function TaskCreator({ onClose }) {
     setSaving(true);
     setSaveError(null);
     try {
-      await addCustomTasksBulk(selectedTasks);
+      const tasksWithoutDates = selectedTasks.map(({ dueDate, ...rest }) => rest);
+      await addCustomTasksBulk(tasksWithoutDates);
       for (const task of selectedTasks) {
         try { await markNeeded(task.id); } catch {}
+        if (task.dueDate) { try { await setDueDate(task.id, task.dueDate); } catch {} }
       }
       onClose();
     } catch {
