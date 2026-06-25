@@ -2,9 +2,15 @@ import { CategoryTile } from "./CategoryIcons";
 import { MatchConfirmationChip } from "./MatchConfirmationChip";
 import { SnoozeIcon } from "./SnoozeIcon";
 
-export function formatDueDate(days) {
+export function formatDueDate(days, lastDone) {
   if (days === null || days === undefined) return '';
-  if (days < -14) return "Hasn't been done in a while";
+  if (days < -14) {
+    if (lastDone) {
+      const date = new Date(lastDone);
+      return `Last done ${date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+    }
+    return "Hasn't been done in a while";
+  }
   if (days < 0) {
     const n = Math.abs(days);
     return `due ${n} day${n !== 1 ? 's' : ''} ago`;
@@ -36,7 +42,7 @@ export function TaskCard({
   const isActive = status === 'due' || status === 'needed' || status === 'coming-up';
   const isSnoozed = status === 'snoozed';
 
-  let dueText = subtitle !== undefined ? subtitle : formatDueDate(days);
+  let dueText = subtitle !== undefined ? subtitle : formatDueDate(days, task.lastDone);
 
   // Show scheduled date if status is scheduled
   if (status === 'scheduled' && task.scheduledDate) {

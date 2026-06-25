@@ -221,7 +221,7 @@ function LifeEventGroup({ event, tasks, taskState, getStatus, getDays, providerH
         return (
           <TaskCard
             key={task.id}
-            task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate }}
+            task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate, lastDone: taskState[task.id]?.lastDone }}
             status={getStatus(task)}
             days={getDays(task)}
             hasSavedProvider={!!providerHistory[task.id]}
@@ -434,7 +434,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
               return (
                 <SwipeableTaskCard
                   key={task.id}
-                  task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate }}
+                  task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate, lastDone: taskState[task.id]?.lastDone }}
                   status={getStatus(task)}
                   days={getDays(task)}
                   hasSavedProvider={!!providerHistory[task.id]}
@@ -462,7 +462,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
               return (
                 <SwipeableTaskCard
                   key={task.id}
-                  task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate }}
+                  task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate, lastDone: taskState[task.id]?.lastDone }}
                   status={getStatus(task)}
                   days={getDays(task)}
                   hasSavedProvider={!!providerHistory[task.id]}
@@ -489,7 +489,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
               return (
                 <SwipeableTaskCard
                   key={task.id}
-                  task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate }}
+                  task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate, lastDone: taskState[task.id]?.lastDone }}
                   status={getStatus(task)}
                   days={getDays(task)}
                   hasSavedProvider={!!providerHistory[task.id]}
