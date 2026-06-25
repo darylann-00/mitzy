@@ -443,7 +443,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
                   onDone={onDoneTask}
                   onSnooze={onSnooze}
                   showCategoryIcon
-                  subtitle={getStatus(task) === 'needed' ? '' : undefined}
+                  subtitle={getStatus(task) === 'needed' && getDays(task) === null ? '' : undefined}
                   pendingMatch={match}
                   onMatchConfirm={match ? () => onMatchConfirm(task.id, match.eventDate) : undefined}
                   onMatchDismiss={match ? () => onMatchDismiss(task.id) : undefined}
