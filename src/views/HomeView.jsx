@@ -309,7 +309,7 @@ export function HomeView({
               <SectionLabel label="Today" color="#1A5C3A" />
               <SnoozeTooltip visible />
               <SwipeableTaskCard
-                task={{ ...todayTask, scheduledDate: taskState[todayTask.id]?.scheduledDate }}
+                task={{ ...todayTask, scheduledDate: taskState[todayTask.id]?.scheduledDate, lastDone: taskState[todayTask.id]?.lastDone }}
                 status={getStatus(todayTask)}
                 days={getDays(todayTask)}
                 hasSavedProvider={!!providerHistory[todayTask.id]}
@@ -338,7 +338,7 @@ export function HomeView({
                 return (
                   <SwipeableTaskCard
                     key={task.id}
-                    task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate }}
+                    task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate, lastDone: taskState[task.id]?.lastDone }}
                     status={getStatus(task)}
                     days={getDays(task)}
                     hasSavedProvider={!!providerHistory[task.id]}
