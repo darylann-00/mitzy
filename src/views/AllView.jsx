@@ -508,7 +508,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
           </>
         )}
 
-        <SnoozedSection tasks={snoozedTasks} taskState={taskState} onSelectTask={onSelectTask} onUnsnooze={unsnoozeTask} />
+        <SnoozedSection tasks={activeCategory === 'all' ? snoozedTasks : snoozedTasks.filter(t => t.cat === activeCategory)} taskState={taskState} onSelectTask={onSelectTask} onUnsnooze={unsnoozeTask} />
 
         <ExploreSection tasks={unknownFiltered} markDone={markDone} markNeeded={markNeeded} markNotApplicable={markNotApplicable} />
 
