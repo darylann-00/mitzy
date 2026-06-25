@@ -61,9 +61,10 @@ export function taskStatus(task, taskState) {
     if (entry?.needed)   return "needed";
     if (entry?.lastDone) return "ok";
     if (entry?.dueDate) {
+      const leadDays = task.reminderLeadDays ?? task.windowDays ?? 7;
       const daysUntil = Math.ceil((new Date(entry.dueDate) - Date.now()) / 86400000);
-      if (daysUntil < 0)  return "due";
-      if (daysUntil <= 7) return "coming-up";
+      if (daysUntil < 0)        return "due";
+      if (daysUntil <= leadDays) return "coming-up";
     }
     return "unknown";
   }
@@ -72,11 +73,12 @@ export function taskStatus(task, taskState) {
   if (!entry?.lastDone) return "unknown";
 
   const intervalDays  = entry?.intervalDays ?? task.intervalDays;
+  const leadDays      = task.reminderLeadDays ?? task.windowDays;
   const daysSinceDone = Math.floor((Date.now() - new Date(entry.lastDone)) / 86400000);
   const daysRemaining = intervalDays - daysSinceDone;
 
-  if (daysRemaining <= 0)                return "due";
-  if (daysRemaining <= task.windowDays)  return "coming-up";
+  if (daysRemaining <= 0)          return "due";
+  if (daysRemaining <= leadDays)   return "coming-up";
   return "ok";
 }
 
