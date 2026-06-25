@@ -18,7 +18,12 @@ export function formatDueDate(days, lastDone) {
   if (days === 0) return 'due today';
   if (days <= 7)  return 'due this week';
   if (days <= 14) return `due in ${days} days`;
-  if (days <= 30) return `due in ${Math.round(days / 7)} week${Math.round(days / 7) !== 1 ? 's' : ''}`;
+  return `due in ${Math.round(days / 7)} week${Math.round(days / 7) !== 1 ? 's' : ''}`;
+}
+
+export function formatOkDate(days) {
+  if (days === null || days === undefined) return '';
+  if (days <= 30) return formatDueDate(days);
   return `good for ${Math.round(days / 30)} month${Math.round(days / 30) !== 1 ? 's' : ''}`;
 }
 
@@ -42,7 +47,9 @@ export function TaskCard({
   const isActive = status === 'due' || status === 'needed' || status === 'coming-up';
   const isSnoozed = status === 'snoozed';
 
-  let dueText = subtitle !== undefined ? subtitle : formatDueDate(days, task.lastDone);
+  let dueText = subtitle !== undefined ? subtitle
+    : status === 'ok' ? formatOkDate(days)
+    : formatDueDate(days, task.lastDone);
 
   // Show scheduled date if status is scheduled
   if (status === 'scheduled' && task.scheduledDate) {
