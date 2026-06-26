@@ -289,19 +289,19 @@ export function WeeklyCheckIn({ onClose }) {
         </div>
 
         <div style={{ padding: '20px 20px 160px' }}>
-          {/* Custom tasks coming up this week */}
+          {/* 1. Custom tasks coming up this week */}
           {customDueTasks.length > 0 && (
             <div style={{ marginBottom: 24 }}>
               <div style={{
                 fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
                 color: C.muted, fontFamily: 'DM Sans, sans-serif', marginBottom: 4,
               }}>
-                Your tasks this week
+                Already on your plate
               </div>
               <div style={{
                 fontSize: 13, color: C.muted, fontFamily: 'DM Sans, sans-serif', marginBottom: 12, lineHeight: 1.5,
               }}>
-                These are tasks you've added — deselect any you want to skip
+                Tasks you've added that are coming up — deselect any you want to skip
               </div>
               {customDueTasks.map(t => {
                 const selected = selectedCustomTasks.has(t.id);
@@ -351,7 +351,34 @@ export function WeeklyCheckIn({ onClose }) {
             </div>
           )}
 
-          {/* Built-in priority tasks */}
+          {/* 2. Brain dump — free-text input */}
+          <div style={{ marginBottom: 24 }}>
+            <div style={{
+              fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+              color: C.muted, fontFamily: 'DM Sans, sans-serif', marginBottom: 4,
+            }}>
+              What else is happening this week?
+            </div>
+            <div style={{
+              fontSize: 13, color: C.muted, fontFamily: 'DM Sans, sans-serif', marginBottom: 12, lineHeight: 1.5,
+            }}>
+              Brain dump anything — appointments, errands, things on your mind
+            </div>
+            <textarea
+              value={userInput}
+              onChange={e => setUserInput(e.target.value)}
+              placeholder="e.g. Taking Max to the vet Thursday, PCP appointment Wednesday, need to change the air filter…"
+              maxLength={2000}
+              style={{
+                width: '100%', minHeight: 100, padding: 14, fontSize: 14,
+                fontFamily: 'DM Sans, sans-serif', color: C.ink,
+                background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 12,
+                resize: 'vertical', boxSizing: 'border-box',
+              }}
+            />
+          </div>
+
+          {/* 3. Built-in priority tasks — shown last */}
           {suggestedTasks.length > 0 && (
             <div style={{ marginBottom: 24 }}>
               <div
@@ -365,7 +392,7 @@ export function WeeklyCheckIn({ onClose }) {
                   fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
                   color: C.muted, fontFamily: 'DM Sans, sans-serif',
                 }}>
-                  {customDueTasks.length >= 3 ? 'Want to add more?' : 'Top priorities'}
+                  Mitzy suggestions
                 </div>
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{
                   transform: structuredExpanded ? 'rotate(180deg)' : 'none',
@@ -379,9 +406,9 @@ export function WeeklyCheckIn({ onClose }) {
                   <div style={{
                     fontSize: 13, color: C.muted, fontFamily: 'DM Sans, sans-serif', marginBottom: 12, lineHeight: 1.5,
                   }}>
-                    {customDueTasks.length >= 3
+                    {(selectedCustomTasks.size + (userInput.trim() ? 1 : 0)) >= 3
                       ? "You've got plenty going on — no pressure, but these are coming up if you have the bandwidth"
-                      : 'Pick 2–3 to focus on this week'}
+                      : 'These are coming up soon — add any you want to tackle this week'}
                   </div>
                   {suggestedTasks.map(t => {
                     const selected = selectedDueTasks.has(t.id);
@@ -432,28 +459,6 @@ export function WeeklyCheckIn({ onClose }) {
               )}
             </div>
           )}
-
-          {/* Free-text input */}
-          <div style={{ marginBottom: 20 }}>
-            <div style={{
-              fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
-              color: C.muted, fontFamily: 'DM Sans, sans-serif', marginBottom: 10,
-            }}>
-              Anything else this week?
-            </div>
-            <textarea
-              value={userInput}
-              onChange={e => setUserInput(e.target.value)}
-              placeholder="e.g. Taking Max to the vet Thursday, PCP appointment Wednesday, need to change the air filter…"
-              maxLength={2000}
-              style={{
-                width: '100%', minHeight: 100, padding: 14, fontSize: 14,
-                fontFamily: 'DM Sans, sans-serif', color: C.ink,
-                background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 12,
-                resize: 'vertical', boxSizing: 'border-box',
-              }}
-            />
-          </div>
 
           {loading && <PulseLoader messages={LOADING_MESSAGES} />}
 
