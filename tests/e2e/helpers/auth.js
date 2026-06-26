@@ -1,21 +1,31 @@
 import { createClient } from '@supabase/supabase-js';
 
-const TEST_EMAIL    = process.env.PLAYWRIGHT_TEST_EMAIL    ?? 'test@example.com';
-const TEST_PASSWORD = process.env.PLAYWRIGHT_TEST_PASSWORD ?? 'testexample';
-
-const supabaseUrl  = process.env.VITE_SUPABASE_URL      ?? '';
-const supabaseAnon = process.env.VITE_SUPABASE_ANON_KEY  ?? '';
+const TEST_EMAIL      = process.env.PLAYWRIGHT_TEST_EMAIL      ?? 'test@example.com';
+const supabaseUrl     = process.env.VITE_SUPABASE_URL          ?? '';
+const supabaseAnon    = process.env.VITE_SUPABASE_ANON_KEY     ?? '';
+const serviceRoleKey  = process.env.SUPABASE_SERVICE_ROLE_KEY   ?? '';
 
 let cachedSession = null;
 
 async function getSession() {
   if (cachedSession) return cachedSession;
-  const sb = createClient(supabaseUrl, supabaseAnon);
-  const { data, error } = await sb.auth.signInWithPassword({
-    email: TEST_EMAIL,
-    password: TEST_PASSWORD,
+
+  const admin = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
   });
-  if (error) throw new Error(`Test auth failed: ${error.message}`);
+  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
+    type: 'magiclink',
+    email: TEST_EMAIL,
+  });
+  if (linkError) throw new Error(`Test auth: generateLink failed: ${linkError.message}`);
+
+  const client = createClient(supabaseUrl, supabaseAnon);
+  const { data, error } = await client.auth.verifyOtp({
+    token_hash: linkData.properties.hashed_token,
+    type: 'magiclink',
+  });
+  if (error) throw new Error(`Test auth: verifyOtp failed: ${error.message}`);
+
   cachedSession = data.session;
   return cachedSession;
 }
