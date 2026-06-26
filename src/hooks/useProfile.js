@@ -4,7 +4,7 @@ import { buildTaskLibrary } from "../data/taskFactory";
 import { supabase } from "../lib/supabase";
 
 const PROFILE_FIELDS = [
-  'name', 'zip', 'hasHome', 'birthYear', 'gender',
+  'name', 'zip', 'hasHome', 'birthYear', 'gender', 'insurance',
   'cars', 'hasCar', 'kids', 'hasKids', 'pets', 'hasPets',
   'capacity',
 ];
@@ -293,6 +293,7 @@ function toRow(p) {
     hazard_done:       p.hazardDone       ?? false,
     profile_questions: p.profileQuestions ?? null,
     capacity:          p.capacity ?? null,
+    insurance:         p.insurance ?? null,
   };
 }
 
@@ -314,5 +315,6 @@ function fromRow(row) {
     hazardDone:       row.hazard_done,
     profileQuestions: row.profile_questions,
     capacity:         row.capacity ?? null,
+    insurance:        row.insurance ?? null,
   };
 }
