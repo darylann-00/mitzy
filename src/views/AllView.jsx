@@ -2,7 +2,7 @@ import { useState } from "react";
 import { TaskCard } from "../components/TaskCard";
 import { SwipeableTaskCard } from "../components/SwipeableTaskCard";
 import { SnoozeIcon } from "../components/SnoozeIcon";
-import { HouseIcon, CarIcon, PersonIcon, CalendarIcon, StarIcon, PetIcon, CategoryTile, LIFE_EVENT_ICON_CONFIG } from "../components/CategoryIcons";
+import { HouseIcon, CarIcon, HeartIcon, KidIcon, CalendarIcon, SirenIcon, PetIcon, CategoryTile, LIFE_EVENT_ICON_CONFIG } from "../components/CategoryIcons";
 import { TaskAnswerChips } from "../components/TaskAnswerChips";
 import { AppHeader } from "./HomeView";
 import { useProfileContext } from "../contexts/ProfileContext";
@@ -44,10 +44,10 @@ const ALL_CATS = [
   { key: 'all',       label: 'All',       Icon: null       },
   { key: 'home',      label: 'Home',      Icon: HouseIcon,    color:'#1A5C3A', bg:'#E8F5EE' },
   { key: 'car',       label: 'Car',       Icon: CarIcon,      color:'#F77F00', bg:'#FFF3E0' },
-  { key: 'health',    label: 'Health',    Icon: PersonIcon,   color:'#06A77D', bg:'#E8F5EE' },
+  { key: 'health',    label: 'Health',    Icon: HeartIcon,    color:'#06A77D', bg:'#E8F5EE' },
   { key: 'finance',   label: 'Finance',   Icon: CalendarIcon, color:'#F77F00', bg:'#FFF3E0' },
-  { key: 'school',    label: 'School',    Icon: PersonIcon,   color:'#4A6256', bg:'#F0EDE4' },
-  { key: 'emergency', label: 'Emergency', Icon: StarIcon,     color:'#D62828', bg:'#FDE8E8' },
+  { key: 'school',    label: 'Kids',      Icon: KidIcon,      color:'#4A6256', bg:'#F0EDE4' },
+  { key: 'emergency', label: 'Emergency', Icon: SirenIcon,    color:'#D62828', bg:'#FDE8E8' },
   { key: 'pet',       label: 'Pet',       Icon: PetIcon,      color:'#F4C430', bg:'#FFFBEE' },
 ];
 

@@ -35,7 +35,7 @@ export const CAT_META = {
   home:      { label: "Home",      color: C.red    },
   car:       { label: "Car",       color: C.brand  },
   health:    { label: "Health",    color: C.green  },
-  school:    { label: "School",    color: C.orange },
+  school:    { label: "Kids",      color: C.orange },
   finance:   { label: "Finance",   color: C.orange },
   emergency: { label: "Emergency", color: C.red    },
   pet:       { label: "Pet",       color: C.yellow },
