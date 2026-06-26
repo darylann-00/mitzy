@@ -54,7 +54,7 @@ async function mockProfileEndpoints(page, { captureUpserts } = {}) {
   });
 }
 
-test('Health section shows a Self card and a per-kid card with its own gender/insurance', async ({ page }) => {
+test('Profile shows a Self health card, and the Kids section now has an insurance field per kid', async ({ page }) => {
   const upserts = [];
   await mockProfileEndpoints(page, { captureUpserts: upserts });
   await seedReturnUser(page);
@@ -66,26 +66,25 @@ test('Health section shows a Self card and a per-kid card with its own gender/in
   // Profile tab
   await page.getByText('Profile', { exact: true }).click();
 
-  // Self card — distinct from the per-kid card
+  // Self health card (renamed from generic "Health")
   await expect(page.getByText('Self', { exact: true })).toBeVisible({ timeout: 5000 });
 
-  // Kid card titled by the kid's name, with no gender/insurance set yet
+  // Kid still lives in the existing Kids section — no separate per-kid card —
+  // and now shows an Insurance row alongside name/birth year.
   await expect(page.getByText('Mira', { exact: true })).toBeVisible();
   await expect(page.getByText('Not set').first()).toBeVisible();
 
-  // Edit profile → set Mira's gender and insurance
+  // Edit profile → set Mira's insurance (the Kids-section picker is the first
+  // "Search providers…" input on the page; Self's is the second).
   await page.getByRole('button', { name: 'Edit profile' }).click();
-
-  const miraSection = page.locator('div').filter({ has: page.getByText('Mira', { exact: true }) }).last();
-  await miraSection.getByRole('button', { name: 'Girl' }).click();
-  await miraSection.getByPlaceholder('Search providers…').fill('Aetna');
+  await page.getByPlaceholder('Search providers…').nth(0).fill('Aetna');
   await page.getByRole('button', { name: 'Aetna' }).first().click();
 
   await page.getByRole('button', { name: 'Save changes' }).click();
 
-  // Saved profile upsert includes the kid's own gender + insurance
-  await expect.poll(() => upserts.some(u => u.kids?.[0]?.gender === 'girl' && u.kids?.[0]?.insurance === 'Aetna')).toBe(true);
+  // Saved profile upsert includes the kid's own insurance, distinct from self's.
+  await expect.poll(() => upserts.some(u => u.kids?.[0]?.insurance === 'Aetna')).toBe(true);
 
-  // Display mode reflects the saved values on Mira's card
-  await expect(page.getByText('Girl', { exact: true })).toBeVisible();
+  // Display mode reflects the saved value under Mira's Insurance row.
+  await expect(page.getByText('Not set')).not.toBeVisible();
 });

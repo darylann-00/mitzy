@@ -655,6 +655,10 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
                       </div>
                       <button onClick={() => setPendingRemove({ type:'kid', index:i })} style={{ fontSize:20, color:'#D62828', background:'none', border:'none', cursor:'pointer', padding:'0 2px', lineHeight:1, marginTop:16, flexShrink:0 }}>×</button>
                     </div>
+                    <div style={{ marginTop:8 }}>
+                      <div style={S.fieldLabel}>Insurance provider</div>
+                      <InsurancePicker value={kid.insurance || ''} onChange={v => { const k=[...editKids]; k[i]={...k[i],insurance:v}; setEditKids(k); }} />
+                    </div>
                     {pendingRemove?.type === 'kid' && pendingRemove.index === i && (
                       <div style={{ display:'flex', gap:8, marginTop:8 }}>
                         <button onClick={() => { setEditKids(editKids.filter((_,j)=>j!==i)); setPendingRemove(null); }} style={{ flex:1, fontSize:12, fontWeight:700, color:'#fff', background:'#D62828', border:'none', borderRadius:8, padding:'6px 0', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}>
@@ -666,7 +670,7 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
                   </div>
                 ))}
                 <button
-                  onClick={() => setEditKids([...editKids, { name:'', birthYear:'', gender:null, insurance:'' }])}
+                  onClick={() => setEditKids([...editKids, { name:'', birthYear:'', insurance:'' }])}
                   style={{ fontSize:12, fontWeight:700, color:'#1A5C3A', background:'#E8F5EE', border:'none', borderRadius:20, padding:'5px 14px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
                 >
                   + Add child
@@ -674,7 +678,23 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
               </div>
             ) : (
               profile.kids?.length > 0
-                ? profile.kids.map((k, i) => <Row key={i} label={k.name} value={k.birthYear ? `born ${k.birthYear}` : null} last={i === profile.kids.length - 1} />)
+                ? profile.kids.map((k, i) => {
+                    const portalUrl = INSURANCE_PROVIDERS.find(p => p.label === k.insurance)?.portal;
+                    return (
+                      <div key={i}>
+                        <Row label={k.name} value={k.birthYear ? `born ${k.birthYear}` : null} />
+                        <div style={S.row(i === profile.kids.length - 1)}>
+                          <span style={S.rowLabel}>Insurance</span>
+                          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                            <span style={S.rowValue(!k.insurance)}>{k.insurance || 'Not set'}</span>
+                            {portalUrl && (
+                              <a href={portalUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize:11, fontWeight:700, color:C.brand, textDecoration:'none', fontFamily:'DM Sans, sans-serif' }}>Portal ↗</a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
                 : <Row label="No kids added" value={null} last />
             )}
           </div>
@@ -782,53 +802,6 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
             </>
           )}
         </div>
-
-        {/* ── Health: Kids ── */}
-        {profile.hasKids && (isEditing ? editKids : (profile.kids || [])).map((kid, i) => (
-          <div key={i} style={S.sectionCard}>
-            <SectionHeader icon={<PersonIcon color="#4A6256" bg="#F0EDE4" size={16} />} iconBg="#F0EDE4" title={kid.name || `Child ${i + 1}`} />
-            {isEditing ? (
-              <>
-                <EditField label="Gender">
-                  <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                    {[['girl','Girl'],['boy','Boy'],['nonbinary','Non-binary'],['prefer-not','Prefer not to say']].map(([key, label]) => (
-                      <button
-                        key={key}
-                        onClick={() => { const k=[...editKids]; k[i]={...k[i],gender:key}; setEditKids(k); }}
-                        style={{ fontSize:12, fontWeight:700, border:'none', borderRadius:20, padding:'6px 14px', cursor:'pointer', fontFamily:'DM Sans, sans-serif', background: kid.gender === key ? '#1A5C3A' : '#F0EDE4', color: kid.gender === key ? '#fff' : '#4A6256' }}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </EditField>
-                <EditField label="Insurance provider" last>
-                  <InsurancePicker value={kid.insurance || ''} onChange={v => { const k=[...editKids]; k[i]={...k[i],insurance:v}; setEditKids(k); }} />
-                </EditField>
-              </>
-            ) : (
-              <>
-                {kid.gender && kid.gender !== 'prefer-not' && (
-                  <Row label="Gender" value={{ girl:'Girl', boy:'Boy', nonbinary:'Non-binary' }[kid.gender] ?? null} />
-                )}
-                {(() => {
-                  const portalUrl = INSURANCE_PROVIDERS.find(p => p.label === kid.insurance)?.portal;
-                  return (
-                    <div style={S.row(true)}>
-                      <span style={S.rowLabel}>Insurance</span>
-                      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                        <span style={S.rowValue(!kid.insurance)}>{kid.insurance || 'Not set'}</span>
-                        {portalUrl && (
-                          <a href={portalUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize:11, fontWeight:700, color:C.brand, textDecoration:'none', fontFamily:'DM Sans, sans-serif' }}>Portal ↗</a>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })()}
-              </>
-            )}
-          </div>
-        ))}
 
         {/* ── Save / Cancel bar ── */}
         {isEditing && (
