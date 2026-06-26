@@ -66,6 +66,13 @@ function TimeChip({ estimate }) {
   );
 }
 
+function genTaskId() {
+  const rand = (typeof crypto !== 'undefined' && crypto.randomUUID)
+    ? crypto.randomUUID().slice(0, 4)
+    : Math.random().toString(36).slice(2, 6);
+  return `custom-${Date.now()}-${rand}`;
+}
+
 function ToggleCard({ selected, onClick, children }) {
   return (
     <div
@@ -112,7 +119,7 @@ export function WeeklyCheckIn({ onClose }) {
     activeTasks, scoredDue, taskState, getStatus,
     savePlan, confirmPlan, weekStart,
   } = useTaskContext();
-  const { customTasks } = useProfileContext();
+  const { customTasks, addCustomTask } = useProfileContext();
 
   const [step, setStep] = useState('input');
   const [userInput, setUserInput] = useState('');
@@ -149,6 +156,7 @@ export function WeeklyCheckIn({ onClose }) {
   const [newSuggestions, setNewSuggestions] = useState([]);
   const [gapFill, setGapFill] = useState([]);
   const [dismissedNewSuggestions, setDismissedNewSuggestions] = useState(new Set());
+  const [addedNewTasks, setAddedNewTasks] = useState(new Map()); // label → taskId
 
   const abortRef = useRef(null);
 
@@ -239,6 +247,26 @@ export function WeeklyCheckIn({ onClose }) {
     setPlanItems(initialPlan);
     setScheduledDates(dates);
     setStep('review');
+  };
+
+  const addNewTaskToPlan = async (suggestion) => {
+    const taskId = genTaskId();
+    const task = {
+      id: taskId,
+      cat: 'home',
+      label: suggestion.label,
+      oneTime: true,
+      isCustom: true,
+      isAIGenerated: false,
+      requires: [],
+    };
+    try {
+      await addCustomTask(task);
+      setAddedNewTasks(prev => new Map(prev).set(suggestion.label, taskId));
+      setPlanItems(prev => new Set(prev).add(taskId));
+    } catch {
+      // silently fail — task card won't appear but no crash
+    }
   };
 
   const togglePlanItem = (id) => {
@@ -516,38 +544,68 @@ export function WeeklyCheckIn({ onClose }) {
             </div>
           )}
 
-          {/* Unmatched brain dump items — not in task library */}
+          {/* Unmatched brain dump items — add as new tasks */}
           {newSuggestions.filter(s => !dismissedNewSuggestions.has(s.label)).length > 0 && (
             <div style={{ marginBottom: 24 }}>
-              <SectionHeader>Not in your tasks yet</SectionHeader>
-              {newSuggestions.filter(s => !dismissedNewSuggestions.has(s.label)).map(s => (
-                <div key={s.label} style={{
-                  display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
-                  background: '#FFFDE7', borderRadius: 10, border: `1px solid ${C.cardBorder}`,
-                  marginBottom: 6,
-                }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
-                      {s.label}
-                    </div>
-                    <div style={{ fontSize: 12, color: C.muted, fontFamily: 'DM Sans, sans-serif', marginTop: 2 }}>
-                      {s.reason}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setDismissedNewSuggestions(prev => new Set(prev).add(s.label))}
-                    style={{
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      fontSize: 18, color: C.muted, padding: 4, lineHeight: 1,
-                    }}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-              <div style={{ fontSize: 11, color: C.muted, fontFamily: 'DM Sans, sans-serif', fontStyle: 'italic', marginTop: 4 }}>
-                You can add these as tasks later from the sparkle button.
+              <SectionHeader>From your brain dump</SectionHeader>
+              <div style={{
+                fontSize: 13, color: C.muted, fontFamily: 'DM Sans, sans-serif', marginBottom: 10, lineHeight: 1.5,
+              }}>
+                These aren't in your tasks yet — add them now?
               </div>
+              {newSuggestions.filter(s => !dismissedNewSuggestions.has(s.label)).map(s => {
+                const added = addedNewTasks.has(s.label);
+                return (
+                  <div key={s.label} style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+                    background: added ? C.card : '#FFFDE7', borderRadius: 10,
+                    border: `1px solid ${added ? C.brand : C.cardBorder}`,
+                    marginBottom: 6,
+                    opacity: added ? 1 : 0.9,
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
+                        {s.label}
+                      </div>
+                      <div style={{ fontSize: 12, color: C.muted, fontFamily: 'DM Sans, sans-serif', marginTop: 2 }}>
+                        {s.reason}
+                      </div>
+                    </div>
+                    {added ? (
+                      <div style={{
+                        background: C.green, color: '#fff',
+                        border: 'none', borderRadius: 8, padding: '6px 12px',
+                        fontSize: 12, fontWeight: 600, fontFamily: 'DM Sans, sans-serif',
+                      }}>
+                        ✓ Added
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button
+                          onClick={() => addNewTaskToPlan(s)}
+                          style={{
+                            background: C.brand, color: C.brandLight,
+                            border: 'none', borderRadius: 8, padding: '6px 12px',
+                            fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                            fontFamily: 'DM Sans, sans-serif',
+                          }}
+                        >
+                          Add
+                        </button>
+                        <button
+                          onClick={() => setDismissedNewSuggestions(prev => new Set(prev).add(s.label))}
+                          style={{
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            fontSize: 16, color: C.muted, padding: '4px 6px', lineHeight: 1,
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 
