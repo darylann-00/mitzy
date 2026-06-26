@@ -24,6 +24,7 @@ import { Celebration }   from "./components/Celebration";
 import { AssistPanel }   from "./components/AssistPanel";
 import { MarkDoneModal } from "./components/MarkDoneModal";
 import { TaskCreator }   from "./components/TaskCreator";
+import { WeeklyCheckIn } from "./components/WeeklyCheckIn";
 import { ProfileConflictModal } from "./components/ProfileConflictModal";
 import { NewBabyIntake } from "./components/LifeEventIntake";
 import { tasksForIntake as newBabyTasksForIntake } from "./data/lifeEvents/newBaby";
@@ -135,6 +136,7 @@ function Overlays({
   markDoneModal, onMarkDone, onMarkDoneClose,
   assistTask, onAssistClose,
   creatorOpen, onCreatorClose,
+  weeklyCheckInOpen, onWeeklyCheckInClose,
   lifeEventIntake, onLifeEventIntakeClose, onStartLifeEventConfirm,
 }) {
   const { pendingConflict, resolveConflict } = useProfileContext();
@@ -145,6 +147,7 @@ function Overlays({
       {markDoneModal && <MarkDoneModal task={markDoneModal} onDone={onMarkDone} onClose={onMarkDoneClose} />}
       {assistTask    && <AssistPanel task={assistTask} onClose={onAssistClose} />}
       {creatorOpen   && <TaskCreator onClose={onCreatorClose} />}
+      {weeklyCheckInOpen && <WeeklyCheckIn onClose={onWeeklyCheckInClose} />}
       {pendingConflict && <ProfileConflictModal onResolve={resolveConflict} />}
       {lifeEventIntake === 'new-baby' && (
         <NewBabyIntake
@@ -201,6 +204,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
   const [assistTask,      setAssistTask]      = useState(null);
   const [markDoneModal,   setMarkDoneModal]   = useState(null);
   const [creatorOpen,     setCreatorOpen]     = useState(false);
+  const [weeklyCheckInOpen, setWeeklyCheckInOpen] = useState(false);
   const [activeCategory,  setActiveCategory]  = useState('all');
   const [dueOnly,         setDueOnly]         = useState(false);
   const [lifeEventIntake, setLifeEventIntake] = useState(null); // null | 'new-baby'
@@ -333,12 +337,13 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
 
   const handleReset = async () => {
     if (user) {
-      const [{ error: te }, { error: pe }, { error: ce }] = await Promise.all([
+      const [{ error: te }, { error: pe }, { error: ce }, { error: we }] = await Promise.all([
         supabase.from("task_records").delete().eq("user_id", user.id),
         supabase.from("profiles").delete().eq("id", user.id),
         supabase.from("custom_tasks").delete().eq("user_id", user.id),
+        supabase.from("weekly_plans").delete().eq("user_id", user.id),
       ]);
-      if (te || pe || ce) return { error: "Couldn't delete your data from the server. Try again." };
+      if (te || pe || ce || we) return { error: "Couldn't delete your data from the server. Try again." };
     }
     await signOut();
     // signOut triggers SIGNED_OUT → clearLocalUserData() + reload in useAuth
@@ -360,6 +365,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
     markDoneModal, onMarkDone: handleMarkDone, onMarkDoneClose: handleMarkDoneClose,
     assistTask, onAssistClose: () => setAssistTask(null),
     creatorOpen, onCreatorClose: () => setCreatorOpen(false),
+    weeklyCheckInOpen, onWeeklyCheckInClose: () => setWeeklyCheckInOpen(false),
     lifeEventIntake,
     onLifeEventIntakeClose: () => setLifeEventIntake(null),
     onStartLifeEventConfirm: handleStartLifeEventConfirm,
@@ -446,6 +452,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
           onHazardDismiss={() => setPendingHazards(null)}
           onMatchConfirm={handleMatchConfirm}
           onMatchDismiss={handleMatchDismiss}
+          onOpenWeeklyCheckIn={() => setWeeklyCheckInOpen(true)}
         />
       )}
 

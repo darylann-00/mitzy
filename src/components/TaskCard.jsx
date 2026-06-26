@@ -116,8 +116,11 @@ export function TaskCard({
           </div>
         )}
         {stepProgress && task.steps && (() => {
-          const done = task.steps.filter(s => stepProgress[s.key]?.done).length;
-          const total = task.steps.length;
+          const decisionStep = task.steps.find(s => s.type === 'decision');
+          const chosenPath = decisionStep ? stepProgress[decisionStep.key]?.choice ?? null : null;
+          const visible = task.steps.filter(s => !s.path || s.path === chosenPath);
+          const done = visible.filter(s => stepProgress[s.key]?.done).length;
+          const total = visible.length;
           if (done > 0 && done < total) return (
             <div style={{ fontSize: 11, color: '#06A77D', marginTop: 2, fontFamily: 'DM Sans, sans-serif', fontWeight: 600 }}>
               {done} of {total} steps done

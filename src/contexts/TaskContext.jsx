@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo, useCallback, useState, useEffect } from "react";
 import { useTasks } from "../hooks/useTasks";
+import { useWeeklyPlan } from "../hooks/useWeeklyPlan";
 import { useProfileContext } from "./ProfileContext";
 import { taskStatus, taskScore, nextDueStr, isWindowActive, isDependencySatisfied } from "../utils/taskLogic";
 import { loadS, saveS, FOCUS_SEEN_KEY } from "../utils/storage";
@@ -21,6 +22,12 @@ export function TaskProvider({ user, children }) {
     snoozeTask, unsnoozeTask,
     loading, syncError,
   } = useTasks(user);
+
+  const {
+    activePlan, isInPlanMode, planProgress, weekStart,
+    savePlan, confirmPlan, addToPlan,
+    showNudge: showWeeklyNudge, dismissNudge: dismissWeeklyNudge,
+  } = useWeeklyPlan(user, taskState, markScheduled);
 
   const activeTasks = useMemo(() =>
     taskLibrary.filter(t => !disabledTasks[t.id] && isDependencySatisfied(t, taskState)),
@@ -127,6 +134,14 @@ export function TaskProvider({ user, children }) {
       .sort((a, b) => getDays(a) - getDays(b))[0] ?? null,
     [visibleTasks, taskState, getDays]);
 
+  const planTasks = useMemo(() => {
+    if (!activePlan) return [];
+    const taskMap = new Map(taskLibrary.map(t => [t.id, t]));
+    return activePlan.taskIds
+      .map(id => taskMap.get(id))
+      .filter(Boolean);
+  }, [activePlan, taskLibrary]);
+
   return (
     <TaskContext.Provider value={{
       taskState, setTaskState,
@@ -137,6 +152,9 @@ export function TaskProvider({ user, children }) {
       snoozeTask, unsnoozeTask,
       getStatus, getDays, getNext,
       loading, syncError,
+      isInPlanMode, activePlan, planTasks, planProgress, weekStart,
+      savePlan, confirmPlan, addToPlan,
+      showWeeklyNudge, dismissWeeklyNudge,
     }}>
       {children}
     </TaskContext.Provider>
