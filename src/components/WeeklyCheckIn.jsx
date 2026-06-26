@@ -66,6 +66,47 @@ function TimeChip({ estimate }) {
   );
 }
 
+function ToggleCard({ selected, onClick, children }) {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+        background: selected ? C.card : C.surface, borderRadius: 10,
+        border: `1px solid ${selected ? C.brand : C.cardBorder}`,
+        marginBottom: 6, cursor: 'pointer',
+        opacity: selected ? 1 : 0.7,
+        transition: 'all 0.15s',
+      }}
+    >
+      {children}
+      <div style={{
+        width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+        background: selected ? C.brand : 'transparent',
+        border: `2px solid ${selected ? C.brand : C.cardBorder}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        {selected && (
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <polyline points="2,6 5,9 10,3" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SectionHeader({ children }) {
+  return (
+    <div style={{
+      fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+      color: C.muted, fontFamily: 'DM Sans, sans-serif', marginBottom: 10,
+    }}>
+      {children}
+    </div>
+  );
+}
+
 export function WeeklyCheckIn({ onClose }) {
   const {
     activeTasks, scoredDue, taskState, getStatus,
@@ -78,7 +119,7 @@ export function WeeklyCheckIn({ onClose }) {
   const [loading, setLoading] = useState(false);
   const [errorKind, setErrorKind] = useState(null);
 
-  // Custom tasks coming up this week (shown first)
+  // Custom tasks coming up this week
   const [customDueTasks] = useState(() => {
     const customIds = new Set(customTasks.map(t => t.id));
     return scoredDue.filter(t => {
@@ -87,11 +128,8 @@ export function WeeklyCheckIn({ onClose }) {
       return s === 'due' || s === 'coming-up' || s === 'needed' || s === 'confirm';
     });
   });
-  const [selectedCustomTasks, setSelectedCustomTasks] = useState(
-    () => new Set(customDueTasks.map(t => t.id))
-  );
 
-  // Structured/built-in priority tasks — user picks which to add
+  // Structured/built-in priority tasks
   const [suggestedTasks] = useState(() => {
     const customIds = new Set(customTasks.map(t => t.id));
     return scoredDue.filter(t => {
@@ -100,17 +138,16 @@ export function WeeklyCheckIn({ onClose }) {
       return s === 'due' || s === 'coming-up' || s === 'needed' || s === 'confirm';
     }).slice(0, 5);
   });
-  const [selectedDueTasks, setSelectedDueTasks] = useState(new Set());
-  const [structuredExpanded, setStructuredExpanded] = useState(() => customDueTasks.length < 3);
+
+  // Review screen state — unified plan items
+  const [planItems, setPlanItems] = useState(new Set());
+  const [scheduledDates, setScheduledDates] = useState({});
+  const [suggestionsExpanded, setSuggestionsExpanded] = useState(false);
 
   // API response state
   const [matches, setMatches] = useState([]);
   const [newSuggestions, setNewSuggestions] = useState([]);
   const [gapFill, setGapFill] = useState([]);
-
-  // Review state — which items are accepted
-  const [acceptedMatches, setAcceptedMatches] = useState(new Set());
-  const [acceptedGapFill, setAcceptedGapFill] = useState(new Set());
   const [dismissedNewSuggestions, setDismissedNewSuggestions] = useState(new Set());
 
   const abortRef = useRef(null);
@@ -134,13 +171,7 @@ export function WeeklyCheckIn({ onClose }) {
       const token = session?.access_token;
       if (!token) { setErrorKind('auth'); setLoading(false); return; }
 
-      const allSelectedIds = new Set([...selectedCustomTasks, ...selectedDueTasks]);
-      const selectedDueArray = [
-        ...customDueTasks.filter(t => selectedCustomTasks.has(t.id)),
-        ...suggestedTasks.filter(t => selectedDueTasks.has(t.id)),
-      ];
       const backlogTasks = scoredDue
-        .filter(t => !allSelectedIds.has(t.id))
         .slice(0, 30)
         .map(t => ({ id: t.id, label: t.label, category: t.cat }));
 
@@ -153,7 +184,7 @@ export function WeeklyCheckIn({ onClose }) {
         body: JSON.stringify({
           userInput: userInput.trim(),
           tasks: activeTasks.slice(0, 200).map(t => ({ id: t.id, label: t.label, category: t.cat })),
-          autoDueTasks: selectedDueArray.map(t => ({ id: t.id, label: t.label })),
+          autoDueTasks: customDueTasks.map(t => ({ id: t.id, label: t.label })),
           capacity: 'normal',
           weekStart,
           backlogTasks,
@@ -170,14 +201,25 @@ export function WeeklyCheckIn({ onClose }) {
 
       const data = await res.json();
 
-      setMatches(data.matches || []);
+      const apiMatches = data.matches || [];
+      const apiGapFill = data.gapFill || [];
+      setMatches(apiMatches);
       setNewSuggestions(data.newTaskSuggestions || []);
-      setGapFill(data.gapFill || []);
+      setGapFill(apiGapFill);
 
-      // Auto-accept all matches
-      setAcceptedMatches(new Set((data.matches || []).map(m => m.taskId)));
-      setAcceptedGapFill(new Set((data.gapFill || []).map(g => g.taskId)));
+      // Build initial plan: custom tasks + matched tasks (all pre-selected)
+      const initialPlan = new Set(customDueTasks.map(t => t.id));
+      const dates = {};
+      for (const t of customDueTasks) {
+        if (taskState[t.id]?.scheduledDate) dates[t.id] = taskState[t.id].scheduledDate;
+      }
+      for (const m of apiMatches) {
+        initialPlan.add(m.taskId);
+        if (m.scheduledDate) dates[m.taskId] = m.scheduledDate;
+      }
 
+      setPlanItems(initialPlan);
+      setScheduledDates(dates);
       setStep('review');
     } catch (err) {
       if (err.name === 'AbortError') return;
@@ -188,67 +230,32 @@ export function WeeklyCheckIn({ onClose }) {
     }
   };
 
-  const handleConfirm = async () => {
-    // Build final task ID list + scheduled dates
-    const taskIds = [];
-    const scheduledDates = {};
-
-    // Selected custom tasks
+  const handleSkipToReview = () => {
+    const initialPlan = new Set(customDueTasks.map(t => t.id));
+    const dates = {};
     for (const t of customDueTasks) {
-      if (!selectedCustomTasks.has(t.id)) continue;
-      taskIds.push(t.id);
-      if (taskState[t.id]?.scheduledDate) {
-        scheduledDates[t.id] = taskState[t.id].scheduledDate;
-      }
+      if (taskState[t.id]?.scheduledDate) dates[t.id] = taskState[t.id].scheduledDate;
     }
+    setPlanItems(initialPlan);
+    setScheduledDates(dates);
+    setStep('review');
+  };
 
-    // Selected structured tasks
-    for (const t of suggestedTasks) {
-      if (!selectedDueTasks.has(t.id)) continue;
-      taskIds.push(t.id);
-      if (taskState[t.id]?.scheduledDate) {
-        scheduledDates[t.id] = taskState[t.id].scheduledDate;
-      }
-    }
+  const togglePlanItem = (id) => {
+    setPlanItems(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
-    // Accepted matches
-    for (const m of matches) {
-      if (!acceptedMatches.has(m.taskId)) continue;
-      if (!taskIds.includes(m.taskId)) taskIds.push(m.taskId);
-      if (m.scheduledDate) scheduledDates[m.taskId] = m.scheduledDate;
-    }
-
-    // Accepted gap fill
-    for (const g of gapFill) {
-      if (!acceptedGapFill.has(g.taskId)) continue;
-      if (!taskIds.includes(g.taskId)) taskIds.push(g.taskId);
-    }
-
+  const handleConfirm = async () => {
+    const taskIds = [...planItems];
     await savePlan(taskIds, scheduledDates, userInput);
     await confirmPlan();
     onClose();
   };
-
-  const handleSkipToConfirm = async () => {
-    const taskIds = [
-      ...customDueTasks.filter(t => selectedCustomTasks.has(t.id)).map(t => t.id),
-      ...suggestedTasks.filter(t => selectedDueTasks.has(t.id)).map(t => t.id),
-    ];
-    const scheduledDates = {};
-    for (const id of taskIds) {
-      if (taskState[id]?.scheduledDate) {
-        scheduledDates[id] = taskState[id].scheduledDate;
-      }
-    }
-    await savePlan(taskIds, scheduledDates, '');
-    await confirmPlan();
-    onClose();
-  };
-
-  const allSelectedCount = selectedCustomTasks.size + selectedDueTasks.size;
-  const totalPlanCount = allSelectedCount
-    + matches.filter(m => acceptedMatches.has(m.taskId) && !selectedCustomTasks.has(m.taskId) && !selectedDueTasks.has(m.taskId)).length
-    + gapFill.filter(g => acceptedGapFill.has(g.taskId)).length;
 
   const ERROR_MESSAGES = {
     offline: "You're offline — try again when you have a connection.",
@@ -257,7 +264,7 @@ export function WeeklyCheckIn({ onClose }) {
     general: "Something went wrong. Try again?",
   };
 
-  // ─── Step 1: Input ─────────────────────────────────────────────────────────
+  // ─── Screen 1: What's on your plate + brain dump ─────────────────────────
   if (step === 'input') {
     return (
       <div style={{
@@ -277,7 +284,7 @@ export function WeeklyCheckIn({ onClose }) {
               Weekly check-in
             </div>
             <div style={{ fontSize: 13, color: '#B8DCC8', fontFamily: 'DM Sans, sans-serif' }}>
-              Plan what matters this week
+              Let's see what your week looks like
             </div>
           </div>
           <button onClick={onClose} style={{
@@ -289,76 +296,44 @@ export function WeeklyCheckIn({ onClose }) {
         </div>
 
         <div style={{ padding: '20px 20px 160px' }}>
-          {/* 1. Custom tasks coming up this week */}
+          {/* Custom tasks — read-only context */}
           {customDueTasks.length > 0 && (
             <div style={{ marginBottom: 24 }}>
-              <div style={{
-                fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
-                color: C.muted, fontFamily: 'DM Sans, sans-serif', marginBottom: 4,
-              }}>
-                Already on your plate
-              </div>
-              <div style={{
-                fontSize: 13, color: C.muted, fontFamily: 'DM Sans, sans-serif', marginBottom: 12, lineHeight: 1.5,
-              }}>
-                Tasks you've added that are coming up — deselect any you want to skip
-              </div>
+              <SectionHeader>Already on your plate</SectionHeader>
               {customDueTasks.map(t => {
-                const selected = selectedCustomTasks.has(t.id);
                 const estimate = getTimeEstimate(t, taskState);
+                const date = taskState[t.id]?.scheduledDate;
                 return (
-                  <div
-                    key={t.id}
-                    onClick={() => {
-                      setSelectedCustomTasks(prev => {
-                        const next = new Set(prev);
-                        if (next.has(t.id)) next.delete(t.id);
-                        else next.add(t.id);
-                        return next;
-                      });
-                    }}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
-                      background: selected ? C.card : C.surface, borderRadius: 10,
-                      border: `1px solid ${selected ? C.brand : C.cardBorder}`,
-                      marginBottom: 6, cursor: 'pointer',
-                      opacity: selected ? 1 : 0.7,
-                      transition: 'all 0.15s',
-                    }}
-                  >
+                  <div key={t.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+                    background: C.card, borderRadius: 10, border: `1px solid ${C.cardBorder}`,
+                    marginBottom: 6,
+                  }}>
                     <CategoryDot cat={t.cat} />
                     <div style={{ flex: 1 }}>
                       <span style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
                         {t.label}
                       </span>
+                      {date && (
+                        <div style={{ fontSize: 12, color: C.yellow, fontWeight: 600, fontFamily: 'DM Sans, sans-serif', marginTop: 2 }}>
+                          {dayLabel(date)}
+                        </div>
+                      )}
                       <TimeChip estimate={estimate} />
                     </div>
-                    <div style={{
-                      width: 22, height: 22, borderRadius: 6, flexShrink: 0,
-                      background: selected ? C.brand : 'transparent',
-                      border: `2px solid ${selected ? C.brand : C.cardBorder}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      {selected && (
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                          <polyline points="2,6 5,9 10,3" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      )}
-                    </div>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <circle cx="8" cy="8" r="7" stroke={C.green} strokeWidth="1.5" />
+                      <polyline points="4.5,8 7,10.5 11.5,5.5" stroke={C.green} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                    </svg>
                   </div>
                 );
               })}
             </div>
           )}
 
-          {/* 2. Brain dump — free-text input */}
+          {/* Brain dump */}
           <div style={{ marginBottom: 24 }}>
-            <div style={{
-              fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
-              color: C.muted, fontFamily: 'DM Sans, sans-serif', marginBottom: 4,
-            }}>
-              What else is happening this week?
-            </div>
+            <SectionHeader>What else is happening this week?</SectionHeader>
             <div style={{
               fontSize: 13, color: C.muted, fontFamily: 'DM Sans, sans-serif', marginBottom: 12, lineHeight: 1.5,
             }}>
@@ -378,88 +353,6 @@ export function WeeklyCheckIn({ onClose }) {
             />
           </div>
 
-          {/* 3. Built-in priority tasks — shown last */}
-          {suggestedTasks.length > 0 && (
-            <div style={{ marginBottom: 24 }}>
-              <div
-                onClick={() => setStructuredExpanded(prev => !prev)}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  cursor: 'pointer', marginBottom: structuredExpanded ? 4 : 0,
-                }}
-              >
-                <div style={{
-                  fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
-                  color: C.muted, fontFamily: 'DM Sans, sans-serif',
-                }}>
-                  Mitzy suggestions
-                </div>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{
-                  transform: structuredExpanded ? 'rotate(180deg)' : 'none',
-                  transition: 'transform 0.2s',
-                }}>
-                  <polyline points="4,6 8,10 12,6" stroke={C.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
-              {structuredExpanded && (
-                <>
-                  <div style={{
-                    fontSize: 13, color: C.muted, fontFamily: 'DM Sans, sans-serif', marginBottom: 12, lineHeight: 1.5,
-                  }}>
-                    {(selectedCustomTasks.size + (userInput.trim() ? 1 : 0)) >= 3
-                      ? "You've got plenty going on — no pressure, but these are coming up if you have the bandwidth"
-                      : 'These are coming up soon — add any you want to tackle this week'}
-                  </div>
-                  {suggestedTasks.map(t => {
-                    const selected = selectedDueTasks.has(t.id);
-                    const estimate = getTimeEstimate(t, taskState);
-                    return (
-                      <div
-                        key={t.id}
-                        onClick={() => {
-                          setSelectedDueTasks(prev => {
-                            const next = new Set(prev);
-                            if (next.has(t.id)) next.delete(t.id);
-                            else next.add(t.id);
-                            return next;
-                          });
-                        }}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
-                          background: selected ? C.card : C.surface, borderRadius: 10,
-                          border: `1px solid ${selected ? C.brand : C.cardBorder}`,
-                          marginBottom: 6, cursor: 'pointer',
-                          opacity: selected ? 1 : 0.7,
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        <CategoryDot cat={t.cat} />
-                        <div style={{ flex: 1 }}>
-                          <span style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
-                            {t.label}
-                          </span>
-                          <TimeChip estimate={estimate} />
-                        </div>
-                        <div style={{
-                          width: 22, height: 22, borderRadius: 6, flexShrink: 0,
-                          background: selected ? C.brand : 'transparent',
-                          border: `2px solid ${selected ? C.brand : C.cardBorder}`,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}>
-                          {selected && (
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                              <polyline points="2,6 5,9 10,3" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </>
-              )}
-            </div>
-          )}
-
           {loading && <PulseLoader messages={LOADING_MESSAGES} />}
 
           {errorKind && (
@@ -473,26 +366,36 @@ export function WeeklyCheckIn({ onClose }) {
           )}
 
           {!loading && (
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button
-                onClick={userInput.trim() ? handleSubmit : handleSkipToConfirm}
-                style={{
-                  flex: 1, padding: '14px', fontSize: 15, fontWeight: 700,
-                  background: C.brand, color: C.brandLight, border: 'none', borderRadius: 12,
-                  cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
-                }}
-              >
-                {userInput.trim() ? 'Plan my week' : allSelectedCount > 0 ? 'Use these tasks' : 'Skip this week'}
-              </button>
-            </div>
+            <button
+              onClick={userInput.trim() ? handleSubmit : handleSkipToReview}
+              style={{
+                width: '100%', padding: '14px', fontSize: 15, fontWeight: 700,
+                background: C.brand, color: C.brandLight, border: 'none', borderRadius: 12,
+                cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+              }}
+            >
+              {userInput.trim() ? 'Plan my week' : customDueTasks.length > 0 ? 'Next' : 'Skip to suggestions'}
+            </button>
           )}
         </div>
       </div>
     );
   }
 
-  // ─── Step 2: Review ────────────────────────────────────────────────────────
+  // ─── Screen 2: Unified plan review ───────────────────────────────────────
   if (step === 'review') {
+    // Split plan items into categories for rendering, but they're all one list
+    const customInPlan = customDueTasks.filter(t => planItems.has(t.id));
+    const matchedInPlan = matches.filter(m => {
+      const isCustom = customDueTasks.some(ct => ct.id === m.taskId);
+      return !isCustom && taskMap.has(m.taskId);
+    });
+    const unmatchedCustom = customDueTasks.filter(t => !planItems.has(t.id));
+
+    // Suggestions the user hasn't already added
+    const availableSuggestions = suggestedTasks.filter(t => !planItems.has(t.id));
+    const addedSuggestions = suggestedTasks.filter(t => planItems.has(t.id));
+
     return (
       <div style={{
         position: 'fixed', inset: 0, zIndex: 100,
@@ -511,7 +414,7 @@ export function WeeklyCheckIn({ onClose }) {
               Your week
             </div>
             <div style={{ fontSize: 13, color: '#B8DCC8', fontFamily: 'DM Sans, sans-serif' }}>
-              {totalPlanCount} task{totalPlanCount !== 1 ? 's' : ''} for this week
+              {planItems.size} task{planItems.size !== 1 ? 's' : ''} planned
             </div>
           </div>
           <button onClick={() => setStep('input')} style={{
@@ -524,105 +427,99 @@ export function WeeklyCheckIn({ onClose }) {
         </div>
 
         <div style={{ padding: '20px 20px 160px' }}>
-          {/* Selected custom tasks */}
-          {selectedCustomTasks.size > 0 && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={{
-                fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
-                color: C.muted, fontFamily: 'DM Sans, sans-serif', marginBottom: 10,
-              }}>
-                Your tasks
-              </div>
-              {customDueTasks.filter(t => selectedCustomTasks.has(t.id)).map(t => (
-                <TaskRow key={t.id} task={t} taskState={taskState} scheduledDate={taskState[t.id]?.scheduledDate} />
-              ))}
-            </div>
-          )}
+          {/* Unified plan list — all selectable */}
+          {(customInPlan.length > 0 || matchedInPlan.length > 0 || addedSuggestions.length > 0) && (
+            <div style={{ marginBottom: 24 }}>
+              <SectionHeader>This week's plan</SectionHeader>
 
-          {/* Selected structured tasks */}
-          {selectedDueTasks.size > 0 && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={{
-                fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
-                color: C.muted, fontFamily: 'DM Sans, sans-serif', marginBottom: 10,
-              }}>
-                {selectedCustomTasks.size > 0 ? 'Plus these' : 'Your picks'}
-              </div>
-              {suggestedTasks.filter(t => selectedDueTasks.has(t.id)).map(t => (
-                <TaskRow key={t.id} task={t} taskState={taskState} scheduledDate={taskState[t.id]?.scheduledDate} />
-              ))}
-            </div>
-          )}
+              {/* Custom tasks in plan */}
+              {customInPlan.map(t => {
+                const estimate = getTimeEstimate(t, taskState);
+                return (
+                  <ToggleCard key={t.id} selected={true} onClick={() => togglePlanItem(t.id)}>
+                    <CategoryDot cat={t.cat} />
+                    <div style={{ flex: 1 }}>
+                      <span style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
+                        {t.label}
+                      </span>
+                      {scheduledDates[t.id] && (
+                        <div style={{ fontSize: 12, color: C.yellow, fontWeight: 600, fontFamily: 'DM Sans, sans-serif', marginTop: 2 }}>
+                          {dayLabel(scheduledDates[t.id])}
+                        </div>
+                      )}
+                      <TimeChip estimate={estimate} />
+                    </div>
+                  </ToggleCard>
+                );
+              })}
 
-          {/* Matched from user input */}
-          {matches.length > 0 && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={{
-                fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
-                color: C.muted, fontFamily: 'DM Sans, sans-serif', marginBottom: 10,
-              }}>
-                From what you told us
-              </div>
-              {matches.map(m => {
+              {/* Matched tasks from brain dump */}
+              {matchedInPlan.map(m => {
                 const task = taskMap.get(m.taskId);
                 if (!task) return null;
-                const accepted = acceptedMatches.has(m.taskId);
+                const inPlan = planItems.has(m.taskId);
                 const estimate = getTimeEstimate(task, taskState);
                 return (
-                  <div key={m.taskId} style={{ marginBottom: 6 }}>
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
-                      background: accepted ? C.card : C.surface, borderRadius: 10,
-                      border: `1px solid ${C.cardBorder}`,
-                      opacity: accepted ? 1 : 0.6,
-                    }}>
-                      <CategoryDot cat={task.cat} />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
-                          {task.label}
-                        </div>
-                        {m.scheduledDate && (
-                          <div style={{ fontSize: 12, color: C.yellow, fontWeight: 600, fontFamily: 'DM Sans, sans-serif', marginTop: 2 }}>
-                            {dayLabel(m.scheduledDate)}
-                          </div>
-                        )}
-                        <TimeChip estimate={estimate} />
+                  <ToggleCard key={m.taskId} selected={inPlan} onClick={() => togglePlanItem(m.taskId)}>
+                    <CategoryDot cat={task.cat} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
+                        {task.label}
                       </div>
-                      <button
-                        onClick={() => {
-                          setAcceptedMatches(prev => {
-                            const next = new Set(prev);
-                            if (next.has(m.taskId)) next.delete(m.taskId);
-                            else next.add(m.taskId);
-                            return next;
-                          });
-                        }}
-                        style={{
-                          background: accepted ? C.green : C.surface,
-                          color: accepted ? '#fff' : C.muted,
-                          border: 'none', borderRadius: 8, padding: '6px 12px',
-                          fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                          fontFamily: 'DM Sans, sans-serif',
-                        }}
-                      >
-                        {accepted ? '✓' : 'Add'}
-                      </button>
+                      {scheduledDates[m.taskId] && (
+                        <div style={{ fontSize: 12, color: C.yellow, fontWeight: 600, fontFamily: 'DM Sans, sans-serif', marginTop: 2 }}>
+                          {dayLabel(scheduledDates[m.taskId])}
+                        </div>
+                      )}
+                      {m.mentionText && (
+                        <div style={{ fontSize: 11, color: C.muted, fontFamily: 'DM Sans, sans-serif', fontStyle: 'italic', marginTop: 2 }}>
+                          from: "{m.mentionText}"
+                        </div>
+                      )}
+                      <TimeChip estimate={estimate} />
                     </div>
-                  </div>
+                  </ToggleCard>
+                );
+              })}
+
+              {/* Structured suggestions that have been added to the plan */}
+              {addedSuggestions.map(t => {
+                const estimate = getTimeEstimate(t, taskState);
+                return (
+                  <ToggleCard key={t.id} selected={true} onClick={() => togglePlanItem(t.id)}>
+                    <CategoryDot cat={t.cat} />
+                    <div style={{ flex: 1 }}>
+                      <span style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
+                        {t.label}
+                      </span>
+                      <TimeChip estimate={estimate} />
+                    </div>
+                  </ToggleCard>
+                );
+              })}
+
+              {/* Removed custom tasks — shown faded so they can re-add */}
+              {unmatchedCustom.map(t => {
+                const estimate = getTimeEstimate(t, taskState);
+                return (
+                  <ToggleCard key={t.id} selected={false} onClick={() => togglePlanItem(t.id)}>
+                    <CategoryDot cat={t.cat} />
+                    <div style={{ flex: 1 }}>
+                      <span style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
+                        {t.label}
+                      </span>
+                      <TimeChip estimate={estimate} />
+                    </div>
+                  </ToggleCard>
                 );
               })}
             </div>
           )}
 
-          {/* New task suggestions */}
+          {/* Unmatched brain dump items — not in task library */}
           {newSuggestions.filter(s => !dismissedNewSuggestions.has(s.label)).length > 0 && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={{
-                fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
-                color: C.muted, fontFamily: 'DM Sans, sans-serif', marginBottom: 10,
-              }}>
-                Not in your tasks yet
-              </div>
+            <div style={{ marginBottom: 24 }}>
+              <SectionHeader>Not in your tasks yet</SectionHeader>
               {newSuggestions.filter(s => !dismissedNewSuggestions.has(s.label)).map(s => (
                 <div key={s.label} style={{
                   display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
@@ -654,27 +551,87 @@ export function WeeklyCheckIn({ onClose }) {
             </div>
           )}
 
-          {/* Gap fill suggestions */}
-          {gapFill.length > 0 && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={{
-                fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
-                color: C.muted, fontFamily: 'DM Sans, sans-serif', marginBottom: 10,
-              }}>
-                Mitzy also suggests
+          {/* Mitzy suggestions — collapsible at bottom */}
+          {availableSuggestions.length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <div
+                onClick={() => setSuggestionsExpanded(prev => !prev)}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  cursor: 'pointer', marginBottom: suggestionsExpanded ? 4 : 0,
+                }}
+              >
+                <div style={{
+                  fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+                  color: C.muted, fontFamily: 'DM Sans, sans-serif',
+                }}>
+                  Mitzy suggestions
+                </div>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{
+                  transform: suggestionsExpanded ? 'rotate(180deg)' : 'none',
+                  transition: 'transform 0.2s',
+                }}>
+                  <polyline points="4,6 8,10 12,6" stroke={C.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               </div>
+              {suggestionsExpanded && (
+                <>
+                  <div style={{
+                    fontSize: 13, color: C.muted, fontFamily: 'DM Sans, sans-serif', marginBottom: 12, lineHeight: 1.5,
+                  }}>
+                    {planItems.size >= 3
+                      ? "You've got plenty going on — no pressure, but these are coming up if you have bandwidth"
+                      : 'These are coming up soon — tap to add any to your plan'}
+                  </div>
+                  {availableSuggestions.map(t => {
+                    const estimate = getTimeEstimate(t, taskState);
+                    return (
+                      <div
+                        key={t.id}
+                        onClick={() => togglePlanItem(t.id)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+                          background: C.surface, borderRadius: 10,
+                          border: `1px solid ${C.cardBorder}`,
+                          marginBottom: 6, cursor: 'pointer',
+                          opacity: 0.7,
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        <CategoryDot cat={t.cat} />
+                        <div style={{ flex: 1 }}>
+                          <span style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
+                            {t.label}
+                          </span>
+                          <TimeChip estimate={estimate} />
+                        </div>
+                        <div style={{
+                          background: C.surface, color: C.muted,
+                          border: 'none', borderRadius: 8, padding: '4px 10px',
+                          fontSize: 12, fontWeight: 600,
+                          fontFamily: 'DM Sans, sans-serif',
+                        }}>
+                          + Add
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Gap fill from API */}
+          {gapFill.length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <SectionHeader>Mitzy also noticed</SectionHeader>
               {gapFill.map(g => {
                 const task = taskMap.get(g.taskId);
                 if (!task) return null;
-                const accepted = acceptedGapFill.has(g.taskId);
+                const inPlan = planItems.has(g.taskId);
                 const estimate = getTimeEstimate(task, taskState);
                 return (
-                  <div key={g.taskId} style={{
-                    display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
-                    background: accepted ? C.card : C.surface, borderRadius: 10,
-                    border: `1px solid ${C.cardBorder}`,
-                    marginBottom: 6, opacity: accepted ? 1 : 0.6,
-                  }}>
+                  <ToggleCard key={g.taskId} selected={inPlan} onClick={() => togglePlanItem(g.taskId)}>
                     <CategoryDot cat={task.cat} />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
@@ -685,26 +642,7 @@ export function WeeklyCheckIn({ onClose }) {
                       </div>
                       <TimeChip estimate={estimate} />
                     </div>
-                    <button
-                      onClick={() => {
-                        setAcceptedGapFill(prev => {
-                          const next = new Set(prev);
-                          if (next.has(g.taskId)) next.delete(g.taskId);
-                          else next.add(g.taskId);
-                          return next;
-                        });
-                      }}
-                      style={{
-                        background: accepted ? C.green : C.surface,
-                        color: accepted ? '#fff' : C.muted,
-                        border: 'none', borderRadius: 8, padding: '6px 12px',
-                        fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                        fontFamily: 'DM Sans, sans-serif',
-                      }}
-                    >
-                      {accepted ? '✓' : 'Add'}
-                    </button>
-                  </div>
+                  </ToggleCard>
                 );
               })}
             </div>
@@ -713,10 +651,14 @@ export function WeeklyCheckIn({ onClose }) {
           {/* Confirm button */}
           <button
             onClick={handleConfirm}
+            disabled={planItems.size === 0}
             style={{
               width: '100%', padding: '14px', fontSize: 15, fontWeight: 700,
-              background: C.brand, color: C.brandLight, border: 'none', borderRadius: 12,
-              cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+              background: planItems.size > 0 ? C.brand : C.surface,
+              color: planItems.size > 0 ? C.brandLight : C.muted,
+              border: 'none', borderRadius: 12,
+              cursor: planItems.size > 0 ? 'pointer' : 'default',
+              fontFamily: 'DM Sans, sans-serif',
             }}
           >
             Lock in my week
@@ -727,28 +669,4 @@ export function WeeklyCheckIn({ onClose }) {
   }
 
   return null;
-}
-
-function TaskRow({ task, taskState, scheduledDate }) {
-  const estimate = taskState ? getTimeEstimate(task, taskState) : null;
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
-      background: C.card, borderRadius: 10, border: `1px solid ${C.cardBorder}`,
-      marginBottom: 6,
-    }}>
-      <CategoryDot cat={task.cat} />
-      <div style={{ flex: 1 }}>
-        <span style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
-          {task.label}
-        </span>
-        {scheduledDate && (
-          <div style={{ fontSize: 12, color: C.yellow, fontWeight: 600, fontFamily: 'DM Sans, sans-serif', marginTop: 2 }}>
-            {dayLabel(scheduledDate)}
-          </div>
-        )}
-        <TimeChip estimate={estimate} />
-      </div>
-    </div>
-  );
 }
