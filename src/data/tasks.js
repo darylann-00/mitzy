@@ -1556,7 +1556,7 @@ export const ALL_TASKS = [
     lastGuidanceUpdate: "2025-01",
     steps: [
       { key: "learn_docs", label: "Know what you need", body: "At minimum, you need three documents:", type: "action", bullets: [
-        { bold: "Will", text: "Says who gets your assets and who becomes guardian of your minor children." },
+        { bold: "Will", text: "Says who gets your assets{{#hasKidsLabel}} and who becomes guardian of {{kidNames}}{{/hasKidsLabel}}." },
         { bold: "Durable power of attorney", text: "Lets someone you trust handle money and legal decisions if you're incapacitated." },
         { bold: "Healthcare directive", text: "Tells doctors what medical treatment you want if you can't speak for yourself, and names a person to make those calls." },
       ], learnMore: [
@@ -1570,7 +1570,7 @@ export const ALL_TASKS = [
       ]},
       { key: "choose_people", label: "Pick your people", body: "You'll need to name people for each role. Reach out to each person before you start drafting — they need to know and agree to serve. You can add their names below if you'd like, to help you remember.", type: "action", inputs: [
         { key: "executor", label: "Executor", placeholder: "Manages your estate", optional: true },
-        { key: "guardian", label: "Guardian for minor children", placeholder: "If applicable", optional: true },
+        { key: "guardian", label: "Guardian{{#hasKidsLabel}} for {{kidNames}}{{/hasKidsLabel}}", placeholder: "{{#hasKidsLabel}}Who you want to raise {{kidNames}}{{/hasKidsLabel}}{{^hasKidsLabel}}If applicable{{/hasKidsLabel}}", optional: true },
         { key: "poa_agent", label: "Power of attorney agent", placeholder: "Handles finances if you can't", optional: true },
         { key: "healthcare_proxy", label: "Healthcare proxy", placeholder: "Makes medical decisions", optional: true },
       ], learnMore: [
@@ -1608,13 +1608,13 @@ export const ALL_TASKS = [
         ]},
         { type: "text", value: "All of these produce legally valid documents. The main difference is the user experience and how much hand-holding you get." },
       ]},
-      { key: "diy_complete", label: "Complete the questionnaire", body: "Set aside about an hour. You'll answer questions about your assets, beneficiaries, guardianship, and the people you picked in step 2. Have their full legal names and contact info handy.", type: "action", path: "diy", learnMore: [
+      { key: "diy_complete", label: "Complete the questionnaire", body: "Set aside about an hour. You'll answer questions about your assets, beneficiaries,{{#hasKidsLabel}} guardianship for {{kidNames}},{{/hasKidsLabel}} and the people you picked in step 2. Have their full legal names and contact info handy.", type: "action", path: "diy", learnMore: [
         { type: "heading", value: "What you'll be asked" },
         { type: "bullets", items: [
-          { bold: "Assets", text: "Home, bank accounts, retirement accounts (401k, IRA), vehicles, life insurance policies, valuable personal property (jewelry, art, collections)." },
+          { bold: "Assets", text: "Home, bank accounts, retirement accounts (401k, IRA),{{#hasCarsLabel}} vehicles (like your {{carList}}),{{/hasCarsLabel}}{{^hasCarsLabel}} vehicles,{{/hasCarsLabel}} life insurance policies, valuable personal property (jewelry, art, collections)." },
           { bold: "Beneficiaries", text: "Who gets each asset. You can name specific items to specific people or split everything by percentage." },
-          { bold: "Guardianship", text: "If you have minor children: a primary guardian and a backup. The service will ask for their full legal names and relationship to you." },
-          { bold: "Special instructions", text: "Funeral wishes, pet care, charitable gifts, conditions on inheritance (e.g., held in trust until a child reaches age 25)." },
+          { bold: "Guardianship", text: "{{#hasKidsLabel}}A primary guardian and a backup for {{kidNames}}. The service will ask for their full legal names and relationship to you.{{/hasKidsLabel}}{{^hasKidsLabel}}If you have minor children: a primary guardian and a backup. The service will ask for their full legal names and relationship to you.{{/hasKidsLabel}}" },
+          { bold: "Special instructions", text: "Funeral wishes,{{#hasPetsLabel}} care plans for {{petNames}},{{/hasPetsLabel}}{{^hasPetsLabel}} pet care,{{/hasPetsLabel}} charitable gifts, conditions on inheritance (e.g., held in trust until a child reaches age 25)." },
         ]},
         { type: "text", value: "Don't stress about being perfectly comprehensive. You can update these documents anytime — and you should, after any major life change." },
       ]},
@@ -1662,7 +1662,7 @@ export const ALL_TASKS = [
           { bold: "Originals", text: "You'll receive the original signed documents. The attorney keeps copies on file and can provide additional copies anytime." },
         ]},
       ]},
-      { key: "store_docs", label: "Store originals and tell your people", body: "Keep the originals in a fireproof safe or a safe deposit box. Give copies to your executor, healthcare proxy, and power of attorney agent. Tell them where the originals are stored. If you used an attorney, they may keep a copy on file.", type: "action", learnMore: [
+      { key: "store_docs", label: "Store originals and tell your people", body: "Keep the originals in a fireproof safe or a safe deposit box. Give copies to your executor, healthcare proxy, and power of attorney agent. Tell them where the originals are stored.{{#hasPetsLabel}} Make sure your will or letter of intent includes care plans for {{petNames}}.{{/hasPetsLabel}} If you used an attorney, they may keep a copy on file.", type: "action", learnMore: [
         { type: "heading", value: "Storage tips" },
         { type: "bullets", items: [
           { bold: "Fireproof safe at home", text: "Often the best option. Make sure your executor knows the code or where to find the key. A fireproof/waterproof safe rated for documents costs $50–$150." },

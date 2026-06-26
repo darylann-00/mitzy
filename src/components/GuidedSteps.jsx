@@ -242,7 +242,7 @@ function MiniProviderCard({ provider: p, onSelect }) {
 }
 
 // ─── Decision card ──────────────────────────────────────────────────────────
-function DecisionCard({ step, index, isDone, isActive, isFuture, chosenPath, onChoose, onUndo }) {
+function DecisionCard({ step, index, isDone, isActive, isFuture, chosenPath, onChoose, onUndo, context }) {
   const circleSize = 26;
 
   return (
@@ -297,7 +297,7 @@ function DecisionCard({ step, index, isDone, isActive, isFuture, chosenPath, onC
             fontSize: 13, color: isDone ? '#8A9A90' : C.muted, lineHeight: 1.55,
             fontFamily: 'DM Sans, sans-serif',
           }}>
-            {step.body}
+            {context ? resolveStepVars(step.body, context) : step.body}
           </div>
 
           {isDone && chosenPath && (
@@ -310,7 +310,7 @@ function DecisionCard({ step, index, isDone, isActive, isFuture, chosenPath, onC
             </div>
           )}
 
-          {(isActive || isDone) && step.learnMore && <LearnMore content={step.learnMore} />}
+          {(isActive || isDone) && step.learnMore && <LearnMore content={step.learnMore} context={context} />}
 
           {isActive && (
             <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -341,7 +341,7 @@ function DecisionCard({ step, index, isDone, isActive, isFuture, chosenPath, onC
 }
 
 // ─── Learn more toggle ──────────────────────────────────────────────────────
-function LearnMore({ content }) {
+function LearnMore({ content, context }) {
   const [open, setOpen] = useState(false);
   const blocks = typeof content === 'string' ? [{ type: 'text', value: content }] : content;
   return (
@@ -372,15 +372,20 @@ function LearnMore({ content }) {
             );
             if (block.type === 'bullets') return (
               <ul key={bi} style={{ margin: '4px 0 0 0', paddingLeft: 16, listStyleType: 'disc' }}>
-                {block.items.map((item, ii) => (
-                  <li key={ii} style={{ marginBottom: 3 }}>
-                    {item.bold && <strong style={{ color: C.ink }}>{item.bold}</strong>}
-                    {item.bold && ' — '}{item.text}
-                  </li>
-                ))}
+                {block.items.map((item, ii) => {
+                  const text = context ? resolveStepVars(item.text, context) : item.text;
+                  if (!text && !item.bold) return null;
+                  return (
+                    <li key={ii} style={{ marginBottom: 3 }}>
+                      {item.bold && <strong style={{ color: C.ink }}>{item.bold}</strong>}
+                      {item.bold && ' — '}{text}
+                    </li>
+                  );
+                })}
               </ul>
             );
-            return <div key={bi} style={{ marginTop: bi > 0 ? 8 : 0 }}>{block.value}</div>;
+            const text = context ? resolveStepVars(block.value, context) : block.value;
+            return <div key={bi} style={{ marginTop: bi > 0 ? 8 : 0 }}>{text}</div>;
           })}
         </div>
       )}
@@ -389,16 +394,19 @@ function LearnMore({ content }) {
 }
 
 // ─── Step inputs (name fields etc.) ─────────────────────────────────────────
-function StepInputs({ inputs, values, onChange }) {
+function StepInputs({ inputs, values, onChange, context }) {
   return (
     <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-      {inputs.map(inp => (
+      {inputs.map(inp => {
+        const label = context ? resolveStepVars(inp.label, context) : inp.label;
+        const placeholder = context ? resolveStepVars(inp.placeholder, context) : inp.placeholder;
+        return (
         <div key={inp.key}>
           <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, fontFamily: 'DM Sans, sans-serif', display: 'block', marginBottom: 3 }}>
-            {inp.label}{inp.optional && <span style={{ fontWeight: 400 }}> (optional)</span>}
+            {label}{inp.optional && <span style={{ fontWeight: 400 }}> (optional)</span>}
           </label>
           <input
-            placeholder={inp.placeholder || ''}
+            placeholder={placeholder || ''}
             value={values?.[inp.key] || ''}
             onChange={e => onChange(inp.key, e.target.value)}
             style={{
@@ -409,7 +417,8 @@ function StepInputs({ inputs, values, onChange }) {
             }}
           />
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -498,7 +507,7 @@ function StepCard({ step, index, isDone, isActive, isFuture, context, onComplete
               {step.bullets.map((b, bi) => (
                 <li key={bi} style={{ marginBottom: 2 }}>
                   {b.bold && <strong style={{ color: isDone ? '#8A9A90' : C.ink }}>{b.bold}</strong>}
-                  {b.bold && ' — '}{b.text}
+                  {b.bold && ' — '}{resolveStepVars(b.text, context)}
                 </li>
               ))}
             </ul>
@@ -506,7 +515,7 @@ function StepCard({ step, index, isDone, isActive, isFuture, context, onComplete
 
           {/* Input fields */}
           {isActive && step.inputs && (
-            <StepInputs inputs={step.inputs} values={inputValues} onChange={onInputChange} />
+            <StepInputs inputs={step.inputs} values={inputValues} onChange={onInputChange} context={context} />
           )}
           {isDone && step.inputs && inputValues && Object.values(inputValues).some(v => v) && (
             <div style={{ marginTop: 6, fontSize: 12, color: C.muted, fontFamily: 'DM Sans, sans-serif' }}>
@@ -517,7 +526,7 @@ function StepCard({ step, index, isDone, isActive, isFuture, context, onComplete
           )}
 
           {/* Learn more */}
-          {(isActive || isDone) && step.learnMore && <LearnMore content={step.learnMore} />}
+          {(isActive || isDone) && step.learnMore && <LearnMore content={step.learnMore} context={context} />}
 
           {/* Type-specific content (only for active step) */}
           {isActive && step.type === 'provider_search' && (
@@ -757,10 +766,29 @@ export const GuidedSteps = memo(function GuidedSteps({ steps, taskId, taskCat, s
     return savedProvider || null;
   }, [stepProgress, visibleSteps, savedProvider]);
 
-  const context = useMemo(() => ({
-    ...profile,
-    provider: selectedProvider,
-  }), [profile, selectedProvider]);
+  const context = useMemo(() => {
+    const kids = profile?.kids || [];
+    const pets = profile?.pets || [];
+    const cars = profile?.cars || [];
+    const kidNames = kids.map(k => k.name).filter(Boolean);
+    const petNames = pets.map(p => p.name).filter(Boolean);
+    const petTypes = [...new Set(pets.map(p => p.type).filter(Boolean))];
+    return {
+      ...profile,
+      provider: selectedProvider,
+      firstKidName: kidNames[0] || '',
+      kidNames: kidNames.join(' and ') || '',
+      kidCount: kids.length,
+      petNames: petNames.join(' and ') || '',
+      petTypes: petTypes.join(' and ') || 'pets',
+      petCount: pets.length,
+      carList: cars.join(', ') || '',
+      firstCar: cars[0] || '',
+      hasKidsLabel: kids.length > 0,
+      hasPetsLabel: pets.length > 0,
+      hasCarsLabel: cars.length > 0,
+    };
+  }, [profile, selectedProvider]);
 
   const completedCount = visibleSteps.filter(s => stepProgress?.[s.key]?.done).length;
   const allDone = completedCount === visibleSteps.length;
@@ -845,6 +873,7 @@ export const GuidedSteps = memo(function GuidedSteps({ steps, taskId, taskCat, s
               isActive={isActive}
               isFuture={isFuture}
               chosenPath={chosenPath}
+              context={context}
               onChoose={(value) => handleDecision(step, value)}
               onUndo={() => handleUndo(step)}
             />
