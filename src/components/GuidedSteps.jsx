@@ -516,7 +516,7 @@ function InsurancePrompt({ onSave }) {
   );
 }
 
-export const GuidedSteps = memo(function GuidedSteps({ steps, taskId, stepProgress, onSetStepProgress }) {
+export const GuidedSteps = memo(function GuidedSteps({ steps, taskId, taskCat, stepProgress, onSetStepProgress }) {
   const { profile, providerHistory, saveProvider, updateProfile } = useProfileContext();
 
   const goodProviders = (providerHistory[taskId] || []).filter(p => p.vote === 'good');
@@ -573,8 +573,8 @@ export const GuidedSteps = memo(function GuidedSteps({ steps, taskId, stepProgre
         )}
       </div>
 
-      {/* Insurance prompt — only if flow has a call step and insurance not set */}
-      {!profile?.insurance && steps.some(s => s.type === 'call') && (
+      {/* Insurance prompt — only for health tasks with a call step */}
+      {!profile?.insurance && taskCat === 'health' && steps.some(s => s.type === 'call') && (
         <InsurancePrompt onSave={(val) => updateProfile({ insurance: val })} />
       )}
 
