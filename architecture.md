@@ -14,14 +14,14 @@ Read this when touching state, data, or non-trivial component wiring.
                       GuidedSteps, MatchConfirmationChip, SnoozePicker, SnoozeIcon,
                       SnoozeTooltip, MonthCalendar, DateField, FrequencyPicker,
                       Celebration, Sheet, CategoryIcons, BottomNav, WelcomeGate,
-                      LoginGate, BrandSplash, ProfileConflictModal
+                      LoginGate, BrandSplash, ProfileConflictModal, WeeklyCheckIn
   /contexts         — ProfileContext, TaskContext, CalendarContext
   /views            — HomeView, AllView, ProfileView, TaskDetailView
   /data             — constants.js, tasks.js, taskFactory.js, insuranceProviders.js,
                       providerTypes.js, zipCodes.js
     /lifeEvents     — index.js (registry), newBaby.js
   /hooks            — useAuth, useProfile, useTasks, useSession, useProviders,
-                      useLifeEvents, useCapacityNudge
+                      useLifeEvents, useCapacityNudge, useWeeklyPlan
   /lib              — supabase.js, googleCalendar.js
   /utils            — storage.js, taskLogic.js, assistPrompt.js, hazards.js,
                       climateRegion.js, renderMarkdown.jsx, resolveStepVars.js
@@ -33,6 +33,7 @@ Read this when touching state, data, or non-trivial component wiring.
   generate-task.js  — Vercel Function → Claude Haiku task generation
   calendar-events.js — Vercel Function → Google Calendar API
   calendar-match.js — Vercel Function → Claude Haiku event-task matching
+  weekly-checkin.js — Vercel Function → Claude Haiku weekly plan matching
   schedule.js       — Vercel Function → Google Calendar event creation
   _auth.js          — Shared auth helper
   _helpers.js       — Shared utilities
