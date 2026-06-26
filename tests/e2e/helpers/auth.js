@@ -1,10 +1,34 @@
+import { createClient } from '@supabase/supabase-js';
+
 const TEST_EMAIL    = process.env.PLAYWRIGHT_TEST_EMAIL    ?? 'test@example.com';
 const TEST_PASSWORD = process.env.PLAYWRIGHT_TEST_PASSWORD ?? 'testexample';
 
+const supabaseUrl  = process.env.VITE_SUPABASE_URL      ?? '';
+const supabaseAnon = process.env.VITE_SUPABASE_ANON_KEY  ?? '';
+
+let cachedSession = null;
+
+async function getSession() {
+  if (cachedSession) return cachedSession;
+  const sb = createClient(supabaseUrl, supabaseAnon);
+  const { data, error } = await sb.auth.signInWithPassword({
+    email: TEST_EMAIL,
+    password: TEST_PASSWORD,
+  });
+  if (error) throw new Error(`Test auth failed: ${error.message}`);
+  cachedSession = data.session;
+  return cachedSession;
+}
+
 export async function loginWithDevCredentials(page) {
-  await page.getByTestId('dev-email').fill(TEST_EMAIL);
-  await page.getByTestId('dev-password').fill(TEST_PASSWORD);
-  await page.getByTestId('dev-sign-in').click();
+  const session = await getSession();
+  const storageKey = `sb-${new URL(supabaseUrl).hostname.split('.')[0]}-auth-token`;
+
+  await page.addInitScript(({ key, session }) => {
+    localStorage.setItem(key, JSON.stringify(session));
+  }, { key: storageKey, session });
+
+  await page.reload();
 }
 
 export async function seedReturnUser(page) {
