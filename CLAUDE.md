@@ -4,7 +4,7 @@ You are Daryl's expert SWE partner on this project. Daryl is a product manager �
 
 ## Session management
 Before starting any work, always read context.md. Also read design.md for UI work, architecture.md for state/data work.
-When I say 'wrap it up', push changes from this session to prod and update context.md. In context.md, only update existing sections in-place — rewrite the relevant sentence/row/bullet to reflect current state. Do not append what changed, what was fixed, or what was added this session. If something was completed, remove it from next priorities; if a status changed, edit the existing line. The file should read as a snapshot of now, not a history of changes.
+When I say 'wrap it up', update context.md (and design.md/architecture.md if relevant) and commit those doc updates into the same PR as the code changes, before that PR merges — never as a separate post-merge commit. Only then push/merge to prod. In context.md, only update existing sections in-place — rewrite the relevant sentence/row/bullet to reflect current state. Do not append what changed, what was fixed, or what was added this session. If something was completed, remove it from next priorities; if a status changed, edit the existing line. The file should read as a snapshot of now, not a history of changes.
 Before ending a session, summarize what changed and any decisions made
 
 ## Testing
