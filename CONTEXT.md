@@ -20,17 +20,14 @@ A household management PWA. Acts as a personal secretary that already knows what
 |-------|--------|
 | UI | React 19 (Vite) |
 | State | Custom hooks + localStorage (cache/offline) + Supabase (`profiles`, `task_records` incl. `snoozed_until`, `custom_tasks`) |
-| API | Vercel Edge Functions |
+| API | Vercel Functions |
 | AI | Claude Haiku 4.5 via `/api/assist` + `/api/generate-task` |
 | Deployment | Vercel |
 | Fonts | Righteous (display/brand), DM Sans (body) |
 
 User data is persisted in Supabase (`profiles` + `task_records` + `custom_tasks`). localStorage is used as a cache/offline layer. Auth is via Supabase — Google OAuth (primary) + magic link (fallback).
 
-Two Supabase projects:
-- **Production:** `https://uftxbegrnlvlgkbitibp.supabase.co`
-- **Dev:** `https://lrzheitfrltcyvllblmb.supabase.co` — used by Playwright e2e tests and Maestro
-```
+Supabase project: `https://uftxbegrnlvlgkbitibp.supabase.co` (production). All testing (Playwright e2e) runs against prod or Vercel preview environments.
 
 ---
 
@@ -56,13 +53,15 @@ Two Supabase projects:
 
 - **Google Calendar matching (Phase 1 + 2)** — On sign-in, silently requests `calendar.events` OAuth scope via Google Identity Services (GIS). Fetches the user's upcoming calendar events via `/api/calendar-events`, then runs a Claude Haiku match against active tasks via `/api/calendar-match`. When a match is found (confidence ≥ threshold), an inline yellow confirmation chip appears on the task card: "📅 Found: [event title] — yours?" with Yes / Not mine buttons. Confirming saves `scheduled_date` to `task_records` in Supabase and shows a yellow scheduled chip on the card. Dismissing removes the chip for the session. Handled task IDs are tracked in a ref so the pipeline (which re-runs on task state changes) never re-surfaces confirmed or dismissed matches. All calendar features are non-blocking — if OAuth is denied or any API call fails, the app continues silently. `window.__MITZY_FAKE_CAL_TOKEN__` test hook short-circuits GIS for Playwright tests.
 
-- **AssistPanel** — Full-screen overlay. Provider/script/deadline/guidance/guidance_companies modes. Caches 7 days (currently v12). Provider mode passes `task.searchQuery` (if set) to `/api/providers` so Places queries are task-appropriate rather than using the raw label. Provider cards show condensed weekly hours (Claude-formatted from Places `weekdayDescriptions`), review count under star rating, address links to Google Maps, blurbs with **bold** key phrases. `guidance_companies` mode returns JSON with guidance markdown + top 3 national companies (no aggregators); renders `MarkdownBlock` + `CompanyCard` rows with external link icon. `MarkdownBlock` handles ##headers, bullets, numbered lists with nested sub-bullets, tables, horizontal rules, bold, and auto-linked URLs. `PulseLoader` cycles through 3 contextual messages per `assistType` every 2.5s; providers uses `task.searchQuery || task.label` for specificity.
+- **AssistPanel** — Full-screen overlay. Provider/script/deadline/guidance/guidance_companies modes. Caches 7 days (currently v12). Provider mode passes `task.searchQuery` (if set) to `/api/providers` so Places queries are task-appropriate rather than using the raw label. Provider cards show condensed weekly hours (Claude-formatted from Places `weekdayDescriptions`), review count under star rating, address links to Google Maps, blurbs with **bold** key phrases. `guidance_companies` mode returns JSON with guidance markdown + top 3 national companies (no aggregators); renders `renderMarkdown` + `CompanyCard` rows with external link icon. `renderMarkdown` handles ##headers, bullets, numbered lists with nested sub-bullets, tables, horizontal rules, bold, and auto-linked URLs. `PulseLoader` cycles through 3 contextual messages per `assistType` every 2.5s; providers uses `task.searchQuery || task.label` for specificity.
 
 - **MarkDoneModal** — Custom `MonthCalendar` (in-React date picker) pre-filled today (hidden for one-time tasks). Closes immediately on done; confetti fires via `Celebration` separately. Replaces native `<input type="date">` to fix month-arrow-click close bug on Chrome/Mac.
 
 - **AI Assist** — End-to-end: prompt → `/api/assist` → Claude → cached response.
 
 - **Trickle questions** — Yellow card, chip/text UI, answers unlock new tasks. One-time tasks show "Have you done this? / Yes / Not yet"; "Not yet" marks `needed` (task surfaces as orange in list, no date).
+
+- **Life events** — Contextual task bundles triggered by major life changes. v1 ships "New baby" (`src/data/lifeEvents/newBaby.js`). `useLifeEvents` hook manages event state in Supabase (`life_events` + `custom_tasks`). `LifeEventNudge` yellow card appears on HomeView in two variants: "discovery" (introduces the feature) and "wrapup" (fires when all tasks for an active event are complete). `LifeEventIntake` collects event-specific details via `GuidedSteps` multi-step form, then generates one-time custom tasks scoped to that event instance. Tasks are ID-prefixed (`lf-{type}-{id}-{taskId}`) so multiple instances don't collide. Event definitions registered in `src/data/lifeEvents/index.js`; new event types add their own task generator to `TASK_GENERATORS` in `useLifeEvents`.
 
 - **Hazard detection** — Zip → hazard type → prep tasks. Runs on visit 2+.
 
@@ -82,7 +81,6 @@ Two Supabase projects:
 
 | Feature | Status |
 |---------|--------|
-| Google Calendar integration | Fully built. Phase 1: silent OAuth at startup, Haiku event-task matching via `/api/calendar-events` + `/api/calendar-match`. Phase 2: inline confirmation chips on task cards, `scheduled_date` persisted to Supabase. `/api/schedule` Edge Function creates all-day events. Requires `VITE_GOOGLE_CLIENT_ID` + Calendar API enabled in Google Cloud Console. Grant flow: user connects once (onboarding step 7, Profile Account section, or ScheduleSurface contextual prompt); `CAL_GRANTED_KEY` persisted to localStorage; subsequent sessions use silent GIS token. Event window is 90 days forward. Detection pipeline runs once per (user, token) pair to avoid cancellation from task-state churn. |
 | Hazard zip lookup | Hardcoded zip ranges. Replace with FEMA API. |
 | Knowledge refresh | Stubbed. |
 | `task.why` + `task.guidance` fields | Null for all current tasks — UI falls back to `task.note` and generic copy. |
@@ -102,13 +100,15 @@ C.red         = '#D62828'  // due now
 C.orange      = '#F77F00'  // coming up, action buttons
 C.green       = '#06A77D'  // done
 C.yellow      = '#F4C430'  // trickle, scheduled
-C.periwinkle  = '#6B8DD6'  // snooze
 C.ink         = '#1C2B22'  // primary text
 C.muted       = '#4A6256'  // secondary text
 C.bg          = '#FDFAF2'  // warm off-white background
 C.card        = '#FFFFFF'  // task card background
 C.cardBorder  = '#EAE4DA'  // task card border
+C.surface     = '#F0EDE4'  // raised surface / divider background
 ```
+
+Snooze uses `#6B8DD6` (periwinkle blue) directly in components — not a named constant.
 
 ### Typography
 - **Righteous** (Google Fonts) — display. Wordmark, section labels, headings, task names.
@@ -146,7 +146,7 @@ WelcomeGate → (new) SlimOnboarding → PrioritySetup → LoginGate → App (3-
                                    ├─ ProfileView
                                    ├─ TaskDetailView
                                    │   ├─ AssistPanel → /api/assist → Claude
-                                   │   ├─ SchedulePanel (mocked)
+                                   │   ├─ ScheduleSurface → /api/schedule
                                    │   └─ MarkDoneModal → Celebration confetti
                                    └─ TaskCreator → /api/generate-task → Claude → custom_tasks
                                        ├─ Single task → TaskConfirmCard
@@ -157,7 +157,7 @@ WelcomeGate → (new) SlimOnboarding → PrioritySetup → LoginGate → App (3-
 
 ## Navigation
 
-Three tabs in `BottomDock` (fixed, `#E8F0EC` pill). Sparkle FAB sits to the right of the pill at the same level — single entry point for adding tasks (opens TaskCreator).
+Three tabs in `BottomNav` (fixed, `#E8F0EC` pill). Sparkle FAB sits to the right of the pill at the same level — single entry point for adding tasks (opens TaskCreator).
 
 | Tab key | Icon | Label |
 |---------|------|-------|
@@ -171,7 +171,7 @@ Three tabs in `BottomDock` (fixed, `#E8F0EC` pill). Sparkle FAB sits to the righ
 
 GitHub Actions at `.github/workflows/ci.yml`. Two jobs on every PR and push to main:
 - **ci** — lint, build, unit tests (placeholder Supabase env, always runs)
-- **e2e** — Playwright acceptance tests against dev Supabase (`lrzheitfrltcyvllblmb`); skips until GitHub repo secrets are set (`VITE_SUPABASE_URL_DEV`, `VITE_SUPABASE_ANON_KEY_DEV`, `PLAYWRIGHT_TEST_EMAIL`, `PLAYWRIGHT_TEST_PASSWORD`). Uploads trace artifacts on failure.
+- **e2e** — Playwright acceptance tests against prod Supabase; requires GitHub repo secrets (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `PLAYWRIGHT_TEST_EMAIL`, `PLAYWRIGHT_TEST_PASSWORD`). Uploads trace artifacts on failure.
 
 Baseline e2e tests run on every PR: `sign_in`, `onboarding`, `mark_done`. Feature tests: `calendar_match`, `life_event_new_baby`, `snooze`. PRs that touch a user-facing flow should include a feature test for that flow.
 
@@ -185,8 +185,4 @@ Baseline e2e tests run on every PR: `sign_in`, `onboarding`, `mark_done`. Featur
 
 ## Known Gaps / Mocked
 
-| Feature | Status |
-|---------|--------|
-| Hazard zip lookup | Hardcoded zip ranges. Replace with FEMA API. |
-| `task.why` + `task.guidance` fields | Null for all current tasks — UI falls back to `task.note` and generic copy. |
-| Provider data | Claude-generated, no verification. |
+See "What's Mocked / Incomplete" section above.
