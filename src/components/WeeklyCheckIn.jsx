@@ -53,13 +53,14 @@ export function WeeklyCheckIn({ onClose }) {
   const [loading, setLoading] = useState(false);
   const [errorKind, setErrorKind] = useState(null);
 
-  // Auto-due tasks: due or coming-up this week
-  const [autoDueTasks] = useState(() =>
+  // Top priority tasks — user picks which to tackle this week
+  const [suggestedTasks] = useState(() =>
     scoredDue.filter(t => {
       const s = getStatus(t);
       return s === 'due' || s === 'coming-up' || s === 'needed' || s === 'confirm';
-    }).slice(0, 10)
+    }).slice(0, 5)
   );
+  const [selectedDueTasks, setSelectedDueTasks] = useState(new Set());
 
   // API response state
   const [matches, setMatches] = useState([]);
@@ -92,8 +93,9 @@ export function WeeklyCheckIn({ onClose }) {
       const token = session?.access_token;
       if (!token) { setErrorKind('auth'); setLoading(false); return; }
 
+      const selectedDueArray = suggestedTasks.filter(t => selectedDueTasks.has(t.id));
       const backlogTasks = scoredDue
-        .filter(t => !autoDueTasks.find(a => a.id === t.id))
+        .filter(t => !selectedDueTasks.has(t.id))
         .slice(0, 30)
         .map(t => ({ id: t.id, label: t.label, category: t.cat }));
 
@@ -106,7 +108,7 @@ export function WeeklyCheckIn({ onClose }) {
         body: JSON.stringify({
           userInput: userInput.trim(),
           tasks: activeTasks.slice(0, 200).map(t => ({ id: t.id, label: t.label, category: t.cat })),
-          autoDueTasks: autoDueTasks.map(t => ({ id: t.id, label: t.label })),
+          autoDueTasks: selectedDueArray.map(t => ({ id: t.id, label: t.label })),
           capacity: 'normal',
           weekStart,
           backlogTasks,
@@ -146,8 +148,9 @@ export function WeeklyCheckIn({ onClose }) {
     const taskIds = [];
     const scheduledDates = {};
 
-    // Auto-due tasks always included
-    for (const t of autoDueTasks) {
+    // Selected priority tasks
+    for (const t of suggestedTasks) {
+      if (!selectedDueTasks.has(t.id)) continue;
       taskIds.push(t.id);
       if (taskState[t.id]?.scheduledDate) {
         scheduledDates[t.id] = taskState[t.id].scheduledDate;
@@ -173,12 +176,11 @@ export function WeeklyCheckIn({ onClose }) {
   };
 
   const handleSkipToConfirm = async () => {
-    // No user input — just use auto-due tasks
-    const taskIds = autoDueTasks.map(t => t.id);
+    const taskIds = suggestedTasks.filter(t => selectedDueTasks.has(t.id)).map(t => t.id);
     const scheduledDates = {};
-    for (const t of autoDueTasks) {
-      if (taskState[t.id]?.scheduledDate) {
-        scheduledDates[t.id] = taskState[t.id].scheduledDate;
+    for (const id of taskIds) {
+      if (taskState[id]?.scheduledDate) {
+        scheduledDates[id] = taskState[id].scheduledDate;
       }
     }
     await savePlan(taskIds, scheduledDates, '');
@@ -186,8 +188,8 @@ export function WeeklyCheckIn({ onClose }) {
     onClose();
   };
 
-  const totalPlanCount = autoDueTasks.length
-    + matches.filter(m => acceptedMatches.has(m.taskId) && !autoDueTasks.find(a => a.id === m.taskId)).length
+  const totalPlanCount = selectedDueTasks.size
+    + matches.filter(m => acceptedMatches.has(m.taskId) && !selectedDueTasks.has(m.taskId)).length
     + gapFill.filter(g => acceptedGapFill.has(g.taskId)).length;
 
   const ERROR_MESSAGES = {
@@ -229,31 +231,61 @@ export function WeeklyCheckIn({ onClose }) {
         </div>
 
         <div style={{ padding: '20px 20px 160px' }}>
-          {/* Auto-due tasks */}
-          {autoDueTasks.length > 0 && (
+          {/* Priority tasks — pick which to tackle */}
+          {suggestedTasks.length > 0 && (
             <div style={{ marginBottom: 24 }}>
               <div style={{
                 fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
-                color: C.muted, fontFamily: 'DM Sans, sans-serif', marginBottom: 10,
+                color: C.muted, fontFamily: 'DM Sans, sans-serif', marginBottom: 4,
               }}>
-                Already on your plate
+                Top priorities
               </div>
-              {autoDueTasks.map(t => (
-                <div key={t.id} style={{
-                  display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
-                  background: C.card, borderRadius: 10, border: `1px solid ${C.cardBorder}`,
-                  marginBottom: 6,
-                }}>
-                  <CategoryDot cat={t.cat} />
-                  <span style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink, flex: 1 }}>
-                    {t.label}
-                  </span>
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <circle cx="8" cy="8" r="7" stroke={C.green} strokeWidth="1.5" />
-                    <polyline points="4.5,8 7,10.5 11.5,5.5" stroke={C.green} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-                  </svg>
-                </div>
-              ))}
+              <div style={{
+                fontSize: 13, color: C.muted, fontFamily: 'DM Sans, sans-serif', marginBottom: 12, lineHeight: 1.5,
+              }}>
+                Pick 2–3 to focus on this week
+              </div>
+              {suggestedTasks.map(t => {
+                const selected = selectedDueTasks.has(t.id);
+                return (
+                  <div
+                    key={t.id}
+                    onClick={() => {
+                      setSelectedDueTasks(prev => {
+                        const next = new Set(prev);
+                        if (next.has(t.id)) next.delete(t.id);
+                        else next.add(t.id);
+                        return next;
+                      });
+                    }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+                      background: selected ? C.card : C.surface, borderRadius: 10,
+                      border: `1px solid ${selected ? C.brand : C.cardBorder}`,
+                      marginBottom: 6, cursor: 'pointer',
+                      opacity: selected ? 1 : 0.7,
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    <CategoryDot cat={t.cat} />
+                    <span style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink, flex: 1 }}>
+                      {t.label}
+                    </span>
+                    <div style={{
+                      width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+                      background: selected ? C.brand : 'transparent',
+                      border: `2px solid ${selected ? C.brand : C.cardBorder}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {selected && (
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                          <polyline points="2,6 5,9 10,3" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -343,16 +375,16 @@ export function WeeklyCheckIn({ onClose }) {
         </div>
 
         <div style={{ padding: '20px 20px 160px' }}>
-          {/* Auto-due tasks */}
-          {autoDueTasks.length > 0 && (
+          {/* Selected priority tasks */}
+          {selectedDueTasks.size > 0 && (
             <div style={{ marginBottom: 20 }}>
               <div style={{
                 fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
                 color: C.muted, fontFamily: 'DM Sans, sans-serif', marginBottom: 10,
               }}>
-                Due this week
+                Your picks
               </div>
-              {autoDueTasks.map(t => (
+              {suggestedTasks.filter(t => selectedDueTasks.has(t.id)).map(t => (
                 <TaskRow key={t.id} task={t} scheduledDate={taskState[t.id]?.scheduledDate} />
               ))}
             </div>
