@@ -753,6 +753,7 @@ export function TaskDetailView({ task, taskState: taskStateProp, onAssist, onDon
           <GuidedSteps
             steps={task.steps}
             taskId={task.id}
+            taskCat={task.cat}
             stepProgress={entry?.stepProgress}
             onSetStepProgress={onSetStepProgress}
           />
