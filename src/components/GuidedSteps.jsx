@@ -310,7 +310,7 @@ function DecisionCard({ step, index, isDone, isActive, isFuture, chosenPath, onC
             </div>
           )}
 
-          {(isActive || isDone) && step.learnMore && <LearnMore text={step.learnMore} />}
+          {(isActive || isDone) && step.learnMore && <LearnMore content={step.learnMore} />}
 
           {isActive && (
             <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -341,8 +341,9 @@ function DecisionCard({ step, index, isDone, isActive, isFuture, chosenPath, onC
 }
 
 // ─── Learn more toggle ──────────────────────────────────────────────────────
-function LearnMore({ text }) {
+function LearnMore({ content }) {
   const [open, setOpen] = useState(false);
+  const blocks = typeof content === 'string' ? [{ type: 'text', value: content }] : content;
   return (
     <div style={{ marginTop: 8 }}>
       <button
@@ -360,10 +361,27 @@ function LearnMore({ text }) {
       </button>
       {open && (
         <div style={{
-          marginTop: 6, padding: '9px 11px', background: '#F8F6F0', borderRadius: 8,
+          marginTop: 6, padding: '10px 12px', background: '#F8F6F0', borderRadius: 8,
           fontSize: 12, color: C.muted, lineHeight: 1.6, fontFamily: 'DM Sans, sans-serif',
         }}>
-          {text}
+          {blocks.map((block, bi) => {
+            if (block.type === 'heading') return (
+              <div key={bi} style={{ fontSize: 11, fontWeight: 700, color: C.ink, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: bi > 0 ? 10 : 0, marginBottom: 4 }}>
+                {block.value}
+              </div>
+            );
+            if (block.type === 'bullets') return (
+              <ul key={bi} style={{ margin: '4px 0 0 0', paddingLeft: 16, listStyleType: 'disc' }}>
+                {block.items.map((item, ii) => (
+                  <li key={ii} style={{ marginBottom: 3 }}>
+                    {item.bold && <strong style={{ color: C.ink }}>{item.bold}</strong>}
+                    {item.bold && ' — '}{item.text}
+                  </li>
+                ))}
+              </ul>
+            );
+            return <div key={bi} style={{ marginTop: bi > 0 ? 8 : 0 }}>{block.value}</div>;
+          })}
         </div>
       )}
     </div>
@@ -499,7 +517,7 @@ function StepCard({ step, index, isDone, isActive, isFuture, context, onComplete
           )}
 
           {/* Learn more */}
-          {(isActive || isDone) && step.learnMore && <LearnMore text={step.learnMore} />}
+          {(isActive || isDone) && step.learnMore && <LearnMore content={step.learnMore} />}
 
           {/* Type-specific content (only for active step) */}
           {isActive && step.type === 'provider_search' && (
