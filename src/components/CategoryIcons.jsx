@@ -35,6 +35,14 @@ export function PersonIcon({ color = '#06A77D', bg = '#E8F5EE', size = 18 }) {
   );
 }
 
+export function HeartIcon({ color = '#06A77D', size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <path d="M9 16 C9 16 1.5 11.5 1.5 6.3 C1.5 3.6 3.6 2 5.7 2 C7.3 2 8.5 2.9 9 3.9 C9.5 2.9 10.7 2 12.3 2 C14.4 2 16.5 3.6 16.5 6.3 C16.5 11.5 9 16 9 16Z" fill={color} />
+    </svg>
+  );
+}
+
 export function CalendarIcon({ color = '#F77F00', bg = '#FFF3E0', size = 18 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
@@ -59,21 +67,33 @@ export function PetIcon({ color = '#F4C430', bg = '#FFFBEE', size = 18 }) {
   );
 }
 
-export function StarIcon({ color = '#D62828', size = 18 }) {
+export function SirenIcon({ color = '#D62828', bg = '#FDE8E8', size = 18 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
-      <polygon points="9,1 11,7 17,7 12,11 14,17 9,13 4,17 6,11 1,7 7,7" fill={color} />
+      <g stroke={color} strokeWidth="1.3" strokeLinecap="round">
+        <line x1="9" y1="0.5" x2="9" y2="2.6" />
+        <line x1="3.6" y1="2.1" x2="4.9" y2="3.9" />
+        <line x1="14.4" y1="2.1" x2="13.1" y2="3.9" />
+        <line x1="1.2" y1="6.2" x2="3.3" y2="7" />
+        <line x1="16.8" y1="6.2" x2="14.7" y2="7" />
+        <line x1="0.4" y1="10.8" x2="2.7" y2="10.4" />
+        <line x1="17.6" y1="10.8" x2="15.3" y2="10.4" />
+      </g>
+      <path d="M9 3.4C6.7 3.4 5 5.2 5 7.5V12H13V7.5C13 5.2 11.3 3.4 9 3.4Z" fill={color} />
+      <path d="M7.3 4.6C6.2 5.4 5.6 6.6 5.6 7.9V11H7V5C7 4.85 7.1 4.7 7.3 4.6Z" fill={bg} />
+      <rect x="4.2" y="12" width="9.6" height="3" rx="1" fill="#2B2F33" />
     </svg>
   );
 }
 
-export function SchoolIcon({ color = '#4A6256', bg = '#F0EDE4', size = 18 }) {
+export function KidIcon({ color = '#4A6256', bg = '#F0EDE4', size = 18 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
-      <polygon points="9,2 1,7 9,12 17,7" fill={color} />
-      <rect x="5" y="12" width="8" height="4" rx="1" fill={color} />
-      <line x1="15" y1="7" x2="15" y2="14" stroke={color} strokeWidth="2" strokeLinecap="round" />
-      <circle cx="15" cy="15" r="1.5" fill={color} />
+      <circle cx="9" cy="6" r="4" fill={color} />
+      <circle cx="7" cy="5.3" r="0.9" fill={bg} />
+      <circle cx="11" cy="5.3" r="0.9" fill={bg} />
+      <path d="M7 7.5 Q9 8.8 11 7.5" stroke={bg} strokeWidth="1.2" strokeLinecap="round" fill="none" />
+      <path d="M5.5 17 C5.5 13 6.8 11 9 11 C11.2 11 12.5 13 12.5 17" fill={color} />
     </svg>
   );
 }
@@ -186,10 +206,10 @@ export const LIFE_EVENT_ICON_CONFIG = {
 export const CAT_ICON_CONFIG = {
   home:      { Icon: HouseIcon,    color: '#1A5C3A', bg: '#E8F5EE', tileBg: '#E8F5EE'  },
   car:       { Icon: CarIcon,      color: '#F77F00', bg: '#FFF3E0', tileBg: '#FFF3E0'  },
-  health:    { Icon: PersonIcon,   color: '#06A77D', bg: '#E8F5EE', tileBg: '#E8F5EE'  },
-  school:    { Icon: SchoolIcon,   color: '#4A6256', bg: '#F0EDE4', tileBg: '#F0EDE4'  },
+  health:    { Icon: HeartIcon,    color: '#06A77D', bg: '#E8F5EE', tileBg: '#E8F5EE'  },
+  school:    { Icon: KidIcon,      color: '#4A6256', bg: '#F0EDE4', tileBg: '#F0EDE4'  },
   finance:   { Icon: CalendarIcon, color: '#F77F00', bg: '#FFF3E0', tileBg: '#FFF3E0'  },
-  emergency: { Icon: StarIcon,     color: '#D62828', bg: '#FDE8E8', tileBg: '#FDE8E8'  },
+  emergency: { Icon: SirenIcon,    color: '#D62828', bg: '#FDE8E8', tileBg: '#FDE8E8'  },
   pet:       { Icon: PetIcon,      color: '#F4C430', bg: '#FFFBEE', tileBg: '#FFFBEE'  },
 };
 
