@@ -117,16 +117,18 @@ function ProvidersIcon({ size = 16 }) {
 
 // ─── Insurance picker ──────────────────────────────────────────────────────────
 function InsurancePicker({ value, onChange }) {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(value || '');
   const [open, setOpen]   = useState(false);
   const [rect, setRect]   = useState(null);
   const anchorRef = useRef(null);
+
+  useEffect(() => { if (!open) setQuery(value || ''); }, [value, open]);
 
   const filtered = query.trim()
     ? INSURANCE_PROVIDERS.filter(p => p.label.toLowerCase().includes(query.toLowerCase()))
     : INSURANCE_PROVIDERS;
 
-  const select = (label) => { onChange(label); setQuery(''); setOpen(false); };
+  const select = (label) => { onChange(label); setQuery(label); setOpen(false); };
   const clear  = () => { onChange(''); setQuery(''); setOpen(false); };
 
   const openDropdown = () => {
@@ -139,12 +141,12 @@ function InsurancePicker({ value, onChange }) {
       <div ref={anchorRef} style={{ display:'flex', alignItems:'center', gap:6, border:'1px solid #D4CFC6', borderRadius:10, padding:'7px 11px', background:'#FDFAF2' }}>
         <input
           style={{ flex:1, fontSize:14, fontFamily:'DM Sans, sans-serif', border:'none', outline:'none', background:'transparent', color:'#1C2B22' }}
-          placeholder={value || 'Search providers…'}
+          placeholder="Search providers…"
           value={query}
           onFocus={openDropdown}
           onChange={e => { setQuery(e.target.value); openDropdown(); }}
         />
-        {value && !query && (
+        {value && !open && (
           <button onClick={clear} style={{ fontSize:16, lineHeight:1, border:'none', background:'none', cursor:'pointer', color:'#9B9B9B', padding:'0 2px' }}>×</button>
         )}
       </div>

@@ -216,9 +216,10 @@ export function HomeView({
   onHazardDismiss,
   onMatchConfirm,
   onMatchDismiss,
+  onOpenWeeklyCheckIn,
 }) {
   const { profile, providerHistory, updateProfile } = useProfileContext();
-  const { homeTasks, doneThisWeek, getStatus, getDays, taskState } = useTaskContext();
+  const { homeTasks, doneThisWeek, getStatus, getDays, taskState, isInPlanMode, planTasks, planProgress, showWeeklyNudge, dismissWeeklyNudge, activePlan } = useTaskContext();
   const todayTask = homeTasks[0] ?? null;
   const isDueThisWeek = (t) => {
     const s = getStatus(t);
@@ -254,6 +255,41 @@ export function HomeView({
               onPrimary={onLifeEventNudgePrimary}
               onDismiss={onLifeEventNudgeDismiss}
             />
+            <Divider />
+          </>
+        )}
+
+        {/* Weekly check-in nudge */}
+        {showWeeklyNudge && !isInPlanMode && (
+          <>
+            <div style={{ background:'#FFFDE7', borderRadius:14, border:'1px solid #EAE4DA', padding:'18px 18px', marginBottom:4 }}>
+              <div style={{
+                fontSize:11, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase',
+                color:'#B8960A', fontFamily:'DM Sans, sans-serif', marginBottom:6,
+              }}>
+                Weekly check-in
+              </div>
+              <div style={{ fontFamily:"'Righteous', cursive", fontSize:17, color:'#1C2B22', marginBottom:6 }}>
+                Ready to plan your week?
+              </div>
+              <div style={{ fontSize:13, color:'#4A6256', fontFamily:'DM Sans, sans-serif', lineHeight:1.5, marginBottom:14 }}>
+                Take a minute to tell Mitzy what's happening — she'll set up your week.
+              </div>
+              <div style={{ display:'flex', gap:8 }}>
+                <button
+                  onClick={onOpenWeeklyCheckIn}
+                  style={{ flex:1, padding:'10px', fontSize:13, fontWeight:700, background:'#1A5C3A', color:'#E8F5EE', border:'none', borderRadius:10, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                >
+                  Let's do it
+                </button>
+                <button
+                  onClick={dismissWeeklyNudge}
+                  style={{ flex:1, padding:'10px', fontSize:13, fontWeight:600, background:'#F0EDE4', color:'#4A6256', border:'none', borderRadius:10, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+                >
+                  Skip this week
+                </button>
+              </div>
+            </div>
             <Divider />
           </>
         )}
@@ -301,105 +337,242 @@ export function HomeView({
           </>
         )}
 
-        {/* Today — single highest-priority task */}
-        {todayTask && (() => {
-          const match = pendingCalendarMatches.find(m => m.taskId === todayTask.id);
+        {/* ─── Plan mode ──────────────────────────────────────────────── */}
+        {isInPlanMode && (() => {
+          const scheduledDates = activePlan?.scheduledDates || {};
+          const doneTasks = planTasks.filter(t => {
+            const entry = taskState[t.id];
+            return entry?.lastDone && entry.lastDone >= activePlan?.weekStart;
+          });
+          const pendingTasks = planTasks.filter(t => {
+            const entry = taskState[t.id];
+            return !(entry?.lastDone && entry.lastDone >= activePlan?.weekStart);
+          });
+          const scheduled = pendingTasks.filter(t => scheduledDates[t.id]);
+          const unscheduled = pendingTasks.filter(t => !scheduledDates[t.id]);
+
+          // Group scheduled tasks by date
+          const byDate = {};
+          scheduled.forEach(t => {
+            const d = scheduledDates[t.id];
+            if (!byDate[d]) byDate[d] = [];
+            byDate[d].push(t);
+          });
+          const sortedDates = Object.keys(byDate).sort();
+
           return (
-            <div style={{ marginBottom: 4 }}>
-              <SectionLabel label="Today" color="#1A5C3A" />
-              <SnoozeTooltip visible />
-              <SwipeableTaskCard
-                task={{ ...todayTask, scheduledDate: taskState[todayTask.id]?.scheduledDate, lastDone: taskState[todayTask.id]?.lastDone }}
-                status={getStatus(todayTask)}
-                days={getDays(todayTask)}
-                hasSavedProvider={!!providerHistory[todayTask.id]}
-                onSelect={onSelectTask}
-                onDone={onDoneTask}
-                onSnooze={onSnooze}
-                showCategoryIcon
-                subtitle={getStatus(todayTask) === 'needed' && getDays(todayTask) === null ? '' : undefined}
-                stepProgress={taskState[todayTask.id]?.stepProgress}
-                pendingMatch={match}
-                onMatchConfirm={match ? () => onMatchConfirm(todayTask.id, match.eventDate) : undefined}
-                onMatchDismiss={match ? () => onMatchDismiss(todayTask.id) : undefined}
-              />
-            </div>
+            <>
+              {/* Progress bar */}
+              <div style={{
+                background:'#FFFFFF', borderRadius:12, border:'1px solid #EAE4DA',
+                padding:'14px 16px', marginBottom:16,
+              }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+                  <span style={{ fontSize:13, fontWeight:600, color:'#1C2B22', fontFamily:'DM Sans, sans-serif' }}>
+                    {planProgress.done} of {planProgress.total} done
+                  </span>
+                  {planProgress.done === planProgress.total && planProgress.total > 0 && (
+                    <span style={{ fontSize:12, color:'#06A77D', fontWeight:600, fontFamily:'DM Sans, sans-serif' }}>
+                      All done!
+                    </span>
+                  )}
+                </div>
+                <div style={{ display:'flex', gap:3 }}>
+                  {planTasks.map((t) => {
+                    const isDone = doneTasks.some(d => d.id === t.id);
+                    return (
+                      <div key={t.id} style={{
+                        flex:1, height:6, borderRadius:3,
+                        background: isDone ? '#1A5C3A' : '#E8F0EC',
+                      }} />
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Scheduled tasks by day */}
+              {sortedDates.map(date => {
+                const dayName = new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday:'long', month:'short', day:'numeric' });
+                return (
+                  <div key={date} style={{ marginBottom:4 }}>
+                    <SectionLabel label={dayName} color="#F4C430" />
+                    {byDate[date].map(task => (
+                      <SwipeableTaskCard
+                        key={task.id}
+                        task={{ ...task, scheduledDate: scheduledDates[task.id], lastDone: taskState[task.id]?.lastDone }}
+                        status={getStatus(task)}
+                        days={getDays(task)}
+                        hasSavedProvider={!!providerHistory[task.id]}
+                        onSelect={onSelectTask}
+                        onDone={onDoneTask}
+                        onSnooze={onSnooze}
+                        showCategoryIcon
+                        stepProgress={taskState[task.id]?.stepProgress}
+                      />
+                    ))}
+                  </div>
+                );
+              })}
+
+              {/* Unscheduled plan tasks */}
+              {unscheduled.length > 0 && (
+                <>
+                  {sortedDates.length > 0 && <Divider />}
+                  <div style={{ marginBottom:4 }}>
+                    <SectionLabel label="This week" color="#F77F00" />
+                    {unscheduled.map(task => (
+                      <SwipeableTaskCard
+                        key={task.id}
+                        task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate, lastDone: taskState[task.id]?.lastDone }}
+                        status={getStatus(task)}
+                        days={getDays(task)}
+                        hasSavedProvider={!!providerHistory[task.id]}
+                        onSelect={onSelectTask}
+                        onDone={onDoneTask}
+                        onSnooze={onSnooze}
+                        showCategoryIcon
+                        stepProgress={taskState[task.id]?.stepProgress}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Done tasks */}
+              {doneTasks.length > 0 && (
+                <>
+                  <Divider />
+                  <div style={{ marginBottom:4 }}>
+                    <SectionLabel label="Done" color="#06A77D" />
+                    {doneTasks.map(task => (
+                      <div key={task.id} style={{ opacity:0.5 }}>
+                        <SwipeableTaskCard
+                          task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate, lastDone: taskState[task.id]?.lastDone }}
+                          status="ok"
+                          days={null}
+                          hasSavedProvider={!!providerHistory[task.id]}
+                          onSelect={onSelectTask}
+                          showCategoryIcon
+                          stepProgress={taskState[task.id]?.stepProgress}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* All plan tasks done */}
+              {planProgress.done === planProgress.total && planProgress.total > 0 && (
+                <EarnedState doneThisWeek={planProgress.done} profile={profile} onGoToAll={onGoToAll} />
+              )}
+            </>
           );
         })()}
 
-        {/* This week — remaining tasks, uncapped */}
-        {todayTask && weekTasks.length > 0 && (
+        {/* ─── Live mode (no weekly plan) ────────────────────────────── */}
+        {!isInPlanMode && (
           <>
-            <Divider />
-            <div style={{ marginBottom: 4 }}>
-              <SectionLabel label="This week" color="#F77F00" />
-              {weekTasks.map(task => {
-                const match = pendingCalendarMatches.find(m => m.taskId === task.id);
-                return (
+            {/* Today — single highest-priority task */}
+            {todayTask && (() => {
+              const match = pendingCalendarMatches.find(m => m.taskId === todayTask.id);
+              return (
+                <div style={{ marginBottom: 4 }}>
+                  <SectionLabel label="Today" color="#1A5C3A" />
+                  <SnoozeTooltip visible />
                   <SwipeableTaskCard
-                    key={task.id}
-                    task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate, lastDone: taskState[task.id]?.lastDone }}
-                    status={getStatus(task)}
-                    days={getDays(task)}
-                    hasSavedProvider={!!providerHistory[task.id]}
+                    task={{ ...todayTask, scheduledDate: taskState[todayTask.id]?.scheduledDate, lastDone: taskState[todayTask.id]?.lastDone }}
+                    status={getStatus(todayTask)}
+                    days={getDays(todayTask)}
+                    hasSavedProvider={!!providerHistory[todayTask.id]}
                     onSelect={onSelectTask}
                     onDone={onDoneTask}
                     onSnooze={onSnooze}
                     showCategoryIcon
-                    subtitle={getStatus(task) === 'needed' && getDays(task) === null ? '' : undefined}
-                    stepProgress={taskState[task.id]?.stepProgress}
+                    subtitle={getStatus(todayTask) === 'needed' && getDays(todayTask) === null ? '' : undefined}
+                    stepProgress={taskState[todayTask.id]?.stepProgress}
                     pendingMatch={match}
-                    onMatchConfirm={match ? () => onMatchConfirm(task.id, match.eventDate) : undefined}
-                    onMatchDismiss={match ? () => onMatchDismiss(task.id) : undefined}
+                    onMatchConfirm={match ? () => onMatchConfirm(todayTask.id, match.eventDate) : undefined}
+                    onMatchDismiss={match ? () => onMatchDismiss(todayTask.id) : undefined}
                   />
-                );
-              })}
-            </div>
+                </div>
+              );
+            })()}
+
+            {/* This week — remaining tasks, uncapped */}
+            {todayTask && weekTasks.length > 0 && (
+              <>
+                <Divider />
+                <div style={{ marginBottom: 4 }}>
+                  <SectionLabel label="This week" color="#F77F00" />
+                  {weekTasks.map(task => {
+                    const match = pendingCalendarMatches.find(m => m.taskId === task.id);
+                    return (
+                      <SwipeableTaskCard
+                        key={task.id}
+                        task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate, lastDone: taskState[task.id]?.lastDone }}
+                        status={getStatus(task)}
+                        days={getDays(task)}
+                        hasSavedProvider={!!providerHistory[task.id]}
+                        onSelect={onSelectTask}
+                        onDone={onDoneTask}
+                        onSnooze={onSnooze}
+                        showCategoryIcon
+                        subtitle={getStatus(task) === 'needed' && getDays(task) === null ? '' : undefined}
+                        stepProgress={taskState[task.id]?.stepProgress}
+                        pendingMatch={match}
+                        onMatchConfirm={match ? () => onMatchConfirm(task.id, match.eventDate) : undefined}
+                        onMatchDismiss={match ? () => onMatchDismiss(task.id) : undefined}
+                      />
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* Nudge to All page when only one task */}
+            {todayTask && weekTasks.length === 0 && !pendingHazards && (
+              <div style={{
+                background: '#FFFFFF',
+                borderRadius: 14,
+                padding: '18px 20px',
+                textAlign: 'center',
+                border: '1px solid #EAE4DA',
+                marginTop: 12,
+              }}>
+                <div style={{ fontSize: 13, color: '#4A6256', fontFamily: 'DM Sans, sans-serif', marginBottom: 10 }}>
+                  Just the one for now.
+                </div>
+                <button
+                  onClick={onGoToAll}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#1A5C3A', fontFamily: 'DM Sans, sans-serif', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                >
+                  See what else Mitzy's tracking
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <polyline points="4,2 10,7 4,12" stroke="#1A5C3A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
+            {/* Hazard card */}
+            {pendingHazards && (
+              <>
+                {homeTasks.length > 0 && <Divider />}
+                <HazardCard
+                  hazards={pendingHazards}
+                  onAccept={onHazardAccept}
+                  onDismiss={onHazardDismiss}
+                />
+              </>
+            )}
+
+            {/* Empty state — two variants based on whether user has done anything this week */}
+            {homeTasks.length === 0 && !pendingHazards && (
+              doneThisWeek > 0
+                ? <EarnedState doneThisWeek={doneThisWeek} profile={profile} onGoToAll={onGoToAll} />
+                : <QuietState nextUpcomingTask={nextUpcomingTask} getDays={getDays} />
+            )}
           </>
-        )}
-
-        {/* Nudge to All page when only one task */}
-        {todayTask && weekTasks.length === 0 && !pendingHazards && (
-          <div style={{
-            background: '#FFFFFF',
-            borderRadius: 14,
-            padding: '18px 20px',
-            textAlign: 'center',
-            border: '1px solid #EAE4DA',
-            marginTop: 12,
-          }}>
-            <div style={{ fontSize: 13, color: '#4A6256', fontFamily: 'DM Sans, sans-serif', marginBottom: 10 }}>
-              Just the one for now.
-            </div>
-            <button
-              onClick={onGoToAll}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#1A5C3A', fontFamily: 'DM Sans, sans-serif', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}
-            >
-              See what else Mitzy's tracking
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <polyline points="4,2 10,7 4,12" stroke="#1A5C3A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          </div>
-        )}
-
-        {/* Hazard card */}
-        {pendingHazards && (
-          <>
-            {homeTasks.length > 0 && <Divider />}
-            <HazardCard
-              hazards={pendingHazards}
-              onAccept={onHazardAccept}
-              onDismiss={onHazardDismiss}
-            />
-          </>
-        )}
-
-        {/* Empty state — two variants based on whether user has done anything this week */}
-        {homeTasks.length === 0 && !pendingHazards && (
-          doneThisWeek > 0
-            ? <EarnedState doneThisWeek={doneThisWeek} profile={profile} onGoToAll={onGoToAll} />
-            : <QuietState nextUpcomingTask={nextUpcomingTask} getDays={getDays} />
         )}
 
       </div>
