@@ -306,17 +306,19 @@ export function WeeklyCheckIn({ onClose }) {
     const tasks = [];
     for (const s of suggestions) {
       const taskId = genTaskId();
+      const intervalDays = s.intervalDays || null;
       const task = {
         id: taskId,
         cat: 'home',
         label: s.label,
-        oneTime: true,
-        intervalDays: null,
-        windowDays: 14,
+        oneTime: !intervalDays,
+        intervalDays,
+        windowDays: intervalDays ? Math.max(3, Math.round(intervalDays * 0.2)) : 14,
         isCustom: true,
         isAIGenerated: false,
         requires: [],
         _reason: s.reason,
+        _startDate: s.startDate || null,
       };
       try {
         await addCustomTask(task);
@@ -398,6 +400,7 @@ export function WeeklyCheckIn({ onClose }) {
       }
       for (const t of createdTasks) {
         initialPlan.add(t.id);
+        if (t._startDate) dates[t.id] = t._startDate;
       }
 
       setPlanItems(initialPlan);
