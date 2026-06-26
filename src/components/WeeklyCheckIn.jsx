@@ -3,6 +3,9 @@ import { C, CAT_META } from "../data/constants";
 import { useTaskContext } from "../contexts/TaskContext";
 import { useProfileContext } from "../contexts/ProfileContext";
 import { FrequencyPicker, formatIntervalDays } from "./FrequencyPicker";
+import { formatDueDate } from "./TaskCard";
+import { DateField } from "./DateField";
+import { CategoryTile } from "./CategoryIcons";
 import { supabase } from "../lib/supabase";
 
 const LOADING_MESSAGES = [
@@ -39,11 +42,6 @@ function dayLabel(dateStr) {
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 }
 
-function CategoryDot({ cat }) {
-  const color = CAT_META[cat]?.color || C.muted;
-  return <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />;
-}
-
 function getTimeEstimate(task, taskState) {
   const entry = taskState[task.id];
   if (task.steps?.length && entry?.stepProgress) {
@@ -53,6 +51,59 @@ function getTimeEstimate(task, taskState) {
     }
   }
   return task.timeToComplete ? { text: task.timeToComplete } : null;
+}
+
+function DueLabel({ task, scheduledDate, taskState, getDays }) {
+  if (scheduledDate) {
+    return (
+      <div style={{ fontSize: 12, color: C.yellow, fontWeight: 600, fontFamily: 'DM Sans, sans-serif', marginTop: 2 }}>
+        {dayLabel(scheduledDate)}
+      </div>
+    );
+  }
+  const days = getDays(task);
+  if (days === null || days === undefined) return null;
+  const text = formatDueDate(days, taskState[task.id]?.lastDone);
+  if (!text) return null;
+  return (
+    <div style={{ fontSize: 12, color: days <= 0 ? C.red : C.muted, fontWeight: 600, fontFamily: 'DM Sans, sans-serif', marginTop: 2 }}>
+      {text}
+    </div>
+  );
+}
+
+function computeDueISO(task, taskState) {
+  const entry = taskState[task.id];
+  const isOneTime = entry?.oneTime !== undefined ? entry.oneTime : task.oneTime;
+  if (isOneTime) return entry?.dueDate ? entry.dueDate.slice(0, 10) : null;
+  if (!entry?.lastDone) return null;
+  const intervalDays = entry?.intervalDays ?? task.intervalDays;
+  const due = new Date(new Date(entry.lastDone).getTime() + intervalDays * 86400000);
+  return due.toISOString().slice(0, 10);
+}
+
+function EditableDueDate({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div onClick={e => e.stopPropagation()} style={{ marginTop: 3 }}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        style={{
+          background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+          fontSize: 12, fontWeight: 600, color: value ? C.yellow : C.muted,
+          fontFamily: 'DM Sans, sans-serif', textDecoration: 'underline',
+        }}
+      >
+        {value ? dayLabel(value) : 'Set a date'}
+      </button>
+      {open && (
+        <div style={{ marginTop: 6, maxWidth: 220 }}>
+          <DateField value={value || ''} onChange={(v) => { onChange(v); setOpen(false); }} />
+        </div>
+      )}
+    </div>
+  );
 }
 
 function TimeChip({ estimate }) {
@@ -117,7 +168,7 @@ function SectionHeader({ children }) {
 
 const CAT_OPTIONS = Object.entries(CAT_META).map(([key, v]) => ({ key, label: v.label, color: v.color }));
 
-function BrainDumpTaskCard({ task, onUpdate }) {
+function BrainDumpTaskCard({ task, onUpdate, dueDate, onDueDateChange }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -132,7 +183,7 @@ function BrainDumpTaskCard({ task, onUpdate }) {
         }}
         onClick={() => setExpanded(prev => !prev)}
       >
-        <CategoryDot cat={task.cat} />
+        <CategoryTile cat={task.cat} size={22} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
             {task.label}
@@ -143,6 +194,7 @@ function BrainDumpTaskCard({ task, onUpdate }) {
               {expanded ? '▾ less' : '▸ edit'}
             </span>
           </div>
+          <EditableDueDate task={task} value={dueDate} onChange={onDueDateChange} />
         </div>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
           <circle cx="8" cy="8" r="7" stroke={C.green} strokeWidth="1.5" />
@@ -200,7 +252,7 @@ function BrainDumpTaskCard({ task, onUpdate }) {
 
 export function WeeklyCheckIn({ onClose }) {
   const {
-    activeTasks, scoredDue, taskState, getStatus,
+    activeTasks, scoredDue, taskState, getStatus, getDays,
     savePlan, confirmPlan, weekStart,
   } = useTaskContext();
   const { customTasks, addCustomTask } = useProfileContext();
@@ -233,7 +285,6 @@ export function WeeklyCheckIn({ onClose }) {
   // Review screen state — unified plan items
   const [planItems, setPlanItems] = useState(new Set());
   const [scheduledDates, setScheduledDates] = useState({});
-  const [suggestionsExpanded, setSuggestionsExpanded] = useState(false);
 
   // API response state
   const [matches, setMatches] = useState([]);
@@ -482,16 +533,12 @@ export function WeeklyCheckIn({ onClose }) {
                     background: C.card, borderRadius: 10, border: `1px solid ${C.cardBorder}`,
                     marginBottom: 6,
                   }}>
-                    <CategoryDot cat={t.cat} />
+                    <CategoryTile cat={t.cat} size={22} />
                     <div style={{ flex: 1 }}>
                       <span style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
                         {t.label}
                       </span>
-                      {date && (
-                        <div style={{ fontSize: 12, color: C.yellow, fontWeight: 600, fontFamily: 'DM Sans, sans-serif', marginTop: 2 }}>
-                          {dayLabel(date)}
-                        </div>
-                      )}
+                      <DueLabel task={t} scheduledDate={date} taskState={taskState} getDays={getDays} />
                       <TimeChip estimate={estimate} />
                     </div>
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -557,13 +604,11 @@ export function WeeklyCheckIn({ onClose }) {
 
   // ─── Screen 2: Unified plan review ───────────────────────────────────────
   if (step === 'review') {
-    const customInPlan = customDueTasks.filter(t => planItems.has(t.id));
     const activeMatches = matches.filter(m => {
       if (dismissedMatches.has(m.taskId)) return false;
       const isCustom = customDueTasks.some(ct => ct.id === m.taskId);
       return !isCustom && taskMap.has(m.taskId);
     });
-    const unmatchedCustom = customDueTasks.filter(t => !planItems.has(t.id));
 
     // Merge suggestedTasks + gapFill into one deduplicated list
     const allSuggestionIds = new Set();
@@ -582,7 +627,7 @@ export function WeeklyCheckIn({ onClose }) {
     }
 
     const hasAddedSuggestions = mergedSuggestions.some(s => planItems.has(s.taskId));
-    const hasPlanItems = customInPlan.length > 0 || activeMatches.length > 0 || brainDumpTasks.length > 0 || hasAddedSuggestions;
+    const hasPlanItems = customDueTasks.length > 0 || activeMatches.length > 0 || brainDumpTasks.length > 0 || hasAddedSuggestions;
 
     return (
       <div style={{
@@ -620,20 +665,26 @@ export function WeeklyCheckIn({ onClose }) {
             <div style={{ marginBottom: 24 }}>
               <SectionHeader>This week's plan</SectionHeader>
 
-              {/* Custom tasks in plan */}
-              {customInPlan.map(t => {
+              {/* Custom tasks already on the user's plate — stay in place, just toggle checked state */}
+              {customDueTasks.map(t => {
                 const estimate = getTimeEstimate(t, taskState);
+                const selected = planItems.has(t.id);
+                const dateValue = scheduledDates[t.id] ?? computeDueISO(t, taskState);
                 return (
-                  <ToggleCard key={t.id} selected={true} onClick={() => togglePlanItem(t.id)}>
-                    <CategoryDot cat={t.cat} />
+                  <ToggleCard key={t.id} selected={selected} onClick={() => togglePlanItem(t.id)}>
+                    <CategoryTile cat={t.cat} size={22} />
                     <div style={{ flex: 1 }}>
                       <span style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
                         {t.label}
                       </span>
-                      {scheduledDates[t.id] && (
-                        <div style={{ fontSize: 12, color: C.yellow, fontWeight: 600, fontFamily: 'DM Sans, sans-serif', marginTop: 2 }}>
-                          {dayLabel(scheduledDates[t.id])}
-                        </div>
+                      {selected ? (
+                        <EditableDueDate
+                          task={t}
+                          value={dateValue}
+                          onChange={(v) => setScheduledDates(prev => ({ ...prev, [t.id]: v }))}
+                        />
+                      ) : (
+                        <DueLabel task={t} scheduledDate={scheduledDates[t.id]} taskState={taskState} getDays={getDays} />
                       )}
                       <TimeChip estimate={estimate} />
                     </div>
@@ -650,15 +701,19 @@ export function WeeklyCheckIn({ onClose }) {
                 return (
                   <div key={m.taskId} style={{ marginBottom: 6 }}>
                     <ToggleCard selected={inPlan} onClick={() => togglePlanItem(m.taskId)}>
-                      <CategoryDot cat={task.cat} />
+                      <CategoryTile cat={task.cat} size={22} />
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
                           {task.label}
                         </div>
-                        {scheduledDates[m.taskId] && (
-                          <div style={{ fontSize: 12, color: C.yellow, fontWeight: 600, fontFamily: 'DM Sans, sans-serif', marginTop: 2 }}>
-                            {dayLabel(scheduledDates[m.taskId])}
-                          </div>
+                        {inPlan ? (
+                          <EditableDueDate
+                            task={task}
+                            value={scheduledDates[m.taskId] ?? computeDueISO(task, taskState)}
+                            onChange={(v) => setScheduledDates(prev => ({ ...prev, [m.taskId]: v }))}
+                          />
+                        ) : (
+                          <DueLabel task={task} scheduledDate={scheduledDates[m.taskId]} taskState={taskState} getDays={getDays} />
                         )}
                         {m.mentionText && (
                           <div style={{ fontSize: 11, color: C.muted, fontFamily: 'DM Sans, sans-serif', fontStyle: 'italic', marginTop: 2 }}>
@@ -690,6 +745,8 @@ export function WeeklyCheckIn({ onClose }) {
                   key={t.id}
                   task={t}
                   onUpdate={(updates) => updateBrainDumpTask(t.id, updates)}
+                  dueDate={scheduledDates[t.id] ?? computeDueISO(t, taskState)}
+                  onDueDateChange={(v) => setScheduledDates(prev => ({ ...prev, [t.id]: v }))}
                 />
               ))}
 
@@ -700,27 +757,16 @@ export function WeeklyCheckIn({ onClose }) {
                 const estimate = getTimeEstimate(task, taskState);
                 return (
                   <ToggleCard key={s.taskId} selected={true} onClick={() => togglePlanItem(s.taskId)}>
-                    <CategoryDot cat={task.cat} />
+                    <CategoryTile cat={task.cat} size={22} />
                     <div style={{ flex: 1 }}>
                       <span style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
                         {task.label}
                       </span>
-                      <TimeChip estimate={estimate} />
-                    </div>
-                  </ToggleCard>
-                );
-              })}
-
-              {/* Removed custom tasks — shown faded so they can re-add */}
-              {unmatchedCustom.map(t => {
-                const estimate = getTimeEstimate(t, taskState);
-                return (
-                  <ToggleCard key={t.id} selected={false} onClick={() => togglePlanItem(t.id)}>
-                    <CategoryDot cat={t.cat} />
-                    <div style={{ flex: 1 }}>
-                      <span style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
-                        {t.label}
-                      </span>
+                      <EditableDueDate
+                        task={task}
+                        value={scheduledDates[s.taskId] ?? computeDueISO(task, taskState)}
+                        onChange={(v) => setScheduledDates(prev => ({ ...prev, [s.taskId]: v }))}
+                      />
                       <TimeChip estimate={estimate} />
                     </div>
                   </ToggleCard>
@@ -730,7 +776,7 @@ export function WeeklyCheckIn({ onClose }) {
               {/* Brain dump tasks removed from plan */}
               {brainDumpTasks.filter(t => !planItems.has(t.id)).map(t => (
                 <ToggleCard key={t.id} selected={false} onClick={() => togglePlanItem(t.id)}>
-                  <CategoryDot cat={t.cat} />
+                  <CategoryTile cat={t.cat} size={22} />
                   <div style={{ flex: 1 }}>
                     <span style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
                       {t.label}
@@ -744,36 +790,15 @@ export function WeeklyCheckIn({ onClose }) {
           {/* Mitzy suggestions — single merged section */}
           {mergedSuggestions.filter(s => !planItems.has(s.taskId)).length > 0 && (
             <div style={{ marginBottom: 24 }}>
-              <div
-                onClick={() => setSuggestionsExpanded(prev => !prev)}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  cursor: 'pointer', marginBottom: suggestionsExpanded ? 4 : 0,
-                }}
-              >
-                <div style={{
-                  fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
-                  color: C.muted, fontFamily: 'DM Sans, sans-serif',
-                }}>
-                  Mitzy suggestions
-                </div>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{
-                  transform: suggestionsExpanded ? 'rotate(180deg)' : 'none',
-                  transition: 'transform 0.2s',
-                }}>
-                  <polyline points="4,6 8,10 12,6" stroke={C.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+              <SectionHeader>Mitzy suggestions</SectionHeader>
+              <div style={{
+                fontSize: 13, color: C.muted, fontFamily: 'DM Sans, sans-serif', marginBottom: 12, lineHeight: 1.5,
+              }}>
+                {planItems.size >= 3
+                  ? "You've got plenty going on — no pressure, but these are coming up if you have bandwidth"
+                  : 'These are coming up soon — tap to add any to your plan'}
               </div>
-              {suggestionsExpanded && (
-                <>
-                  <div style={{
-                    fontSize: 13, color: C.muted, fontFamily: 'DM Sans, sans-serif', marginBottom: 12, lineHeight: 1.5,
-                  }}>
-                    {planItems.size >= 3
-                      ? "You've got plenty going on — no pressure, but these are coming up if you have bandwidth"
-                      : 'These are coming up soon — tap to add any to your plan'}
-                  </div>
-                  {mergedSuggestions.filter(s => !planItems.has(s.taskId)).map(s => {
+              {mergedSuggestions.filter(s => !planItems.has(s.taskId)).map(s => {
                     const task = taskMap.get(s.taskId);
                     if (!task) return null;
                     const estimate = getTimeEstimate(task, taskState);
@@ -790,7 +815,7 @@ export function WeeklyCheckIn({ onClose }) {
                           transition: 'all 0.15s',
                         }}
                       >
-                        <CategoryDot cat={task.cat} />
+                        <CategoryTile cat={task.cat} size={22} />
                         <div style={{ flex: 1 }}>
                           <span style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
                             {task.label}
@@ -800,6 +825,7 @@ export function WeeklyCheckIn({ onClose }) {
                               {s.reason}
                             </div>
                           )}
+                          <DueLabel task={task} taskState={taskState} getDays={getDays} />
                           <TimeChip estimate={estimate} />
                         </div>
                         <div style={{
@@ -813,8 +839,6 @@ export function WeeklyCheckIn({ onClose }) {
                       </div>
                     );
                   })}
-                </>
-              )}
             </div>
           )}
 
