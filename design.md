@@ -20,7 +20,10 @@ C.muted       = '#4A6256'  // secondary text
 C.bg          = '#FDFAF2'  // warm off-white background
 C.card        = '#FFFFFF'  // task card background
 C.cardBorder  = '#EAE4DA'  // task card border
+C.surface     = '#F0EDE4'  // raised surface / divider background
 ```
+
+Snooze uses `#6B8DD6` (periwinkle blue) directly in components — not a named constant.
 
 ---
 

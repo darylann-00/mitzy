@@ -8,18 +8,35 @@ Read this when touching state, data, or non-trivial component wiring.
 
 ```
 /src
-  /components       — TaskCard, AssistPanel, SchedulePanel, MarkDoneModal, AddTaskPanel,
-                      TrickleCard, HazardCard, Celebration, Sheet, CategoryIcons
-  /contexts         — ProfileContext, TaskContext
+  /components       — TaskCard, SwipeableTaskCard, AssistPanel, ScheduleSurface,
+                      MarkDoneModal, TaskCreator, TaskConfirmCard, BrainDumpReview,
+                      TrickleCard, HazardCard, LifeEventIntake, LifeEventNudge,
+                      GuidedSteps, MatchConfirmationChip, SnoozePicker, SnoozeIcon,
+                      SnoozeTooltip, MonthCalendar, DateField, FrequencyPicker,
+                      Celebration, Sheet, CategoryIcons, BottomNav, WelcomeGate,
+                      LoginGate, BrandSplash, ProfileConflictModal
+  /contexts         — ProfileContext, TaskContext, CalendarContext
   /views            — HomeView, AllView, ProfileView, TaskDetailView
-  /data             — constants.js, tasks.js, taskFactory.js
-  /hooks            — useProfile, useTasks, useSession, useProviders
-  /utils            — storage.js, taskLogic.js, assistPrompt.js, hazards.js, climateRegion.js
+  /data             — constants.js, tasks.js, taskFactory.js, insuranceProviders.js,
+                      providerTypes.js, zipCodes.js
+    /lifeEvents     — index.js (registry), newBaby.js
+  /hooks            — useAuth, useProfile, useTasks, useSession, useProviders,
+                      useLifeEvents, useCapacityNudge
+  /lib              — supabase.js, googleCalendar.js
+  /utils            — storage.js, taskLogic.js, assistPrompt.js, hazards.js,
+                      climateRegion.js, renderMarkdown.jsx, resolveStepVars.js
   /onboarding       — SlimOnboarding, PrioritySetup
   /styles/app.css   — Full design system
 /api
-  assist.js         — Vercel Edge Function → Anthropic API proxy
-  providers.js      — Vercel Edge Function → Google Places + Claude synthesis
+  assist.js         — Vercel Function → Anthropic API proxy
+  providers.js      — Vercel Function → Google Places + Claude synthesis
+  generate-task.js  — Vercel Function → Claude Haiku task generation
+  calendar-events.js — Vercel Function → Google Calendar API
+  calendar-match.js — Vercel Function → Claude Haiku event-task matching
+  schedule.js       — Vercel Function → Google Calendar event creation
+  _auth.js          — Shared auth helper
+  _helpers.js       — Shared utilities
+  _ratelimit.js     — Upstash rate limiting
 ```
 
 ---
@@ -28,6 +45,7 @@ Read this when touching state, data, or non-trivial component wiring.
 
 - `ProfileContext` (`src/contexts/ProfileContext.jsx`) wraps `useProfile` + `useProviders` + `region`.
 - `TaskContext` (`src/contexts/TaskContext.jsx`) wraps `useTasks` + all derived lists (`activeTasks`, `visibleTasks`, `scoredDue`, `focusTasks`, `doneThisWeek`) + helpers (`getStatus`, `getDays`, `getNext`).
+- `CalendarContext` (`src/contexts/CalendarContext.jsx`) manages Google Calendar OAuth tokens, event fetching, and task-event matching state.
 - `TaskProvider` is nested inside `ProfileProvider`.
 - `App.js` = `Mitzy` (providers + auth) → `MitzyApp` (all UI/onboarding logic) → views.
 - Views and `AssistPanel` consume context directly; `MitzyApp` only passes UI callbacks (not domain data) to views.
