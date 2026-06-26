@@ -50,6 +50,7 @@ Read this when touching state, data, or non-trivial component wiring.
 - `isWindowActive(task, region)` in `taskLogic.js` — `region` from `getClimateRegion(zip)`. `REGION_TASK_ADJUSTMENTS` maps `region → task.id → { seasonStart, activeMonths }`. `DEFAULT_REGION = null` — unrecognized zips get no seasonal adjustment.
 - `task.priority: true` on task definition objects. `isPriority(task)` checks `task.priority` directly.
 - `effectiveInterval = entry?.intervalDays ?? task.intervalDays` drives all display and scheduling.
+- `taskStatus()` in `taskLogic.js` computes the `coming-up` threshold as `task.reminderLeadDays ?? task.windowDays` (one-time tasks: `?? 7`). `reminderLeadDays` is the per-task field for tasks that need extra lead time to actually book (vet, pediatrician, dentist, specialist trades) — set higher than `windowDays` on those; otherwise falls back to `windowDays` so behavior is unchanged for quick/walk-in services.
 - Profile stores `birthYear` (4-digit year) for user, kids, and pets. `getAge(birthYear) = currentYear - birthYear` in `taskFactory.js` and `assistPrompt.js`. `PROFILE_KEY = "mitzy-pro-v7"`.
 - Trickle rotation queue key: `TRICKLE_QUEUE_KEY = "mitzy-tq-v6"`. 5-day cadence.
 - `activeCategory` and `dueOnly` filter state lives in App.js (survives tab switches).
