@@ -1546,7 +1546,7 @@ export const ALL_TASKS = [
     priority: true,
     assistType: "guidance_companies",
     diyable: false,
-    timeToComplete: "1–2 hours",
+    timeToComplete: "1–4 hours",
     minAge: null,
     maxAge: null,
     oneTime: true,
@@ -1554,6 +1554,125 @@ export const ALL_TASKS = [
     why: "A will and estate documents ensure your wishes are followed if you're incapacitated or die. Without them, decisions about your assets and care default to state law.",
     guidance: "1. At minimum you need three documents: a will, a durable power of attorney, and a healthcare directive (living will). 2. An estate attorney can prepare all three in one appointment — expect 1–3 hours total including a follow-up signing. 3. If cost is a concern, legal aid organizations and online services like Trust & Will or LegalZoom offer lower-cost options. 4. Name an executor for your will and a healthcare proxy for your directive — make sure they know and agree to serve.",
     lastGuidanceUpdate: "2025-01",
+    steps: [
+      { key: "learn_docs", label: "Know what you need", body: "At minimum, you need three documents:", type: "action", bullets: [
+        { bold: "Will", text: "Says who gets your assets{{#hasKidsLabel}} and who becomes guardian of {{kidNames}}{{/hasKidsLabel}}." },
+        { bold: "Durable power of attorney", text: "Lets someone you trust handle money and legal decisions if you're incapacitated." },
+        { bold: "Healthcare directive", text: "Tells doctors what medical treatment you want if you can't speak for yourself, and names a person to make those calls." },
+      ], learnMore: [
+        { type: "text", value: "These three cover the most critical scenarios. Depending on your situation, you may also want:" },
+        { type: "bullets", items: [
+          { bold: "Revocable living trust", text: "Avoids probate (the public court process of validating your will) and keeps the details of your estate private. Assets in a trust transfer immediately — no court delays. Especially valuable if you own property in more than one state." },
+          { bold: "Transfer-on-death deed", text: "Passes real estate to a named beneficiary without probate. Simpler than a trust if your home is your main asset. Not available in every state." },
+          { bold: "Letter of intent", text: "Not legally binding, but tells your executor and family your wishes on things a will doesn't cover — funeral preferences, personal items, messages to loved ones." },
+        ]},
+        { type: "text", value: "A trust and TOD deed aren't essential for most people, but they're worth asking about if you go the attorney route." },
+      ]},
+      { key: "choose_people", label: "Pick your people", body: "You'll need to name people for each role. Reach out to each person before you start drafting — they need to know and agree to serve. You can add their names below if you'd like, to help you remember.", type: "action", inputs: [
+        { key: "executor", label: "Executor", placeholder: "Manages your estate", optional: true },
+        { key: "guardian", label: "Guardian{{#hasKidsLabel}} for {{kidNames}}{{/hasKidsLabel}}", placeholder: "{{#hasKidsLabel}}Who you want to raise {{kidNames}}{{/hasKidsLabel}}{{^hasKidsLabel}}If applicable{{/hasKidsLabel}}", optional: true },
+        { key: "poa_agent", label: "Power of attorney agent", placeholder: "Handles finances if you can't", optional: true },
+        { key: "healthcare_proxy", label: "Healthcare proxy", placeholder: "Makes medical decisions", optional: true },
+      ], learnMore: [
+        { type: "heading", value: "What each role does" },
+        { type: "bullets", items: [
+          { bold: "Executor", text: "Handles paying your debts, filing your final tax return, and distributing assets according to your will. Pick someone organized and trustworthy. This can be a family member, close friend, or a professional (attorneys and banks offer this service for a fee, usually 1–3% of the estate)." },
+          { bold: "Guardian", text: "Only needed if you have minor children. Courts strongly honor your written preference but can override it if they find the person unfit. Always name a backup. If you have a co-parent, the surviving parent typically gets custody automatically — the guardian is for if neither parent is available." },
+          { bold: "POA agent", text: "Steps in to manage finances, pay bills, and make legal decisions if you're alive but incapacitated. \"Durable\" means it stays in effect even if you can't make decisions. Without this, your family may need a court-appointed conservatorship — expensive and slow." },
+          { bold: "Healthcare proxy", text: "Makes medical decisions when you can't communicate. This person should know your values around end-of-life care, life support, and organ donation. Can be the same person as your POA agent, but doesn't have to be." },
+        ]},
+        { type: "text", value: "For all roles, name a backup (alternate) in case your first choice can't serve when the time comes." },
+      ]},
+      { key: "choose_path", label: "DIY or hire a professional?", body: "An online service is fine if your situation is straightforward — no business ownership, no blended family, no complex assets. If any of those apply, an attorney is worth the cost to get it right.", type: "decision", learnMore: [
+        { type: "heading", value: "When DIY works" },
+        { type: "text", value: "If you have a single household, no business interests, assets under $1M, and a straightforward family structure, an online service will produce perfectly valid legal documents. Millions of people use them successfully." },
+        { type: "heading", value: "When you need an attorney" },
+        { type: "bullets", items: [
+          { bold: "Business ownership", text: "Succession planning, buy-sell agreements, and business valuation need professional guidance." },
+          { bold: "Blended family", text: "Children from multiple relationships, stepchildren, and complex custody situations need careful structuring to avoid disputes." },
+          { bold: "Property in multiple states", text: "Each state has its own probate process. An attorney can set up a trust to avoid probate in every state." },
+          { bold: "Significant assets", text: "Estates over the federal exemption ($13.6M in 2024) face estate tax. An attorney can structure your plan to minimize tax exposure." },
+          { bold: "Special needs dependent", text: "A special needs trust preserves government benefits eligibility. Getting this wrong can disqualify your dependent from Medicaid or SSI." },
+        ]},
+      ], options: [
+        { value: "diy", label: "Do it myself online", description: "Good for straightforward situations. Costs $100–$300." },
+        { value: "professional", label: "Hire an estate attorney", description: "Better for complex situations. Costs $500–$2,000." },
+      ]},
+      { key: "diy_pick_service", label: "Pick an online service", body: "Trust & Will, FreeWill, and LegalZoom are the most widely used. Trust & Will and FreeWill walk you through it step by step. LegalZoom gives you more customization but takes longer. All three produce legally valid documents.", type: "action", path: "diy", learnMore: [
+        { type: "heading", value: "Comparing services" },
+        { type: "bullets", items: [
+          { bold: "FreeWill", text: "Free for basic wills (funded by nonprofit partnerships). Clean, guided interface. Good for simple situations. Covers will, POA, and healthcare directive." },
+          { bold: "Trust & Will", text: "Around $150 for the will bundle. Very well-designed questionnaire that explains each question in plain language. Includes all three core documents plus optional trust." },
+          { bold: "LegalZoom", text: "$150–$300 depending on plan. More customization options but takes longer. Offers optional attorney review for an additional fee." },
+          { bold: "Nolo's WillMaker", text: "$100 one-time purchase, desktop software. Good if you prefer working offline. Includes all documents and a thorough help section." },
+        ]},
+        { type: "text", value: "All of these produce legally valid documents. The main difference is the user experience and how much hand-holding you get." },
+      ]},
+      { key: "diy_complete", label: "Complete the questionnaire", body: "Set aside about an hour. You'll answer questions about your assets, beneficiaries,{{#hasKidsLabel}} guardianship for {{kidNames}},{{/hasKidsLabel}} and the people you picked in step 2. Have their full legal names and contact info handy.", type: "action", path: "diy", learnMore: [
+        { type: "heading", value: "What you'll be asked" },
+        { type: "bullets", items: [
+          { bold: "Assets", text: "Home, bank accounts, retirement accounts (401k, IRA),{{#hasCarsLabel}} vehicles (like your {{carList}}),{{/hasCarsLabel}}{{^hasCarsLabel}} vehicles,{{/hasCarsLabel}} life insurance policies, valuable personal property (jewelry, art, collections)." },
+          { bold: "Beneficiaries", text: "Who gets each asset. You can name specific items to specific people or split everything by percentage." },
+          { bold: "Guardianship", text: "{{#hasKidsLabel}}A primary guardian and a backup for {{kidNames}}. The service will ask for their full legal names and relationship to you.{{/hasKidsLabel}}{{^hasKidsLabel}}If you have minor children: a primary guardian and a backup. The service will ask for their full legal names and relationship to you.{{/hasKidsLabel}}" },
+          { bold: "Special instructions", text: "Funeral wishes,{{#hasPetsLabel}} care plans for {{petNames}},{{/hasPetsLabel}}{{^hasPetsLabel}} pet care,{{/hasPetsLabel}} charitable gifts, conditions on inheritance (e.g., held in trust until a child reaches age 25)." },
+        ]},
+        { type: "text", value: "Don't stress about being perfectly comprehensive. You can update these documents anytime — and you should, after any major life change." },
+      ]},
+      { key: "diy_notarize", label: "Print, sign, and notarize", body: "Download your completed documents and print two copies of each. Most states require notarization and two witnesses who aren't named in the documents. UPS Stores, banks, and libraries usually have a notary — call ahead to confirm availability. Typical notary cost is $5–$15 per document.", type: "action", path: "diy", learnMore: [
+        { type: "heading", value: "Signing requirements" },
+        { type: "text", value: "Requirements vary by state, but in general:" },
+        { type: "bullets", items: [
+          { bold: "Witnesses", text: "Most states require two witnesses who are not beneficiaries named in your will. They watch you sign and then sign themselves. Ask friends, neighbors, or coworkers." },
+          { bold: "Notarization", text: "Not required for the will itself in most states, but strongly recommended. Required for the power of attorney and healthcare directive in many states. UPS Store, bank branches, and public libraries usually have notaries." },
+          { bold: "Self-proving affidavit", text: "A separate page where your witnesses swear before a notary that they watched you sign. This speeds up probate later because the court doesn't need to track down your witnesses. Your online service will include this if your state uses it." },
+        ]},
+        { type: "text", value: "Your online service will include state-specific signing instructions with your documents. Follow those exactly." },
+      ]},
+      { key: "pro_find_attorney", label: "Find an estate planning attorney", body: "Look for an attorney who specializes in estate planning — not a general practitioner. Your state bar association has a referral service, or ask friends and family for recommendations.", type: "provider_search", providerSearchQuery: "estate planning attorney wills trusts", path: "professional", learnMore: [
+        { type: "heading", value: "What to look for" },
+        { type: "bullets", items: [
+          { bold: "Specialization", text: "Estate planning should be their primary practice area, not a side service. Ask what percentage of their practice is estate planning." },
+          { bold: "Fee structure", text: "Most charge a flat fee for a basic estate plan ($500–$2,000 depending on complexity and location). Ask for the total cost upfront, including the signing appointment." },
+          { bold: "Consultations", text: "Many offer a free or low-cost initial consultation ($0–$150). Use this to evaluate fit before committing." },
+        ]},
+        { type: "heading", value: "Where to find one" },
+        { type: "bullets", items: [
+          { bold: "State bar referral", text: "Your state bar association has a lawyer referral service that screens for specialization and good standing." },
+          { bold: "Personal referrals", text: "Ask friends, family, or your financial advisor. Word of mouth is often the best way to find a good fit." },
+          { bold: "NELF directory", text: "The National Elder Law Foundation certifies attorneys in elder law, which overlaps significantly with estate planning." },
+        ]},
+      ]},
+      { key: "pro_consultation", label: "Book a consultation", body: "Call {{provider.name}} to schedule an initial consultation. Many offer a free or low-cost first meeting. Bring your list of assets (home, accounts, insurance policies), the names of the people you chose in step 2, and any questions about trusts or tax implications.", type: "call", phone: "{{provider.phone}}", callScript: "Hi, I'd like to schedule a consultation for estate planning — I need a will, power of attorney, and healthcare directive.", dependsOnProvider: true, path: "professional", learnMore: [
+        { type: "heading", value: "What happens at the consultation" },
+        { type: "text", value: "The attorney will review your family situation, assets, and goals, then recommend which documents you need and give you a fee estimate. This is typically 30–60 minutes." },
+        { type: "heading", value: "What to bring" },
+        { type: "bullets", items: [
+          { bold: "Asset summary", text: "Rough values for your home, bank accounts, retirement accounts, life insurance, and other significant assets." },
+          { bold: "Your people list", text: "The names you chose in step 2 — executor, guardian, POA agent, healthcare proxy." },
+          { bold: "Questions", text: "Do I need a trust? How do beneficiary designations on my retirement accounts interact with my will? Are there tax implications for my estate size?" },
+        ]},
+        { type: "text", value: "After this meeting, the attorney handles everything — drafting the documents, arranging witnesses, and scheduling the signing. You don't need to schedule anything else separately." },
+      ]},
+      { key: "pro_signing", label: "Attend the signing appointment", body: "Your attorney will draft the documents and call you when they're ready — usually 1–2 weeks. They'll schedule the signing and arrange for witnesses and a notary at their office. Just bring a valid photo ID.", type: "action", path: "professional", learnMore: [
+        { type: "heading", value: "What to expect" },
+        { type: "text", value: "You don't need to schedule this separately — your attorney coordinates everything after the consultation. The signing appointment is typically 30–45 minutes." },
+        { type: "bullets", items: [
+          { bold: "Review", text: "The attorney will walk you through each document and explain what you're signing. Ask questions about anything you don't understand." },
+          { bold: "Signing", text: "You'll sign each document in front of witnesses and a notary that the attorney arranges. Bring a valid government-issued photo ID." },
+          { bold: "Originals", text: "You'll receive the original signed documents. The attorney keeps copies on file and can provide additional copies anytime." },
+        ]},
+      ]},
+      { key: "store_docs", label: "Store originals and tell your people", body: "Keep the originals in a fireproof safe or a safe deposit box. Give copies to your executor, healthcare proxy, and power of attorney agent. Tell them where the originals are stored.{{#hasPetsLabel}} Make sure your will or letter of intent includes care plans for {{petNames}}.{{/hasPetsLabel}} If you used an attorney, they may keep a copy on file.", type: "action", learnMore: [
+        { type: "heading", value: "Storage tips" },
+        { type: "bullets", items: [
+          { bold: "Fireproof safe at home", text: "Often the best option. Make sure your executor knows the code or where to find the key. A fireproof/waterproof safe rated for documents costs $50–$150." },
+          { bold: "Safe deposit box", text: "Very secure, but make sure your executor is listed as an authorized signer on the box — otherwise they may need a court order to access it after your death." },
+          { bold: "Attorney's office", text: "If you used an attorney, they typically keep copies on file. Some offer original storage as well." },
+        ]},
+        { type: "heading", value: "Who to tell" },
+        { type: "text", value: "Give copies to your executor, healthcare proxy, and POA agent. They don't need to read the documents now, but they need to know the documents exist and where to find the originals. Your healthcare proxy should also know your general wishes on end-of-life care — don't rely on the document alone for that conversation." },
+      ]},
+    ],
   },
   {
     id: "fin-will-review",
