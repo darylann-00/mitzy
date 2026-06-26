@@ -310,6 +310,8 @@ function DecisionCard({ step, index, isDone, isActive, isFuture, chosenPath, onC
             </div>
           )}
 
+          {(isActive || isDone) && step.learnMore && <LearnMore text={step.learnMore} />}
+
           {isActive && (
             <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
               {step.options.map(opt => (
@@ -338,8 +340,64 @@ function DecisionCard({ step, index, isDone, isActive, isFuture, chosenPath, onC
   );
 }
 
+// ─── Learn more toggle ──────────────────────────────────────────────────────
+function LearnMore({ text }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ marginTop: 8 }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          background: 'none', border: 'none', padding: 0, fontSize: 12,
+          color: C.brand, fontWeight: 600, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+          display: 'flex', alignItems: 'center', gap: 4,
+        }}
+      >
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>
+          <path d="M3 1.5L7 5L3 8.5" stroke={C.brand} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        {open ? 'Less' : 'Learn more'}
+      </button>
+      {open && (
+        <div style={{
+          marginTop: 6, padding: '9px 11px', background: '#F8F6F0', borderRadius: 8,
+          fontSize: 12, color: C.muted, lineHeight: 1.6, fontFamily: 'DM Sans, sans-serif',
+        }}>
+          {text}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Step inputs (name fields etc.) ─────────────────────────────────────────
+function StepInputs({ inputs, values, onChange }) {
+  return (
+    <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {inputs.map(inp => (
+        <div key={inp.key}>
+          <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, fontFamily: 'DM Sans, sans-serif', display: 'block', marginBottom: 3 }}>
+            {inp.label}{inp.optional && <span style={{ fontWeight: 400 }}> (optional)</span>}
+          </label>
+          <input
+            placeholder={inp.placeholder || ''}
+            value={values?.[inp.key] || ''}
+            onChange={e => onChange(inp.key, e.target.value)}
+            style={{
+              width: '100%', padding: '8px 10px', borderRadius: 8,
+              border: `1px solid ${C.cardBorder}`, fontSize: 13,
+              fontFamily: 'DM Sans, sans-serif', boxSizing: 'border-box',
+              color: C.ink,
+            }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Step card ────────────────────────────────────────────────────────────────
-function StepCard({ step, index, isDone, isActive, isFuture, context, onComplete, onUndo, onSelectProvider, onSaveProvider, cachedResults, onChangeProvider }) {
+function StepCard({ step, index, isDone, isActive, isFuture, context, onComplete, onUndo, onSelectProvider, onSaveProvider, cachedResults, onChangeProvider, inputValues, onInputChange }) {
   const resolvedBody = resolveStepVars(step.body, context);
   const resolvedPhone = resolveStepVars(step.phone, context);
   const resolvedScript = resolveStepVars(step.callScript, context);
@@ -413,6 +471,36 @@ function StepCard({ step, index, isDone, isActive, isFuture, context, onComplete
             {resolvedBody}
           </div>
 
+          {/* Bullet list */}
+          {step.bullets && (
+            <ul style={{
+              margin: '6px 0 0 0', paddingLeft: 18, fontSize: 13, color: isDone ? '#8A9A90' : C.muted,
+              lineHeight: 1.65, fontFamily: 'DM Sans, sans-serif', listStyleType: 'disc',
+            }}>
+              {step.bullets.map((b, bi) => (
+                <li key={bi} style={{ marginBottom: 2 }}>
+                  {b.bold && <strong style={{ color: isDone ? '#8A9A90' : C.ink }}>{b.bold}</strong>}
+                  {b.bold && ' — '}{b.text}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* Input fields */}
+          {isActive && step.inputs && (
+            <StepInputs inputs={step.inputs} values={inputValues} onChange={onInputChange} />
+          )}
+          {isDone && step.inputs && inputValues && Object.values(inputValues).some(v => v) && (
+            <div style={{ marginTop: 6, fontSize: 12, color: C.muted, fontFamily: 'DM Sans, sans-serif' }}>
+              {step.inputs.filter(inp => inputValues[inp.key]).map(inp => (
+                <div key={inp.key}><span style={{ fontWeight: 600, color: C.ink }}>{inp.label}:</span> {inputValues[inp.key]}</div>
+              ))}
+            </div>
+          )}
+
+          {/* Learn more */}
+          {(isActive || isDone) && step.learnMore && <LearnMore text={step.learnMore} />}
+
           {/* Type-specific content (only for active step) */}
           {isActive && step.type === 'provider_search' && (
             <>
@@ -438,6 +526,19 @@ function StepCard({ step, index, isDone, isActive, isFuture, context, onComplete
                 </svg>
                 Call {resolvedPhone}
               </a>
+              {context.provider?.website && (
+                <a href={context.provider.website} target="_blank" rel="noopener noreferrer" style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5, marginLeft: 8,
+                  padding: '9px 14px', background: C.brandLight, color: C.brand,
+                  border: `1.5px solid ${C.brand}`, borderRadius: 8,
+                  fontSize: 12, fontWeight: 700, textDecoration: 'none', fontFamily: 'DM Sans, sans-serif',
+                }}>
+                  Book online
+                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                    <path d="M3 11L11 3M11 3H5M11 3v6" stroke={C.brand} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </a>
+              )}
               {context.provider?.hours && (
                 <div style={{ fontSize: 11, color: C.muted, marginTop: 6, fontFamily: 'DM Sans, sans-serif' }}>
                   Office hours: {context.provider.hours}
@@ -647,17 +748,22 @@ export const GuidedSteps = memo(function GuidedSteps({ steps, taskId, taskCat, s
   const allDone = completedCount === visibleSteps.length;
 
   const handleComplete = (step) => {
-    onSetStepProgress(step.key, { done: true, completedAt: new Date().toISOString() });
+    const inputs = step.inputs ? stepProgress?.[step.key]?.inputs : undefined;
+    onSetStepProgress(step.key, { done: true, completedAt: new Date().toISOString(), ...(inputs ? { inputs } : {}) });
   };
 
   const handleUndo = (step) => {
     if (step.type === 'decision') {
       onSetStepProgress(step.key, { done: false, choice: null });
-      const pathStepKeys = steps.filter(s => s.path).map(s => s.key);
-      pathStepKeys.forEach(key => onSetStepProgress(key, { done: false }));
     } else {
       onSetStepProgress(step.key, { done: false });
     }
+  };
+
+  const handleInputChange = (stepKey, inputKey, value) => {
+    const prev = stepProgress?.[stepKey] ?? {};
+    const prevInputs = prev.inputs ?? {};
+    onSetStepProgress(stepKey, { ...prev, inputs: { ...prevInputs, [inputKey]: value } });
   };
 
   const handleDecision = (step, value) => {
@@ -745,6 +851,8 @@ export const GuidedSteps = memo(function GuidedSteps({ steps, taskId, taskCat, s
             onSelectProvider={(provider, results) => handleSelectProvider(step, provider, results)}
             onSaveProvider={(provider) => saveProvider(taskId, provider)}
             cachedResults={providerStepEntry?.results}
+            inputValues={stepProgress?.[step.key]?.inputs}
+            onInputChange={(inputKey, value) => handleInputChange(step.key, inputKey, value)}
             onChangeProvider={(newProvider) => {
               const providerStep = visibleSteps.find(s => s.type === 'provider_search');
               if (providerStep) {
