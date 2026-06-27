@@ -10,7 +10,8 @@ const sanitizeZip = (zip) =>
 export function buildAssistPrompt(task, profile) {
   const zip  = sanitizeZip(profile.zip);
   const loc  = zip                   ? `near zip code ${zip}` : "in my area";
-  const ins  = profile.insurance     ? `Insurance: ${sanitize(profile.insurance)}. ` : "";
+  const insuranceProvider = task.insurance || profile.insurance;
+  const ins  = insuranceProvider      ? `Insurance: ${sanitize(insuranceProvider)}. ` : "";
   const carStr = task.vehicle
     ? task.vehicle
     : profile.cars?.length ? profile.cars.join(", ") : profile.car;
@@ -28,7 +29,7 @@ export function buildAssistPrompt(task, profile) {
 
   switch (task.assistType) {
     case "script":
-      return `${base}\n\nWrite a short ready-to-send message to schedule this. ${ins ? `Mention ${profile.insurance}.` : ""}Include subject line if email. Then 2-3 bullet points on what to ask. Under 150 words.`;
+      return `${base}\n\nWrite a short ready-to-send message to schedule this. ${ins ? `Mention ${insuranceProvider}.` : ""}Include subject line if email. Then 2-3 bullet points on what to ask. Under 150 words.`;
 
     case "deadline":
       return `${base}\n\nFind specific deadlines, key dates, official links, and phone numbers ${loc}. Include direct links to official sources.`;

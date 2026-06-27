@@ -219,14 +219,14 @@ export function carTasks(carString) {
 // ─── Per-kid Task Generator ───────────────────────────────────────────────────
 
 export function kidTasks(kid) {
-  const { name, birthYear } = kid;
+  const { name, birthYear, insurance } = kid;
   const age = getAge(birthYear);
   const slug = name.toLowerCase().replace(/\s+/g, "-");
   const tasks = [];
 
-  tasks.push({ ...T(`k-health-${slug}`, "health", `${name}: annual health visit`, 365, 30, "high",   null,         [], "script",   "Annual well-child visit."), reminderLeadDays: 45, priority: true });
-  tasks.push({ ...T(`k-dent-${slug}`,   "health", `${name}: dental cleaning`,     180, 21, "medium", null,         [], "script",   "Every 6 months."), reminderLeadDays: 30 });
-  tasks.push({ ...T(`k-eye-${slug}`,    "health", `${name}: eye exam`,            365, 30, "medium", null,         [], "script",   "Annually."), reminderLeadDays: 45 });
+  tasks.push({ ...T(`k-health-${slug}`, "health", `${name}: annual health visit`, 365, 30, "high",   null,         [], "script",   "Annual well-child visit."), reminderLeadDays: 45, priority: true, insurance: insurance || null });
+  tasks.push({ ...T(`k-dent-${slug}`,   "health", `${name}: dental cleaning`,     180, 21, "medium", null,         [], "script",   "Every 6 months."), reminderLeadDays: 30, insurance: insurance || null });
+  tasks.push({ ...T(`k-eye-${slug}`,    "health", `${name}: eye exam`,            365, 30, "medium", null,         [], "script",   "Annually."), reminderLeadDays: 45, insurance: insurance || null });
 
   if (age < 18) {
     tasks.push(T(`k-emerg-${slug}`,  "school", `${name}: update emergency contacts`, 365, 14, "high",   [7,8,9],   [], "script",    "Update at school start."));
