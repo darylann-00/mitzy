@@ -31,7 +31,7 @@ const CAR_DATA = {
   Lexus:           ['ES', 'GX', 'IS', 'LS', 'NX', 'RX', 'UX'],
   Mazda:           ['CX-30', 'CX-5', 'CX-9', 'Mazda3', 'Mazda6', 'MX-5 Miata'],
   'Mercedes-Benz': ['A-Class', 'C-Class', 'E-Class', 'GLA', 'GLC', 'GLE', 'S-Class'],
-  Nissan:          ['Altima', 'Frontier', 'Kicks', 'Maxima', 'Murano', 'Pathfinder', 'Rogue', 'Sentra', 'Titan', 'Versa'],
+  Nissan:          ['Altima', 'Frontier', 'Kicks', 'Leaf', 'Maxima', 'Murano', 'Pathfinder', 'Rogue', 'Sentra', 'Titan', 'Versa'],
   Ram:             ['1500', '2500', 'ProMaster'],
   Subaru:          ['Ascent', 'BRZ', 'Crosstrek', 'Forester', 'Impreza', 'Legacy', 'Outback'],
   Tesla:           ['Cybertruck', 'Model 3', 'Model S', 'Model X', 'Model Y'],
