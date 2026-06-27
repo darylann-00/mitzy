@@ -11,7 +11,7 @@ function parseCarParts(carString) {
 }
 
 const EV_MAKES = new Set(["Tesla"]);
-const EV_MODELS = new Set(["Ioniq 5", "EV6", "ID.4"]);
+const EV_MODELS = new Set(["Ioniq 5", "EV6", "ID.4", "Leaf"]);
 
 const THIS_YEAR = new Date().getFullYear();
 const getAge = (birthYear) => birthYear ? THIS_YEAR - parseInt(birthYear, 10) : NaN;
