@@ -668,125 +668,160 @@ export function WeeklyCheckIn({ onClose }) {
             <div style={{ marginBottom: 24 }}>
               <SectionHeader>This week's plan</SectionHeader>
 
-              {/* Custom tasks already on the user's plate — stay in place, just toggle checked state */}
-              {customDueTasks.map(t => {
-                const estimate = getTimeEstimate(t, taskState);
-                const selected = planItems.has(t.id);
-                const dateValue = scheduledDates[t.id] ?? computeDueISO(t, taskState);
-                return (
-                  <ToggleCard key={t.id} selected={selected} onClick={() => togglePlanItem(t.id)}>
-                    <CategoryTile cat={t.cat} size={22} />
-                    <div style={{ flex: 1 }}>
-                      <span style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
-                        {t.label}
-                      </span>
-                      {selected ? (
-                        <EditableDueDate
-                          task={t}
-                          value={dateValue}
-                          onChange={(v) => setScheduledDates(prev => ({ ...prev, [t.id]: v }))}
-                        />
-                      ) : (
-                        <DueLabel task={t} scheduledDate={scheduledDates[t.id]} taskState={taskState} getDays={getDays} />
-                      )}
-                      <TimeChip estimate={estimate} />
-                    </div>
-                  </ToggleCard>
-                );
-              })}
+              {/* Unified plan list, sorted chronologically by due date (undated tasks last) */}
+              {(() => {
+                const rows = [];
 
-              {/* Matched tasks from brain dump */}
-              {activeMatches.map(m => {
-                const task = taskMap.get(m.taskId);
-                if (!task) return null;
-                const inPlan = planItems.has(m.taskId);
-                const estimate = getTimeEstimate(task, taskState);
-                return (
-                  <div key={m.taskId} style={{ marginBottom: 6 }}>
-                    <ToggleCard selected={inPlan} onClick={() => togglePlanItem(m.taskId)}>
-                      <CategoryTile cat={task.cat} size={22} />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
-                          {task.label}
+                for (const t of customDueTasks) {
+                  rows.push({ type: 'custom', key: t.id, date: scheduledDates[t.id] ?? computeDueISO(t, taskState), task: t });
+                }
+
+                for (const m of activeMatches) {
+                  const task = taskMap.get(m.taskId);
+                  if (!task) continue;
+                  rows.push({ type: 'match', key: m.taskId, date: scheduledDates[m.taskId] ?? computeDueISO(task, taskState), match: m, task });
+                }
+
+                for (const t of brainDumpTasks.filter(t => planItems.has(t.id))) {
+                  rows.push({ type: 'brainDumpInPlan', key: t.id, date: scheduledDates[t.id] ?? computeDueISO(t, taskState), task: t });
+                }
+
+                for (const s of mergedSuggestions.filter(s => planItems.has(s.taskId))) {
+                  const task = taskMap.get(s.taskId);
+                  if (!task) continue;
+                  rows.push({ type: 'suggestion', key: s.taskId, date: scheduledDates[s.taskId] ?? computeDueISO(task, taskState), suggestion: s, task });
+                }
+
+                for (const t of brainDumpTasks.filter(t => !planItems.has(t.id))) {
+                  rows.push({ type: 'brainDumpRemoved', key: t.id, date: null, task: t });
+                }
+
+                rows.sort((a, b) => {
+                  if (!a.date && !b.date) return 0;
+                  if (!a.date) return 1;
+                  if (!b.date) return -1;
+                  return a.date.localeCompare(b.date);
+                });
+
+                return rows.map(row => {
+                  if (row.type === 'custom') {
+                    const t = row.task;
+                    const estimate = getTimeEstimate(t, taskState);
+                    const selected = planItems.has(t.id);
+                    return (
+                      <ToggleCard key={row.key} selected={selected} onClick={() => togglePlanItem(t.id)}>
+                        <CategoryTile cat={t.cat} size={22} />
+                        <div style={{ flex: 1 }}>
+                          <span style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
+                            {t.label}
+                          </span>
+                          {selected ? (
+                            <EditableDueDate
+                              task={t}
+                              value={row.date}
+                              onChange={(v) => setScheduledDates(prev => ({ ...prev, [t.id]: v }))}
+                            />
+                          ) : (
+                            <DueLabel task={t} scheduledDate={scheduledDates[t.id]} taskState={taskState} getDays={getDays} />
+                          )}
+                          <TimeChip estimate={estimate} />
                         </div>
-                        {inPlan ? (
+                      </ToggleCard>
+                    );
+                  }
+
+                  if (row.type === 'match') {
+                    const { match: m, task } = row;
+                    const inPlan = planItems.has(m.taskId);
+                    const estimate = getTimeEstimate(task, taskState);
+                    return (
+                      <div key={row.key} style={{ marginBottom: 6 }}>
+                        <ToggleCard selected={inPlan} onClick={() => togglePlanItem(m.taskId)}>
+                          <CategoryTile cat={task.cat} size={22} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
+                              {task.label}
+                            </div>
+                            {inPlan ? (
+                              <EditableDueDate
+                                task={task}
+                                value={row.date}
+                                onChange={(v) => setScheduledDates(prev => ({ ...prev, [m.taskId]: v }))}
+                              />
+                            ) : (
+                              <DueLabel task={task} scheduledDate={scheduledDates[m.taskId]} taskState={taskState} getDays={getDays} />
+                            )}
+                            {m.mentionText && (
+                              <div style={{ fontSize: 11, color: C.muted, fontFamily: 'DM Sans, sans-serif', fontStyle: 'italic', marginTop: 2 }}>
+                                from: &ldquo;{m.mentionText}&rdquo;
+                              </div>
+                            )}
+                            <TimeChip estimate={estimate} />
+                          </div>
+                        </ToggleCard>
+                        {m.mentionText && (
+                          <button
+                            onClick={() => dismissMatch(m.taskId, m.mentionText)}
+                            style={{
+                              background: 'none', border: 'none', cursor: 'pointer',
+                              fontSize: 11, color: C.muted, fontFamily: 'DM Sans, sans-serif',
+                              textDecoration: 'underline', padding: '0 14px 4px',
+                            }}
+                          >
+                            Not what I meant — add as a separate task
+                          </button>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  if (row.type === 'brainDumpInPlan') {
+                    const t = row.task;
+                    return (
+                      <BrainDumpTaskCard
+                        key={row.key}
+                        task={t}
+                        onUpdate={(updates) => updateBrainDumpTask(t.id, updates)}
+                        dueDate={row.date}
+                        onDueDateChange={(v) => setScheduledDates(prev => ({ ...prev, [t.id]: v }))}
+                      />
+                    );
+                  }
+
+                  if (row.type === 'suggestion') {
+                    const { suggestion: s, task } = row;
+                    const estimate = getTimeEstimate(task, taskState);
+                    return (
+                      <ToggleCard key={row.key} selected={true} onClick={() => togglePlanItem(s.taskId)}>
+                        <CategoryTile cat={task.cat} size={22} />
+                        <div style={{ flex: 1 }}>
+                          <span style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
+                            {task.label}
+                          </span>
                           <EditableDueDate
                             task={task}
-                            value={scheduledDates[m.taskId] ?? computeDueISO(task, taskState)}
-                            onChange={(v) => setScheduledDates(prev => ({ ...prev, [m.taskId]: v }))}
+                            value={row.date}
+                            onChange={(v) => setScheduledDates(prev => ({ ...prev, [s.taskId]: v }))}
                           />
-                        ) : (
-                          <DueLabel task={task} scheduledDate={scheduledDates[m.taskId]} taskState={taskState} getDays={getDays} />
-                        )}
-                        {m.mentionText && (
-                          <div style={{ fontSize: 11, color: C.muted, fontFamily: 'DM Sans, sans-serif', fontStyle: 'italic', marginTop: 2 }}>
-                            from: &ldquo;{m.mentionText}&rdquo;
-                          </div>
-                        )}
-                        <TimeChip estimate={estimate} />
+                          <TimeChip estimate={estimate} />
+                        </div>
+                      </ToggleCard>
+                    );
+                  }
+
+                  const t = row.task;
+                  return (
+                    <ToggleCard key={row.key} selected={false} onClick={() => togglePlanItem(t.id)}>
+                      <CategoryTile cat={t.cat} size={22} />
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
+                          {t.label}
+                        </span>
                       </div>
                     </ToggleCard>
-                    {m.mentionText && (
-                      <button
-                        onClick={() => dismissMatch(m.taskId, m.mentionText)}
-                        style={{
-                          background: 'none', border: 'none', cursor: 'pointer',
-                          fontSize: 11, color: C.muted, fontFamily: 'DM Sans, sans-serif',
-                          textDecoration: 'underline', padding: '0 14px 4px',
-                        }}
-                      >
-                        Not what I meant — add as a separate task
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-
-              {/* Auto-created brain dump tasks with inline editor */}
-              {brainDumpTasks.filter(t => planItems.has(t.id)).map(t => (
-                <BrainDumpTaskCard
-                  key={t.id}
-                  task={t}
-                  onUpdate={(updates) => updateBrainDumpTask(t.id, updates)}
-                  dueDate={scheduledDates[t.id] ?? computeDueISO(t, taskState)}
-                  onDueDateChange={(v) => setScheduledDates(prev => ({ ...prev, [t.id]: v }))}
-                />
-              ))}
-
-              {/* Suggestions that have been added to the plan */}
-              {mergedSuggestions.filter(s => planItems.has(s.taskId)).map(s => {
-                const task = taskMap.get(s.taskId);
-                if (!task) return null;
-                const estimate = getTimeEstimate(task, taskState);
-                return (
-                  <ToggleCard key={s.taskId} selected={true} onClick={() => togglePlanItem(s.taskId)}>
-                    <CategoryTile cat={task.cat} size={22} />
-                    <div style={{ flex: 1 }}>
-                      <span style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
-                        {task.label}
-                      </span>
-                      <EditableDueDate
-                        task={task}
-                        value={scheduledDates[s.taskId] ?? computeDueISO(task, taskState)}
-                        onChange={(v) => setScheduledDates(prev => ({ ...prev, [s.taskId]: v }))}
-                      />
-                      <TimeChip estimate={estimate} />
-                    </div>
-                  </ToggleCard>
-                );
-              })}
-
-              {/* Brain dump tasks removed from plan */}
-              {brainDumpTasks.filter(t => !planItems.has(t.id)).map(t => (
-                <ToggleCard key={t.id} selected={false} onClick={() => togglePlanItem(t.id)}>
-                  <CategoryTile cat={t.cat} size={22} />
-                  <div style={{ flex: 1 }}>
-                    <span style={{ fontSize: 14, fontFamily: "'Righteous', cursive", color: C.ink }}>
-                      {t.label}
-                    </span>
-                  </div>
-                </ToggleCard>
-              ))}
+                  );
+                });
+              })()}
             </div>
           )}
 
