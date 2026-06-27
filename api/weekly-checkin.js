@@ -17,7 +17,7 @@ You receive a JSON object with:
 Return ONLY valid JSON in this shape — no markdown, no prose:
 {
   "matches": [{ "taskId": string, "scheduledDate": string, "confidence": number, "mentionText": string }],
-  "newTaskSuggestions": [{ "label": string, "reason": string }],
+  "newTaskSuggestions": [{ "label": string, "reason": string, "intervalDays": number | null, "startDate": string | null }],
   "gapFill": [{ "taskId": string, "reason": string }]
 }
 
@@ -27,6 +27,9 @@ Rules:
 - When the user mentions a day of the week (e.g., "Thursday"), convert it to an ISO date using the weekStart. Monday = weekStart, Tuesday = weekStart + 1, etc. If the day has already passed this week, use the same week's date anyway.
 - "mentionText" is the relevant snippet from the user's input that triggered the match.
 - If a mention doesn't match any task, add it to "newTaskSuggestions" with a short reason.
+- For each "newTaskSuggestions" entry, also extract recurrence and timing if mentioned:
+  - "intervalDays": if the user describes a repeating cadence (e.g. "every month" = 30, "every week" = 7, "every two weeks" = 14, "every year" = 365), set this to the interval in days. If it's a one-off with no repeat mentioned, set it to null.
+  - "startDate": if the user mentions a day/date for the first occurrence (e.g. "on Tuesday"), convert it to an ISO date the same way as for matches (relative to weekStart). If no date is mentioned, set it to null.
 - For "gapFill": pick the most important tasks from "backlogTasks" (by their list position, which reflects priority). Fill remaining capacity:
   - capacity "low" = 1 total tasks for the week
   - capacity "normal" = 5 total tasks for the week
@@ -165,10 +168,17 @@ export default async function handler(req) {
       ).slice(0, 20)
     : [];
 
+  const dateRe = /^\d{4}-\d{2}-\d{2}$/;
   const newTaskSuggestions = Array.isArray(parsed.newTaskSuggestions)
-    ? parsed.newTaskSuggestions.filter(s =>
-        s && typeof s.label === 'string' && s.label.length > 0
-      ).slice(0, 10)
+    ? parsed.newTaskSuggestions
+        .filter(s => s && typeof s.label === 'string' && s.label.length > 0)
+        .map(s => ({
+          label: s.label,
+          reason: typeof s.reason === 'string' ? s.reason : '',
+          intervalDays: typeof s.intervalDays === 'number' && s.intervalDays > 0 ? Math.round(s.intervalDays) : null,
+          startDate: typeof s.startDate === 'string' && dateRe.test(s.startDate) ? s.startDate : null,
+        }))
+        .slice(0, 10)
     : [];
 
   const gapFill = Array.isArray(parsed.gapFill)
