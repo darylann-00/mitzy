@@ -11,6 +11,7 @@ export default defineConfig({
   use: {
     baseURL: isCI ? 'http://localhost:4173' : 'http://localhost:5173',
     headless: isCI,
+    channel: isCI ? 'chrome' : undefined,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     viewport: { width: 390, height: 844 },

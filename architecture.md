@@ -27,6 +27,11 @@ Read this when touching state, data, or non-trivial component wiring.
                       climateRegion.js, renderMarkdown.jsx, resolveStepVars.js
   /onboarding       — SlimOnboarding, PrioritySetup
   /styles/app.css   — Full design system
+/public/data        — Static lookup datasets fetched same-origin at runtime:
+                      zip-to-fips.json, nri-county-risk.json (FEMA hazard data,
+                      see Key Implementation Notes)
+/scripts            — build-hazard-data.mjs (manual maintenance script, not in
+                      build/CI pipeline; re-run when FEMA publishes a new NRI vintage)
 /api
   assist.js         — Vercel Function → Anthropic API proxy
   providers.js      — Vercel Function → Google Places + Claude synthesis
@@ -78,3 +83,4 @@ Read this when touching state, data, or non-trivial component wiring.
 - `storage.js`: `cleanupOldKeys()` removes orphaned `mitzy-*` keys from old schema versions, called on startup in `index.js`.
 - Supabase: `markDone`/`markScheduled`/`markNotApplicable`/`updateProfile` roll back local state on failed upsert. Both `useTasks` and `useProfile` return `loading` + `syncError`.
 - `task_records` has `interval_days` column (migration: `supabase/migrations/20260423_add_interval_days_to_task_records.sql`).
+- `detectHazards(zip)` in `hazards.js` looks up `/data/zip-to-fips.json` → `/data/nri-county-risk.json` (both fetched same-origin, memoized in a module-level promise so repeat calls from `App.js` and `useSession.js` don't refetch). FEMA's current NRI schema uses `IFLD` (Inland Flooding) not the older `RFLD` code, and rating strings are `"Relatively Low/Moderate/High"` + `"Very Low/High"` — not `"Medium"`/`"High"`.
