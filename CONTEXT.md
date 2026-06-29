@@ -65,7 +65,7 @@ Supabase project: `https://uftxbegrnlvlgkbitibp.supabase.co` (production). All t
 
 - **Life events** — Contextual task bundles triggered by major life changes. v1 ships "New baby" (`src/data/lifeEvents/newBaby.js`). `useLifeEvents` hook manages event state in Supabase (`life_events` + `custom_tasks`). `LifeEventNudge` yellow card appears on HomeView in two variants: "discovery" (introduces the feature) and "wrapup" (fires when all tasks for an active event are complete). `LifeEventIntake` collects event-specific details via `GuidedSteps` multi-step form, then generates one-time custom tasks scoped to that event instance. Tasks are ID-prefixed (`lf-{type}-{id}-{taskId}`) so multiple instances don't collide. Event definitions registered in `src/data/lifeEvents/index.js`; new event types add their own task generator to `TASK_GENERATORS` in `useLifeEvents`.
 
-- **Hazard detection** — Zip → hazard type → prep tasks. Runs on visit 2+.
+- **Hazard detection** — Zip → FEMA NRI API (`hazards.fema.gov`, allowlisted in CSP `connect-src`) → hazard type → prep tasks. Falls back to `["winter"]` if the zip is invalid or the API call fails (logged via `console.warn`). Runs on visit 2+.
 
 - **Bottom dock** — Fixed nav: `[Today|All|Profile]` pill + sparkle FAB circle to the right (always visible). Single entry point for adding tasks (no separate white `+` FAB).
 
@@ -83,7 +83,6 @@ Supabase project: `https://uftxbegrnlvlgkbitibp.supabase.co` (production). All t
 
 | Feature | Status |
 |---------|--------|
-| Hazard zip lookup | Hardcoded zip ranges. Replace with FEMA API. |
 | Knowledge refresh | Stubbed. |
 | `task.why` + `task.guidance` fields | Null for all current tasks — UI falls back to `task.note` and generic copy. |
 | Provider data | Claude-generated, no verification. |
@@ -181,9 +180,8 @@ Baseline e2e tests run on every PR: `sign_in`, `onboarding`, `mark_done`. Featur
 
 ## Next Priorities
 
-1. Replace hardcoded hazard zip ranges in `hazards.js` with FEMA API.
-2. Zip error message copy in onboarding (deferred).
-3. Task Creator polish — edge cases in multi-task review, speech-to-text testing.
+1. Zip error message copy in onboarding (deferred).
+2. Task Creator polish — edge cases in multi-task review, speech-to-text testing.
 
 ## Known Gaps / Mocked
 
