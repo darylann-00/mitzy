@@ -10,8 +10,11 @@ function parseCarParts(carString) {
   return { slug, make, model };
 }
 
-const EV_MAKES = new Set(["Tesla"]);
-const EV_MODELS = new Set(["Ioniq 5", "EV6", "ID.4", "Leaf"]);
+const EV_MAKES = new Set(["Tesla", "Lucid", "Polestar", "Rivian"]);
+const EV_MODELS = new Set([
+  "Ioniq 5", "Ioniq 6", "EV6", "EV9", "Niro EV", "ID.4", "Leaf",
+  "Mustang Mach-E", "Bolt EV", "Lyriq", "GV60", "I-Pace", "Taycan",
+]);
 
 const THIS_YEAR = new Date().getFullYear();
 const getAge = (birthYear) => birthYear ? THIS_YEAR - parseInt(birthYear, 10) : NaN;
