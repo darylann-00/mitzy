@@ -15,7 +15,7 @@ export function ProfileProvider({ user, welcomeChoice, children }) {
     pendingConflict, resolveConflict,
     serverProfileChecked, serverProfileExists,
   } = useProfile(user, welcomeChoice);
-  const { providerHistory, saveProvider, updateProvider, removeProvider } = useProviders();
+  const { providerHistory, saveProvider, updateProvider, removeProvider } = useProviders(user);
   const lifeEvents = useLifeEvents({ user, customTasks, addCustomTasksBulk, removeCustomTasksByLifeEvent });
   const region = getClimateRegion(profile?.zip);
 
