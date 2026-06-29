@@ -6,7 +6,6 @@ import { saveS, ASSIST_CACHE_PREFIX, ASSIST_CACHE_TTL } from "../utils/storage";
 import { buildAssistPrompt } from "../utils/assistPrompt";
 import { useProfileContext } from "../contexts/ProfileContext";
 import { supabase } from "../lib/supabase";
-import { ProviderNameSearch } from "./ProviderNameSearch";
 
 // ─── Pulsing dot loader ────────────────────────────────────────────────────────
 function PulseLoader({ messages }) {
@@ -206,7 +205,7 @@ function ProviderCard({ provider: p, isSaved, onSave }) {
         )}
         {p.website && (
           <a href={p.website} target="_blank" rel="noopener noreferrer" style={{ padding:'7px 12px', background:'#F0EDE4', color:'#1C2B22', borderRadius:8, fontSize:12, fontWeight:700, textDecoration:'none', fontFamily:'DM Sans, sans-serif' }}>
-            Schedule online
+            Website
           </a>
         )}
         {!isSaved && !saved && (
@@ -272,24 +271,29 @@ function SectionLabel({ label }) {
   );
 }
 
+// ─── Parse providers JSON from result text ────────────────────────────────────
+function parseProviders(text) {
+  try {
+    const match = text.match(/\[[\s\S]*\]/);
+    if (match) return JSON.parse(match[0]);
+  } catch {}
+  return null;
+}
+
 // ─── AssistPanel ───────────────────────────────────────────────────────────────
 export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
   const { profile, providerHistory, saveProvider } = useProfileContext();
-  const isProviderTask = task.assistType === 'providers';
-
-  // Most recently saved "use again" provider is the suggested starting point;
-  // disliked providers stay in history (visible in Profile) but aren't resurfaced here.
-  const savedProviders = providerHistory[task.id] || [];
-  const goodProviders  = savedProviders.filter(p => p.vote === 'good');
-  const savedProvider  = goodProviders[goodProviders.length - 1] || null;
-
-  const [pickedProvider, setPickedProvider] = useState(savedProvider);
   const [status,    setStatus]    = useState('idle');
   const [result,    setResult]    = useState(null);
   const [cached,    setCached]    = useState(null);
   const [errorKind, setErrorKind] = useState('general');
 
   const cacheKey = `${ASSIST_CACHE_PREFIX}-${task.id}`;
+
+  const parsedProviders = useMemo(() => {
+    if (task.assistType !== 'providers' || !result) return null;
+    return parseProviders(result);
+  }, [task.assistType, result]);
 
   const parsedGuidanceCompanies = useMemo(() => {
     if (task.assistType !== 'guidance_companies' || !result) return null;
@@ -330,14 +334,31 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
       if (!token) throw new Error('Not authenticated');
 
       const authHeader = { 'authorization': `Bearer ${token}` };
-      const prompt = buildAssistPrompt(task, profile);
-      const res = await fetch('/api/assist', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', ...authHeader },
-        body: JSON.stringify({ prompt }),
-      });
-      if (!res.ok) throw new Error(`${res.status}`);
-      const { text } = await res.json();
+      let text;
+      if (task.assistType === 'providers') {
+        const res = await fetch('/api/providers', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', ...authHeader },
+          body: JSON.stringify({
+            taskLabel:   task.label,
+            taskCat:     task.cat,
+            taskNote:    task.note,
+            zip:         profile.zip,
+            searchQuery: task.searchQuery,
+          }),
+        });
+        if (!res.ok) throw new Error(`${res.status}`);
+        ({ text } = await res.json());
+      } else {
+        const prompt = buildAssistPrompt(task, profile);
+        const res = await fetch('/api/assist', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', ...authHeader },
+          body: JSON.stringify({ prompt }),
+        });
+        if (!res.ok) throw new Error(`${res.status}`);
+        ({ text } = await res.json());
+      }
       saveCache(text);
       setResult(text);
       setStatus('done');
@@ -354,15 +375,27 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
     }
   };
 
-  useEffect(() => { if (!isProviderTask) fetchResult(false); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchResult(false); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const cacheAgeHours = cached ? Math.floor((Date.now() - cached.ts) / (1000 * 60 * 60)) : null;
+  const savedProviders = providerHistory[task.id] || [];
+  // Most recently saved "use again" provider is the suggested one; disliked
+  // providers stay in history (visible in Profile) but aren't resurfaced here.
+  const goodProviders = savedProviders.filter(p => p.vote === 'good');
+  const savedProvider = goodProviders[goodProviders.length - 1] || null;
+  const avoidNames = new Set(savedProviders.filter(p => p.vote === 'bad').map(p => p.name?.trim().toLowerCase()));
+  const filteredParsedProviders = useMemo(
+    () => (parsedProviders || []).filter(p => !avoidNames.has(p.name?.trim().toLowerCase())),
+    [parsedProviders, providerHistory, task.id] // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   const handleSave = (provider, vote, notes) => {
     saveProvider(task.id, { ...provider, vote, notes });
   };
 
   const getLoadingMessages = () => {
+    const subject = task.searchQuery || task.label;
+    if (task.assistType === 'providers')          return [`Finding ${subject} services near you...`, 'Checking reviews and hours...', 'Almost there...'];
     if (task.assistType === 'script')             return ['Drafting your script...', 'Choosing the right words...', 'Almost ready...'];
     if (task.assistType === 'deadline')           return ['Looking up key dates...', 'Checking current rules...', 'Almost done...'];
     if (task.assistType === 'guidance')           return ['Pulling together the best approach...', 'Reviewing what matters most...', 'Almost done...'];
@@ -450,23 +483,22 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
             );
           })()}
 
-          {/* Providers — pick a provider, then see scheduling info */}
-          {isProviderTask && (
-            <>
-              <SectionLabel label="Find a provider" />
-              <ProviderNameSearch
-                value={pickedProvider?.name || ''}
-                onChange={() => {}}
-                zip={profile.zip}
-                onSelectPlace={(place) => setPickedProvider({ ...place, vote: null, notes: '' })}
-              />
-              {pickedProvider && (
-                <div style={{ marginTop:14 }}>
-                  <SectionLabel label="Scheduling" />
-                  <ProviderCard provider={pickedProvider} isSaved={pickedProvider === savedProvider} onSave={handleSave} />
-                </div>
-              )}
-            </>
+          {/* Done — providers */}
+          {status === 'done' && task.assistType === 'providers' && (
+            !parsedProviders?.length
+              ? <div style={{ fontSize:14, lineHeight:1.8, color:'#1C2B22', whiteSpace:'pre-wrap', fontFamily:'DM Sans, sans-serif' }}>{result}</div>
+              : <>
+                  {savedProvider && (
+                    <>
+                      <SectionLabel label={`${task.label} — saved provider`} />
+                      <ProviderCard provider={savedProvider} isSaved onSave={handleSave} />
+                    </>
+                  )}
+                  <SectionLabel label={savedProvider ? 'Other options nearby' : 'Services near you'} />
+                  {filteredParsedProviders.map((p, i) => (
+                    <ProviderCard key={i} provider={p} isSaved={false} onSave={handleSave} />
+                  ))}
+                </>
           )}
 
           {/* Done — script */}
