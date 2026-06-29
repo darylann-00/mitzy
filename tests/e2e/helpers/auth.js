@@ -1,9 +1,20 @@
+import { randomUUID } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 
-const TEST_EMAIL      = process.env.PLAYWRIGHT_TEST_EMAIL      ?? 'test@example.com';
+// Each worker process gets its own throwaway "+pw-<uuid>" address derived from
+// PLAYWRIGHT_TEST_EMAIL. Supabase doesn't canonicalize "+tag" addressing, so
+// this is a distinct auth user per process — concurrent CI runs (or workers)
+// never share magic-link state and can't invalidate each other's tokens.
+// Stale tagged users are swept up by tests/e2e/helpers/cleanupTestUsers.js.
+const TEST_EMAIL = buildTestEmail(process.env.PLAYWRIGHT_TEST_EMAIL ?? 'test@example.com');
 const supabaseUrl     = process.env.VITE_SUPABASE_URL          ?? '';
 const supabaseAnon    = process.env.VITE_SUPABASE_ANON_KEY     ?? '';
 const serviceRoleKey  = process.env.SUPABASE_SERVICE_ROLE_KEY   ?? '';
+
+function buildTestEmail(base) {
+  const [local, domain] = base.split('@');
+  return `${local}+pw-${randomUUID()}@${domain}`;
+}
 
 let cachedSession = null;
 
