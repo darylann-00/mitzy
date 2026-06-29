@@ -77,8 +77,12 @@ test('a manually saved provider persists through Supabase, not just local state'
 
   await page.getByRole('button', { name: '+ Add provider' }).click();
   await page.getByPlaceholder("e.g. Dr. Smith, Joe's Plumbing").fill('Riverside Plumbing');
+  // Closes the name-search dropdown — these custom pickers only dismiss on a
+  // click outside, not Escape, and the full-screen overlay div they render
+  // would otherwise intercept later clicks.
+  await page.mouse.click(5, 5);
   await page.getByPlaceholder('e.g. plumber, dentist, vet').fill('plumber');
-  await page.keyboard.press('Escape');
+  await page.mouse.click(5, 5);
   await page.getByRole('button', { name: 'Good', exact: true }).click();
   await page.getByRole('button', { name: 'Save provider' }).click();
 
