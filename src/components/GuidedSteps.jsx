@@ -3,6 +3,7 @@ import { resolveStepVars } from "../utils/resolveStepVars";
 import { useProfileContext } from "../contexts/ProfileContext";
 import { supabase } from "../lib/supabase";
 import { INSURANCE_PROVIDERS } from "../data/insuranceProviders";
+import { ProviderNameSearch } from "./ProviderNameSearch";
 
 const C = {
   brand: '#1A5C3A', brandDark: '#0F3D27', brandLight: '#E8F5EE',
@@ -79,11 +80,27 @@ function ProviderSearch({ query, zip, onSelect, onSaveProvider, nameSearchOnly }
     }
   };
 
-  if ((manualMode || nameSearchOnly) && status === 'idle') {
+  if (nameSearchOnly) {
     return (
       <div style={{ marginTop: 8 }}>
         <div style={{ fontSize: 12, color: C.muted, marginBottom: 6, fontFamily: 'DM Sans, sans-serif' }}>
-          {nameSearchOnly ? 'Look up your provider to save their info' : 'Search for your provider by name'}
+          Look up your provider to save their info
+        </div>
+        <ProviderNameSearch
+          value=""
+          onChange={() => {}}
+          zip={zip}
+          onSelectPlace={(place) => { onSaveProvider(place); onSelect(place, [place]); }}
+        />
+      </div>
+    );
+  }
+
+  if (manualMode && status === 'idle') {
+    return (
+      <div style={{ marginTop: 8 }}>
+        <div style={{ fontSize: 12, color: C.muted, marginBottom: 6, fontFamily: 'DM Sans, sans-serif' }}>
+          Search for your provider by name
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           <input
@@ -109,18 +126,16 @@ function ProviderSearch({ query, zip, onSelect, onSaveProvider, nameSearchOnly }
             Search
           </button>
         </div>
-        {!nameSearchOnly && (
-          <button
-            onClick={() => { setManualMode(false); setManualName(''); }}
-            style={{
-              width: '100%', padding: '8px 0', background: 'none', border: 'none',
-              fontSize: 12, color: C.muted, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
-              marginTop: 4,
-            }}
-          >
-            Back to find providers
-          </button>
-        )}
+        <button
+          onClick={() => { setManualMode(false); setManualName(''); }}
+          style={{
+            width: '100%', padding: '8px 0', background: 'none', border: 'none',
+            fontSize: 12, color: C.muted, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+            marginTop: 4,
+          }}
+        >
+          Back to find providers
+        </button>
       </div>
     );
   }
