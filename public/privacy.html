@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Mitzy</title>
+  <link rel="icon" href="/favicon.ico" />
+  <link href="https://fonts.googleapis.com/css2?family=Righteous&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'DM Sans', sans-serif; background: #FDFAF2; color: #1C2B22; line-height: 1.7; padding: 2rem 1.25rem 4rem; max-width: 720px; margin: 0 auto; }
+    h1 { font-family: 'Righteous', sans-serif; color: #1A5C3A; font-size: 2rem; margin-bottom: 0.25rem; }
+    h2 { font-family: 'Righteous', sans-serif; color: #1A5C3A; font-size: 1.25rem; margin-top: 2rem; margin-bottom: 0.5rem; }
+    p, li { color: #4A6256; margin-bottom: 0.75rem; }
+    ul { padding-left: 1.5rem; margin-bottom: 1rem; }
+    a { color: #1A5C3A; }
+    .date { color: #4A6256; font-size: 0.9rem; margin-bottom: 2rem; }
+    .back { display: inline-block; margin-bottom: 1.5rem; text-decoration: none; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <a class="back" href="/">← Back to Mitzy</a>
+  <h1>Privacy Policy</h1>
+  <p class="date">Effective date: June 28, 2026</p>
+
+  <p>Mitzy ("we," "us," or "our") is a household management app that helps you stay on top of recurring tasks — from HVAC filters to pet vaccines. This Privacy Policy explains what information we collect, how we use it, and the choices you have.</p>
+
+  <h2>1. Information We Collect</h2>
+  <p><strong>Account information.</strong> When you sign in with Google or a magic link, we receive your email address and basic profile information (name, profile photo) from your identity provider.</p>
+  <p><strong>Profile information you provide.</strong> During onboarding and in your profile, you may share details such as your name, birth year, gender, zip code, home type, vehicles, children, and pets. You choose what to share — these fields help Mitzy personalize which tasks are relevant to you.</p>
+  <p><strong>Task data.</strong> We store your task records, completion dates, snooze dates, scheduled dates, custom tasks, weekly plans, and life-event data so Mitzy can track what's due and what's done.</p>
+  <p><strong>Google Calendar data.</strong> If you grant calendar access, we read upcoming calendar events to match them against your tasks (e.g., finding a vet appointment on your calendar). We do not modify, create, or delete any calendar events. Calendar data is processed in memory and is not stored on our servers.</p>
+  <p><strong>Location (zip code only).</strong> Your zip code is sent to FEMA's National Risk Index API to identify local natural hazards and suggest relevant preparation tasks. We do not collect precise geolocation.</p>
+  <p><strong>Usage data.</strong> We collect standard analytics such as pages visited, features used, and session duration to improve the app.</p>
+
+  <h2>2. How We Use Your Information</h2>
+  <ul>
+    <li>To personalize your task list based on your household profile</li>
+    <li>To track task completion, scheduling, and snoozing</li>
+    <li>To match calendar events with relevant tasks</li>
+    <li>To identify local hazards and suggest preparation tasks</li>
+    <li>To power AI features (task creation, guidance, and provider recommendations) via Anthropic's Claude API</li>
+    <li>To send you communications related to your account (if applicable)</li>
+    <li>To improve and maintain the service</li>
+  </ul>
+
+  <h2>3. AI Features</h2>
+  <p>Mitzy uses Anthropic's Claude AI to help generate custom tasks, provide guidance, and suggest local service providers. When you use these features, relevant context (such as your task details or a description you type) is sent to Anthropic's API for processing. Anthropic does not use your data to train its models. See <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener">Anthropic's Privacy Policy</a> for details.</p>
+
+  <h2>4. How We Store and Protect Your Data</h2>
+  <p>Your data is stored in Supabase (hosted on AWS) and served through Vercel. We use industry-standard security measures including encryption in transit (TLS) and authentication via Supabase Auth. Your data is also cached locally on your device for offline access.</p>
+
+  <h2>5. Third-Party Services</h2>
+  <p>We use the following third-party services:</p>
+  <ul>
+    <li><strong>Supabase</strong> — database and authentication</li>
+    <li><strong>Vercel</strong> — hosting and serverless functions</li>
+    <li><strong>Google Identity Services</strong> — OAuth sign-in and calendar access</li>
+    <li><strong>Anthropic (Claude)</strong> — AI-powered features</li>
+    <li><strong>Google Places API</strong> — local provider recommendations</li>
+    <li><strong>FEMA National Risk Index</strong> — hazard detection by zip code</li>
+  </ul>
+
+  <h2>6. Data Sharing</h2>
+  <p>We do not sell your personal information. We share data only with the third-party services listed above, solely to operate the app. We may disclose information if required by law.</p>
+
+  <h2>7. Your Choices</h2>
+  <ul>
+    <li><strong>Google Calendar access</strong> is optional. If you decline, the app works without it.</li>
+    <li><strong>Profile details</strong> are optional. You can skip onboarding questions.</li>
+    <li><strong>Delete your data</strong> at any time from Profile → Account → Reset. This removes your Supabase records and clears local data.</li>
+    <li><strong>Sign out</strong> at any time from Profile → Account.</li>
+  </ul>
+
+  <h2>8. Children's Privacy</h2>
+  <p>Mitzy is not directed at children under 13. We do not knowingly collect information from children under 13. If you believe a child has provided us with personal information, please contact us so we can delete it.</p>
+
+  <h2>9. Changes to This Policy</h2>
+  <p>We may update this policy from time to time. We will notify you of material changes by posting the updated policy with a new effective date.</p>
+
+  <h2>10. Contact</h2>
+  <p>If you have questions about this Privacy Policy, contact us at <a href="mailto:hello@mitzy.io">hello@mitzy.io</a>.</p>
+</body>
+</html>
