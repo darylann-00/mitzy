@@ -40,7 +40,8 @@ export async function detectHazards(zip) {
     }
 
     return found.size > 0 ? [...found] : DEFAULT_HAZARDS;
-  } catch {
+  } catch (err) {
+    console.warn(`detectHazards: FEMA API call failed for zip ${zip}`, err);
     return DEFAULT_HAZARDS;
   }
 }
