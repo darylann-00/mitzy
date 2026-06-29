@@ -21,8 +21,9 @@ async function getSession() {
 
   const client = createClient(supabaseUrl, supabaseAnon);
   const { data, error } = await client.auth.verifyOtp({
-    token_hash: linkData.properties.hashed_token,
-    type: 'magiclink',
+    email: TEST_EMAIL,
+    token: linkData.properties.email_otp,
+    type: 'email',
   });
   if (error) throw new Error(`Test auth: verifyOtp failed: ${error.message}`);
 
