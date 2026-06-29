@@ -7,7 +7,6 @@ const isCI = !!process.env.CI;
 
 export default defineConfig({
   testDir: './tests/e2e',
-  globalTeardown: './tests/e2e/helpers/cleanupTestUsers.js',
   timeout: 30000,
   use: {
     baseURL: isCI ? 'http://localhost:4173' : 'http://localhost:5173',
