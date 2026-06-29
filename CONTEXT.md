@@ -43,7 +43,7 @@ Supabase project: `https://uftxbegrnlvlgkbitibp.supabase.co` (production). All t
 
 - **HomeView** — Personal greeting header (`HomeHeader`). Two rendering modes: **plan mode** (when a weekly plan is confirmed) shows a progress bar, scheduled tasks grouped by day, unscheduled tasks in a "This week" bucket, and a "Done" section — completing a task leaves an empty slot with no backfill. **Live mode** (default, no plan) shows Today section (top scored task) + This week section (remaining). Both modes show trickle card, hazard card, capacity nudge card, weekly check-in nudge, and all-clear state. Focus task count calibrated by capacity setting: low=1, normal=3, high=5. `paddingBottom: 160px` to clear FABs + nav.
 
-- **Weekly check-in** — Optional weekly planning flow. A nudge card appears on HomeView on the first app visit of a new week (persists until dismissed or completed). Tapping "Let's do it" opens `WeeklyCheckIn` full-screen overlay with two steps: (1) shows top 5 priority tasks as selectable toggle cards ("Pick 2–3 to focus on") + free-text input ("Tell Mitzy what else is happening this week"), (2) review screen with selected picks, matched tasks (via `/api/weekly-checkin` Claude Haiku matching), gap-fill suggestions, and new task suggestions. "Lock in my week" confirms the plan, freezing it for the week. Data: `weekly_plans` Supabase table with `task_ids` (JSONB array), `scheduled_dates` (JSONB object), `confirmed_at`. Hook: `useWeeklyPlan` in `TaskContext`. Nudge dismissal tracked in localStorage (`mitzy-wcn-v1`). When user mentions a day-of-week for a task ("vet Thursday"), Claude converts it to an ISO date and the task shows under a day header in plan mode.
+- **Weekly check-in** — Optional weekly planning flow. A nudge card appears on HomeView on the first app visit of a new week (persists until dismissed or completed). Tapping "Let's do it" opens `WeeklyCheckIn` full-screen overlay with two steps: (1) read-only list of custom tasks already due/coming-up this week + free-text brain dump input ("Tell Mitzy what else is happening this week"), (2) unified review screen — custom tasks (toggle on/off without losing their place in the list), matched tasks from the brain dump (via `/api/weekly-checkin` Claude Haiku matching), auto-created brain-dump tasks with inline category/frequency editors, and an always-visible "Mitzy suggestions" tray (gap-fill + top priority tasks, no longer collapsible). Every task category is shown with its `CategoryTile` icon, not a color dot. Every task in the plan shows its due date and that date is editable inline (tap to open a calendar picker) regardless of whether it came from a calendar match or the task's own computed due date. "Lock in my week" confirms the plan, freezing it for the week. Data: `weekly_plans` Supabase table with `task_ids` (JSONB array), `scheduled_dates` (JSONB object), `confirmed_at`. Hook: `useWeeklyPlan` in `TaskContext`. Nudge dismissal tracked in localStorage (`mitzy-wcn-v1`). When user mentions a day-of-week for a task ("vet Thursday"), Claude converts it to an ISO date and the task shows under a day header in plan mode.
 
 - **Capacity / Bandwidth** — Profile field `capacity` (`low | normal | high`, default `normal`). Set during onboarding step 8, toggleable in Profile > Account > "My bandwidth". Controls `homeTasks` slice count in `TaskContext` via `CAPACITY_FOCUS_COUNT`. Smart nudge (`useCapacityNudge`) tracks weekly stats in localStorage (`mitzy-cs-v1`); after 2+ weeks, suggests dialing up if user clears everything or down if barely completing. Nudge dismisses for 3 weeks. Supabase column: `profiles.capacity TEXT`.
 
@@ -65,7 +65,7 @@ Supabase project: `https://uftxbegrnlvlgkbitibp.supabase.co` (production). All t
 
 - **Life events** — Contextual task bundles triggered by major life changes. v1 ships "New baby" (`src/data/lifeEvents/newBaby.js`). `useLifeEvents` hook manages event state in Supabase (`life_events` + `custom_tasks`). `LifeEventNudge` yellow card appears on HomeView in two variants: "discovery" (introduces the feature) and "wrapup" (fires when all tasks for an active event are complete). `LifeEventIntake` collects event-specific details via `GuidedSteps` multi-step form, then generates one-time custom tasks scoped to that event instance. Tasks are ID-prefixed (`lf-{type}-{id}-{taskId}`) so multiple instances don't collide. Event definitions registered in `src/data/lifeEvents/index.js`; new event types add their own task generator to `TASK_GENERATORS` in `useLifeEvents`.
 
-- **Hazard detection** — Zip → hazard type → prep tasks. Runs on visit 2+.
+- **Hazard detection** — Zip → FEMA NRI API (`hazards.fema.gov`, allowlisted in CSP `connect-src`) → hazard type → prep tasks. Falls back to `["winter"]` if the zip is invalid or the API call fails (logged via `console.warn`). Runs on visit 2+.
 
 - **Bottom dock** — Fixed nav: `[Today|All|Profile]` pill + sparkle FAB circle to the right (always visible). Single entry point for adding tasks (no separate white `+` FAB).
 
@@ -83,7 +83,6 @@ Supabase project: `https://uftxbegrnlvlgkbitibp.supabase.co` (production). All t
 
 | Feature | Status |
 |---------|--------|
-| Hazard zip lookup | Hardcoded zip ranges. Replace with FEMA API. |
 | Knowledge refresh | Stubbed. |
 | `task.why` + `task.guidance` fields | Null for all current tasks — UI falls back to `task.note` and generic copy. |
 | Provider data | Claude-generated, no verification. |
@@ -181,9 +180,8 @@ Baseline e2e tests run on every PR: `sign_in`, `onboarding`, `mark_done`. Featur
 
 ## Next Priorities
 
-1. Replace hardcoded hazard zip ranges in `hazards.js` with FEMA API.
-2. Zip error message copy in onboarding (deferred).
-3. Task Creator polish — edge cases in multi-task review, speech-to-text testing.
+1. Zip error message copy in onboarding (deferred).
+2. Task Creator polish — edge cases in multi-task review, speech-to-text testing.
 
 ## Known Gaps / Mocked
 

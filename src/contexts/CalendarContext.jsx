@@ -34,7 +34,8 @@ export function CalendarProvider({ user, children }) {
       catch { token = await getCalendarToken({ silent: false }); }
       markGranted(token);
       return true;
-    } catch {
+    } catch (err) {
+      console.error('[calendar] connect failed:', err);
       return false;
     }
   };
