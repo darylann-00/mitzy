@@ -29,7 +29,7 @@ jobs:
     #   VITE_SUPABASE_URL         — https://uftxbegrnlvlgkbitibp.supabase.co (prod project)
     #   VITE_SUPABASE_ANON_KEY    — anon key for the prod Supabase project
     #   SUPABASE_SERVICE_ROLE_KEY  — service role key (generates test auth sessions)
-    #   PLAYWRIGHT_TEST_EMAIL     — test user email (must exist in prod Supabase)
+    #   PLAYWRIGHT_TEST_EMAIL     — test user email (must exist in prod Supabase, pre-onboarded)
     env:
       VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
       VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}

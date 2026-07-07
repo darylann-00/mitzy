@@ -7,28 +7,43 @@ const serviceRoleKey  = process.env.SUPABASE_SERVICE_ROLE_KEY   ?? '';
 
 let cachedSession = null;
 
+// Tests share one real, pre-onboarded PLAYWRIGHT_TEST_EMAIL account (most
+// specs don't mock /rest/v1/profiles and depend on its persisted profile
+// row). Supabase only keeps one active OTP per user, so concurrent CI jobs
+// generating a magic link for that same email can invalidate each other's
+// token between our generateLink and verifyOtp calls. Retry the whole
+// generate-then-verify cycle with jittered backoff rather than failing.
 async function getSession() {
   if (cachedSession) return cachedSession;
 
   const admin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
-    type: 'magiclink',
-    email: TEST_EMAIL,
-  });
-  if (linkError) throw new Error(`Test auth: generateLink failed: ${linkError.message}`);
-
   const client = createClient(supabaseUrl, supabaseAnon);
-  const { data, error } = await client.auth.verifyOtp({
-    email: TEST_EMAIL,
-    token: linkData.properties.email_otp,
-    type: 'email',
-  });
-  if (error) throw new Error(`Test auth: verifyOtp failed: ${error.message}`);
 
-  cachedSession = data.session;
-  return cachedSession;
+  const maxAttempts = 5;
+  let lastError;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
+      type: 'magiclink',
+      email: TEST_EMAIL,
+    });
+    if (linkError) throw new Error(`Test auth: generateLink failed: ${linkError.message}`);
+
+    const { data, error } = await client.auth.verifyOtp({
+      email: TEST_EMAIL,
+      token: linkData.properties.email_otp,
+      type: 'email',
+    });
+    if (!error) {
+      cachedSession = data.session;
+      return cachedSession;
+    }
+
+    lastError = error;
+    await new Promise(resolve => setTimeout(resolve, attempt * 500 + Math.random() * 500));
+  }
+  throw new Error(`Test auth: verifyOtp failed after ${maxAttempts} attempts: ${lastError.message}`);
 }
 
 export async function loginWithDevCredentials(page) {
