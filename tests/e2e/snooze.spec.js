@@ -61,15 +61,17 @@ async function simulateSwipeLeft(page, element) {
 test('swipe left on task card opens snooze picker, pick preset moves task to snoozed section', async ({ page }) => {
   await mockTaskRecordsWithSnoozeSupport(page);
   await seedReturnUser(page);
-  // Dismiss the snooze tooltip so it doesn't interfere
-  await page.addInitScript(() => {
-    localStorage.setItem('mitzy-snztip-v1', JSON.stringify(true));
-  });
   await page.goto('/');
   await loginWithDevCredentials(page);
 
   // Wait for home screen
   await expect(page.getByText('Today', { exact: true })).toBeVisible({ timeout: 15000 });
+
+  // Dismiss the snooze tooltip if it's showing so it doesn't interfere
+  const snoozeTooltip = page.getByText('Swipe left on a task to snooze it for later');
+  if (await snoozeTooltip.isVisible().catch(() => false)) {
+    await snoozeTooltip.click();
+  }
 
   // Switch to All tab where swipeable cards are rendered
   await page.getByText('All', { exact: true }).click();
@@ -118,9 +120,6 @@ test('unsnooze a task from the snoozed section', async ({ page }) => {
   });
 
   await seedReturnUser(page);
-  await page.addInitScript(() => {
-    localStorage.setItem('mitzy-snztip-v1', JSON.stringify(true));
-  });
   await page.goto('/');
   await loginWithDevCredentials(page);
 
