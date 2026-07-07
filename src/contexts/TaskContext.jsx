@@ -25,7 +25,7 @@ export function TaskProvider({ user, children }) {
 
   const {
     activePlan, isInPlanMode, planProgress, weekStart,
-    savePlan, confirmPlan, addToPlan,
+    confirmPlan, addToPlan,
     showNudge: showWeeklyNudge, dismissNudge: dismissWeeklyNudge,
   } = useWeeklyPlan(user, taskState, markScheduled);
 
@@ -153,7 +153,7 @@ export function TaskProvider({ user, children }) {
       getStatus, getDays, getNext,
       loading, syncError,
       isInPlanMode, activePlan, planTasks, planProgress, weekStart,
-      savePlan, confirmPlan, addToPlan,
+      confirmPlan, addToPlan,
       showWeeklyNudge, dismissWeeklyNudge,
     }}>
       {children}
