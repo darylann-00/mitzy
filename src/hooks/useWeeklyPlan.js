@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { loadS, saveS, WEEKLY_CHECKIN_NUDGE_KEY } from "../utils/storage";
 import { supabase } from "../lib/supabase";
 
 function getCurrentWeekStart() {
@@ -13,7 +12,7 @@ function getCurrentWeekStart() {
 
 export { getCurrentWeekStart };
 
-export function useWeeklyPlan(user, taskState, markScheduled) {
+export function useWeeklyPlan(user, taskState, markScheduled, uiState, updateUiState) {
   const [activePlan, setActivePlan] = useState(null);
   const [loading, setLoading] = useState(!!user);
 
@@ -133,12 +132,12 @@ export function useWeeklyPlan(user, taskState, markScheduled) {
     }
   }, [user, activePlan, weekStart]);
 
-  const dismissedWeek = loadS(WEEKLY_CHECKIN_NUDGE_KEY, null);
+  const dismissedWeek = uiState?.weeklyCheckinDismissedWeek ?? null;
   const showNudge = !loading && !isInPlanMode && dismissedWeek !== weekStart;
 
   const dismissNudge = useCallback(() => {
-    saveS(WEEKLY_CHECKIN_NUDGE_KEY, weekStart);
-  }, [weekStart]);
+    updateUiState?.({ weeklyCheckinDismissedWeek: weekStart });
+  }, [weekStart, updateUiState]);
 
   return {
     activePlan,

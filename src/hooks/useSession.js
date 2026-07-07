@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import {
   loadS, saveS,
   VISIT_COUNT_KEY, HAZARD_DONE_KEY,
-  KNOWLEDGE_REFRESH_KEY, KNOWLEDGE_REFRESH_TTL, TRICKLE_DATE_KEY, TRICKLE_QUEUE_KEY,
+  KNOWLEDGE_REFRESH_KEY, KNOWLEDGE_REFRESH_TTL,
 } from "../utils/storage";
 import { detectHazards } from "../utils/hazards";
 
-export function useSession({ onboarded, profile, activeTasks, taskState, tasksLoading }) {
+export function useSession({ onboarded, profile, activeTasks, taskState, tasksLoading, updateUiState }) {
   const [visitCount,     setVisitCount]   = useState(() => loadS(VISIT_COUNT_KEY, 0));
   const [trickleTask,    setTrickleTask]  = useState(null);
   const [pendingHazards, setPendingHazards] = useState(null);
@@ -25,7 +25,8 @@ export function useSession({ onboarded, profile, activeTasks, taskState, tasksLo
 
     // Trickle: rotate through unknown tasks, one per 5 days.
     // Clock starts when surfaced — dismiss/ignore/answer all advance the same way.
-    const lastDate  = loadS(TRICKLE_DATE_KEY, null);
+    const trickle   = profile?.uiState?.trickle || {};
+    const lastDate  = trickle.lastDate || null;
     const daysSince = lastDate
       ? Math.floor((Date.now() - new Date(lastDate).getTime()) / 86400000)
       : 999;
@@ -37,14 +38,13 @@ export function useSession({ onboarded, profile, activeTasks, taskState, tasksLo
       if (unknown.length > 0) {
         const unknownIds = new Set(unknown.map(t => t.id));
         // Keep only still-unknown IDs, then append any new ones not yet queued
-        let queue = loadS(TRICKLE_QUEUE_KEY, []).filter(id => unknownIds.has(id));
+        let queue = (trickle.queue || []).filter(id => unknownIds.has(id));
         const inQueue = new Set(queue);
         unknown.forEach(t => { if (!inQueue.has(t.id)) queue.push(t.id); });
         // Pick from front, rotate to back
         const taskId = queue[0];
         queue.push(queue.shift());
-        saveS(TRICKLE_QUEUE_KEY, queue);
-        saveS(TRICKLE_DATE_KEY, new Date().toISOString().slice(0, 10));
+        updateUiState?.({ trickle: { queue, lastDate: new Date().toISOString().slice(0, 10) } });
         const task = unknown.find(t => t.id === taskId);
         if (task) setTrickleTask(task);
       }

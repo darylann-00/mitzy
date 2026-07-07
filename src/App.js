@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import "./styles/app.css";
 
-import { loadS, saveS, ONBOARDED_KEY, PROFILE_DONE_KEY, VISIT_COUNT_KEY, WELCOME_CHOICE_KEY, LIFE_EVENTS_NUDGE_KEY } from "./utils/storage";
+import { loadS, saveS, ONBOARDED_KEY, PROFILE_DONE_KEY, VISIT_COUNT_KEY, WELCOME_CHOICE_KEY } from "./utils/storage";
 import { LIFE_EVENT_DEFS } from "./data/lifeEvents";
 import { detectHazards } from "./utils/hazards";
 import { EM_UNIVERSAL, EM_HAZARD } from "./data/tasks";
@@ -189,7 +189,7 @@ export default function Mitzy() {
 
 // ─── Inner app — consumes contexts ─────────────────────────────────────────────
 function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, signInWithPassword, welcomeChoice, setWelcomeChoice }) {
-  const { profile, taskLibrary, updateProfile, removeCustomTask, region, loading: profileLoading, syncError: profileSyncError, serverProfileChecked, serverProfileExists, lifeEvents } = useProfileContext();
+  const { profile, taskLibrary, updateProfile, updateUiState, removeCustomTask, region, loading: profileLoading, syncError: profileSyncError, serverProfileChecked, serverProfileExists, lifeEvents } = useProfileContext();
   const { activeTasks, taskState, setTaskState, setDisabledTasks, markDone, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, setDueDate, setStepProgress, markScheduled, snoozeTask, unsnoozeTask, nextUpcomingTask, loading: tasksLoading, syncError: tasksSyncError } = useTaskContext();
   const { pendingCalendarMatches, dismissMatch } = useCalendarContext();
 
@@ -209,10 +209,10 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
   const [dueOnly,         setDueOnly]         = useState(false);
   const [lifeEventIntake, setLifeEventIntake] = useState(null); // null | 'new-baby'
   const [snoozePickerTask, setSnoozePickerTask] = useState(null);
-  const [nudgeState, setNudgeState] = useState(() => loadS(LIFE_EVENTS_NUDGE_KEY, { discoveryDismissed: false, wrapupDismissed: {} }));
+  const nudgeState = profile.uiState?.lifeEventNudge ?? { discoveryDismissed: false, wrapupDismissed: {} };
 
   // ─── Session (trickle + hazards) ───────────────────────────────────────────
-  const { trickleTask, dismissTrickle, answerTrickle, pendingHazards, setPendingHazards } = useSession({ onboarded, profile, activeTasks, taskState, tasksLoading });
+  const { trickleTask, dismissTrickle, answerTrickle, pendingHazards, setPendingHazards } = useSession({ onboarded, profile, activeTasks, taskState, tasksLoading, updateUiState });
 
   // ─── Returning user with no server profile → drop into new-user onboarding ─
   useEffect(() => {
@@ -286,30 +286,30 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
   const handleNudgePrimary = () => {
     if (!lifeEventNudge) return;
     if (lifeEventNudge.variant === 'discovery') {
-      const next = { ...nudgeState, discoveryDismissed: true };
-      setNudgeState(next); saveS(LIFE_EVENTS_NUDGE_KEY, next);
+      updateUiState({ lifeEventNudge: { ...nudgeState, discoveryDismissed: true } });
       setView('you');
     } else if (lifeEventNudge.variant === 'wrapup') {
       lifeEvents.completeEvent(lifeEventNudge.activeId);
-      const next = {
-        ...nudgeState,
-        wrapupDismissed: { ...(nudgeState.wrapupDismissed || {}), [lifeEventNudge.activeId]: true },
-      };
-      setNudgeState(next); saveS(LIFE_EVENTS_NUDGE_KEY, next);
+      updateUiState({
+        lifeEventNudge: {
+          ...nudgeState,
+          wrapupDismissed: { ...(nudgeState.wrapupDismissed || {}), [lifeEventNudge.activeId]: true },
+        },
+      });
     }
   };
 
   const handleNudgeDismiss = () => {
     if (!lifeEventNudge) return;
     if (lifeEventNudge.variant === 'discovery') {
-      const next = { ...nudgeState, discoveryDismissed: true };
-      setNudgeState(next); saveS(LIFE_EVENTS_NUDGE_KEY, next);
+      updateUiState({ lifeEventNudge: { ...nudgeState, discoveryDismissed: true } });
     } else if (lifeEventNudge.variant === 'wrapup') {
-      const next = {
-        ...nudgeState,
-        wrapupDismissed: { ...(nudgeState.wrapupDismissed || {}), [lifeEventNudge.activeId]: true },
-      };
-      setNudgeState(next); saveS(LIFE_EVENTS_NUDGE_KEY, next);
+      updateUiState({
+        lifeEventNudge: {
+          ...nudgeState,
+          wrapupDismissed: { ...(nudgeState.wrapupDismissed || {}), [lifeEventNudge.activeId]: true },
+        },
+      });
     }
   };
 
