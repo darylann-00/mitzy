@@ -12,6 +12,7 @@ You receive a JSON object with:
 - "autoDueTasks": [{ id, label }] — tasks already due or coming up this week (pre-included)
 - "capacity": "low" | "normal" | "high" — how many tasks they want
 - "weekStart": "YYYY-MM-DD" — the Monday of this week
+- "today": "YYYY-MM-DD" — today's actual date
 - "backlogTasks": [{ id, label, category }] — scored backlog tasks for gap-filling
 
 Return ONLY valid JSON in this shape — no markdown, no prose:
@@ -24,7 +25,7 @@ Return ONLY valid JSON in this shape — no markdown, no prose:
 Rules:
 - Parse the user's input for mentions of tasks, appointments, or household activities.
 - Match mentions against the "tasks" list. Only emit matches with confidence >= 0.7.
-- When the user mentions a day of the week (e.g., "Thursday"), convert it to an ISO date using the weekStart. Monday = weekStart, Tuesday = weekStart + 1, etc. If the day has already passed this week, use the same week's date anyway.
+- When the user mentions a day of the week (e.g., "Thursday"), convert it to an ISO date. Monday = weekStart, Tuesday = weekStart + 1, etc. If that date is before "today", it has already passed this week — add 7 days so it lands on the same weekday next week instead.
 - "mentionText" is the relevant snippet from the user's input that triggered the match.
 - If a mention doesn't match any task, add it to "newTaskSuggestions" with a short reason.
 - For each "newTaskSuggestions" entry, also extract recurrence and timing if mentioned:
@@ -70,7 +71,7 @@ export default async function handler(req) {
   try { body = await req.json(); }
   catch { return new Response("Invalid JSON", { status: 400, headers: corsHeaders(req) }); }
 
-  const { userInput, tasks, autoDueTasks, capacity, weekStart, backlogTasks } = body || {};
+  const { userInput, tasks, autoDueTasks, capacity, weekStart, today, backlogTasks } = body || {};
 
   if (!Array.isArray(tasks) || !weekStart) {
     return new Response("Missing tasks or weekStart", { status: 400, headers: corsHeaders(req) });
@@ -97,6 +98,7 @@ export default async function handler(req) {
 
   const safeCapacity = ['low', 'normal', 'high'].includes(capacity) ? capacity : 'normal';
   const safeWeekStart = sanitize(weekStart).slice(0, 10);
+  const safeToday = /^\d{4}-\d{2}-\d{2}$/.test(today) ? today : safeWeekStart;
 
   const emptyResponse = { matches: [], newTaskSuggestions: [], gapFill: [] };
 
@@ -117,6 +119,7 @@ export default async function handler(req) {
     autoDueTasks: safeAutoDue,
     capacity: safeCapacity,
     weekStart: safeWeekStart,
+    today: safeToday,
     backlogTasks: safeBacklog,
   });
 

@@ -364,6 +364,7 @@ export function WeeklyCheckIn({ onClose }) {
           autoDueTasks: customDueTasks.map(t => ({ id: t.id, label: t.label })),
           capacity: 'normal',
           weekStart,
+          today: new Date().toISOString().slice(0, 10),
           backlogTasks,
         }),
         signal: controller.signal,
