@@ -36,9 +36,17 @@ test('new user completes onboarding and reaches home screen', async ({ page }) =
   await expect(page.getByText('Any kids at home?')).toBeVisible();
   await page.getByText('No').first().click();
 
-  // Step 5: pets — click No → shows transition screen
+  // Step 5: pets — click No
   await expect(page.getByText('Any pets?')).toBeVisible();
   await page.getByText('No').first().click();
+
+  // Step 6: Google Calendar — skip
+  await expect(page.getByText('Connect Google Calendar?')).toBeVisible();
+  await page.getByRole('button', { name: 'Skip for now' }).click();
+
+  // Step 7: bandwidth/capacity
+  await expect(page.getByText("How's your bandwidth right now?")).toBeVisible();
+  await page.getByText('Keeping up').click();
 
   // Transition screen
   await expect(page.getByRole('button', { name: "Let's go" })).toBeVisible();
@@ -72,5 +80,5 @@ test('new user completes onboarding and reaches home screen', async ({ page }) =
   await loginWithDevCredentials(page);
 
   // Home screen — BottomDock always present once authenticated
-  await expect(page.getByText('Today', { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText('Today', { exact: true }).first()).toBeVisible({ timeout: 15000 });
 });

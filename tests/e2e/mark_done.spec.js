@@ -1,15 +1,17 @@
 import { test, expect } from '@playwright/test';
-import { loginWithDevCredentials, seedReturnUser, mockTaskRecords } from './helpers/auth.js';
+import { loginWithDevCredentials, seedReturnUser, mockTaskRecords, mockProfile, mockCustomTasks } from './helpers/auth.js';
 
 test('user opens a task and marks it done', async ({ page }) => {
   await mockTaskRecords(page);
+  await mockProfile(page);
+  await mockCustomTasks(page);
   await seedReturnUser(page);
   await page.goto('/');
 
   await loginWithDevCredentials(page);
 
   // Wait for home screen
-  await expect(page.getByText('Today', { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText('Today', { exact: true }).first()).toBeVisible({ timeout: 15000 });
 
   // Switch to All tab so there are always tasks visible regardless of focus list state
   await page.getByText('All', { exact: true }).click();
@@ -36,13 +38,15 @@ test('user opens a task and marks it done', async ({ page }) => {
 
 test('date picker month arrows do not close picker', async ({ page }) => {
   await mockTaskRecords(page);
+  await mockProfile(page);
+  await mockCustomTasks(page);
   await seedReturnUser(page);
   await page.goto('/');
 
   await loginWithDevCredentials(page);
 
   // Wait for home screen
-  await expect(page.getByText('Today', { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText('Today', { exact: true }).first()).toBeVisible({ timeout: 15000 });
 
   // Switch to All tab
   await page.getByText('All', { exact: true }).click();

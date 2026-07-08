@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loginWithDevCredentials, seedReturnUser, mockTaskRecords } from './helpers/auth.js';
+import { loginWithDevCredentials, seedReturnUser, mockTaskRecords, mockProfile, mockCustomTasks } from './helpers/auth.js';
 
 // Mocks Phase 1's calendar OAuth + match pipeline so the test doesn't need a
 // real Google account. Three pieces:
@@ -35,6 +35,8 @@ test('user confirms a calendar match → task becomes scheduled', async ({ page 
   const inAWeek = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
 
   await mockTaskRecords(page);
+  await mockProfile(page);
+  await mockCustomTasks(page);
   await seedReturnUser(page);
   await mockCalendarMatch(page, {
     taskId: 'hm-smoke',
@@ -55,7 +57,7 @@ test('user confirms a calendar match → task becomes scheduled', async ({ page 
 
   await page.goto('/');
   await loginWithDevCredentials(page);
-  await expect(page.getByText('Today', { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText('Today', { exact: true }).first()).toBeVisible({ timeout: 15000 });
 
   // Switch to All so the seeded task is always rendered regardless of focus state.
   await page.getByText('All', { exact: true }).click();
@@ -80,6 +82,8 @@ test('user dismisses a calendar match → chip disappears, no upsert', async ({ 
   const inAWeek = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
 
   await mockTaskRecords(page);
+  await mockProfile(page);
+  await mockCustomTasks(page);
   await seedReturnUser(page);
   await mockCalendarMatch(page, {
     taskId: 'hm-smoke',
@@ -96,7 +100,7 @@ test('user dismisses a calendar match → chip disappears, no upsert', async ({ 
 
   await page.goto('/');
   await loginWithDevCredentials(page);
-  await expect(page.getByText('Today', { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText('Today', { exact: true }).first()).toBeVisible({ timeout: 15000 });
   await page.getByText('All', { exact: true }).click();
 
   const chipText = page.getByText('Replace smoke detector batteries');

@@ -61,7 +61,7 @@ test('Profile shows a Self health card, and the Kids section now has an insuranc
   await page.goto('/');
   await loginWithDevCredentials(page);
 
-  await expect(page.getByText('Today', { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText('Today', { exact: true }).first()).toBeVisible({ timeout: 15000 });
 
   // Profile tab
   await page.getByText('Profile', { exact: true }).click();
