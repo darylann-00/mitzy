@@ -48,7 +48,7 @@ function SteppedFlow({ task, onAnswer, onDismiss }) {
     if (opt.action === "notApplicable") {
       onAnswer({ taskId: task.id, notApplicable: true });
     } else if (opt.action === "done") {
-      onAnswer({ taskId: task.id, lastDone: new Date().toISOString(), intervalDays: opt.intervalDays });
+      onAnswer({ taskId: task.id, lastDone: new Date().toISOString().split('T')[0], intervalDays: opt.intervalDays });
     } else if (opt.next != null) {
       setStep(opt.next);
     }
@@ -97,7 +97,7 @@ export function TrickleCard({ task, onAnswer, onDismiss, onAssist }) {
 
       <TaskAnswerChips
         task={task}
-        onDone={(iso) => onAnswer({ taskId: task.id, lastDone: iso })}
+        onDone={(iso) => onAnswer({ taskId: task.id, lastDone: iso.split('T')[0] })}
         onNeeded={() => onAnswer({ taskId: task.id, needed: true })}
         onSkip={() => onAnswer({ taskId: task.id, notApplicable: true })}
         onNotSure={onAssist ? () => onAssist(task) : undefined}
