@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loginWithDevCredentials, seedReturnUser } from './helpers/auth.js';
+import { loginWithDevCredentials, seedReturnUser, mockTaskRecords } from './helpers/auth.js';
 
 // Seeds one custom one-time task (due in 2 days) plus one overdue library task
 // (hm-smoke) so the review screen has both "already on your plate" and
@@ -150,4 +150,42 @@ test('unchecking an existing task on the review screen keeps it visible, and its
     .toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
   await page.getByRole('button', { name: dateLabel }).click();
   await expect(page.getByTestId('date-field-toggle')).toBeVisible();
+});
+
+// Regression test for a bug where a day-of-week mention (e.g. "Monday") in the
+// brain-dump was resolved to a date already in the past, because the matching
+// API only received "weekStart" and had no way to tell whether that weekday had
+// already passed this week. Fix: the frontend now also sends "today", and the
+// matching API's system prompt uses it to roll forward to next week when needed.
+// This test locks in the plumbing (the request payload) since the actual
+// day-of-week judgment happens inside the mocked Claude call, not in JS.
+test('brain dump submission sends today\'s actual date to the matching API', async ({ page }) => {
+  await mockTaskRecords(page);
+  await page.route('**/rest/v1/custom_tasks**', route => {
+    if (route.request().method() !== 'GET') return route.continue();
+    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  });
+  await seedReturnUser(page);
+
+  let requestBody = null;
+  await page.route('**/api/weekly-checkin', route => {
+    requestBody = route.request().postDataJSON();
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ matches: [], newTaskSuggestions: [], gapFill: [] }),
+    });
+  });
+
+  await page.goto('/');
+  await loginWithDevCredentials(page);
+  await expect(page.getByText('Today', { exact: true })).toBeVisible({ timeout: 15000 });
+
+  await page.getByRole('button', { name: "Let's do it" }).click();
+  await page.getByPlaceholder(/vet Thursday/).fill('Vet appointment Monday');
+  await page.getByRole('button', { name: 'Plan my week' }).click();
+
+  await expect.poll(() => requestBody).not.toBeNull();
+  expect(requestBody.today).toBe(new Date().toISOString().slice(0, 10));
+  expect(requestBody.weekStart).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 });
