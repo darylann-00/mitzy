@@ -61,7 +61,12 @@ test('a manually saved provider persists through Supabase, not just local state'
         data: body.data,
         created_at: new Date().toISOString(),
       };
-      return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify([savedRow]) });
+      // saveProvider() uses .select().single(), which asks Postgrest for a bare
+      // object (not an array) via the Accept header. Unlike .maybeSingle(),
+      // supabase-js does not unwrap a length-1 array client-side for .single(),
+      // so a real server's bare-object response must be matched here too —
+      // wrapping this in an array silently breaks fromRow() downstream.
+      return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(savedRow) });
     }
     return route.continue();
   });

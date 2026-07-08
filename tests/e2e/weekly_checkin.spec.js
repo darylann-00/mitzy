@@ -85,10 +85,13 @@ test('locking in the week persists confirmed_at and switches Home into plan mode
 
   await page.goto('/');
   await loginWithDevCredentials(page);
-  await expect(page.getByText('Today', { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText('Today', { exact: true }).first()).toBeVisible({ timeout: 15000 });
 
   await expect(page.getByText('Ready to plan your week?')).toBeVisible({ timeout: 10000 });
-  await page.getByRole('button', { name: "Let's do it" }).click();
+  // "Let's do it" also labels each due task's own quick-action button, so this
+  // must be scoped to the first match (the weekly check-in nudge, which renders
+  // above the task list).
+  await page.getByRole('button', { name: "Let's do it" }).first().click();
   await expect(page.getByText('Already on your plate')).toBeVisible({ timeout: 10000 });
 
   // Skip the brain-dump textarea — go straight to the review screen.
@@ -123,7 +126,10 @@ test('unchecking an existing task on the review screen keeps it visible, and its
   await loginWithDevCredentials(page);
   await expect(page.getByText('Today', { exact: true }).first()).toBeVisible({ timeout: 15000 });
 
-  await page.getByRole('button', { name: "Let's do it" }).click();
+  // "Let's do it" also labels each due task's own quick-action button, so this
+  // must be scoped to the first match (the weekly check-in nudge, which renders
+  // above the task list).
+  await page.getByRole('button', { name: "Let's do it" }).first().click();
   await expect(page.getByText('Already on your plate')).toBeVisible({ timeout: 10000 });
   await expect(page.getByText('Submit claim for FSA')).toBeVisible();
 
@@ -179,9 +185,9 @@ test('brain dump submission sends today\'s actual date to the matching API', asy
 
   await page.goto('/');
   await loginWithDevCredentials(page);
-  await expect(page.getByText('Today', { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText('Today', { exact: true }).first()).toBeVisible({ timeout: 15000 });
 
-  await page.getByRole('button', { name: "Let's do it" }).click();
+  await page.getByRole('button', { name: "Let's do it" }).first().click();
   await page.getByPlaceholder(/vet Thursday/).fill('Vet appointment Monday');
   await page.getByRole('button', { name: 'Plan my week' }).click();
 
