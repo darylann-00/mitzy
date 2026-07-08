@@ -33,7 +33,7 @@ Supabase project: `https://uftxbegrnlvlgkbitibp.supabase.co` (production). All t
 
 ## What's Built and Working
 
-- **Onboarding** — `SlimOnboarding`: full-screen green, 3 phases: welcome → 8 question screens (name/age/gender, own/rent, cars, zip, kids, pets, Google Calendar, capacity/bandwidth) → transition summary. `PrioritySetup`: 12 key tasks, slide transitions, full green screen. Recurring tasks show fuzzy time chips + a collapsed "pick an exact date" toggle (calendar icon, label color matches the label style passed in) that expands `MonthCalendar` on tap; one-time tasks show "Have you done this? Yes / Not yet".
+- **Onboarding** — `SlimOnboarding`: full-screen green, 3 phases: welcome → 8 question screens (name/age/gender, own/rent, cars, zip, kids, pets, Google Calendar, capacity/bandwidth) → transition summary. `PrioritySetup`: up to 12 key tasks, slide transitions, full green screen. `selectPriorityTasks()` picks the set: if the profile has kids, every kid's priority task (annual health visit) is guaranteed a slot and pet priority tasks are excluded entirely; if there are pets but no kids, every pet's priority task (vet visit) is guaranteed instead; remaining slots fill from generic (home/car/finance/etc.) priority tasks in library order. Kids and pets are never asked about as a partial subset. Recurring tasks show fuzzy time chips + a collapsed "pick an exact date" toggle (calendar icon, label color matches the label style passed in) that expands `MonthCalendar` on tap; one-time tasks show "Have you done this? Yes / Not yet".
 
 - **Task library** — 60+ base tasks across 6 categories (home, car, health, finance, emergency, seasonal). Dynamically extended with per-car, per-kid, per-pet, and per-hazard tasks based on profile.
 

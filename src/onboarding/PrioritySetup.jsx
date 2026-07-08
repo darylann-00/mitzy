@@ -79,8 +79,28 @@ function TaskSlide({ task, onAnswer, onNeeded }) {
   );
 }
 
+const MAX_PRIORITY_TASKS = 12;
+
+// Kids and pets are asked about all-or-nothing, never a partial subset:
+// if there are kids, every kid gets their one priority task and pets get
+// none (pet dates stay `unknown`, filled in later); pets only get their
+// guaranteed slots when there are no kids at all. Generic (home/car/etc)
+// tasks fill whatever's left of the overall cap.
+function selectPriorityTasks(eligible) {
+  const kidTasks     = eligible.filter(t => t.id.startsWith('k-'));
+  const petTasks     = eligible.filter(t => t.id.startsWith('p-'));
+  const genericTasks = eligible.filter(t => !t.id.startsWith('k-') && !t.id.startsWith('p-'));
+
+  const guaranteed = kidTasks.length > 0 ? kidTasks : petTasks;
+  const remainingSlots = Math.max(0, MAX_PRIORITY_TASKS - guaranteed.length);
+  const selectedIds = new Set([...guaranteed, ...genericTasks.slice(0, remainingSlots)].map(t => t.id));
+
+  return eligible.filter(t => selectedIds.has(t.id));
+}
+
 export function PrioritySetup({ taskLib, region, onComplete }) {
-  const priorityTasks = taskLib.filter(t => isPriority(t) && isDependencySatisfied(t, {}) && isWindowActive(t, region)).slice(0, 12);
+  const eligible = taskLib.filter(t => isPriority(t) && isDependencySatisfied(t, {}) && isWindowActive(t, region));
+  const priorityTasks = selectPriorityTasks(eligible);
   const [index,      setIndex]      = useState(0);
   const [selections, setSelections] = useState({});
   const [done,       setDone]       = useState(false);
