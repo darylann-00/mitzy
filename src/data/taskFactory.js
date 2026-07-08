@@ -235,11 +235,11 @@ export function kidTasks(kid) {
     tasks.push(T(`k-emerg-${slug}`,  "school", `${name}: update emergency contacts`, 365, 14, "high",   [7,8,9],   [], "script",    "Update at school start."));
     tasks.push(T(`k-hform-${slug}`,  "school", `${name}: submit health form`,        365, 21, "high",   [7,8,9],   [], "script",    "Required annually."));
     tasks.push(T(`k-supply-${slug}`, "school", `${name}: restock school supplies`,   365, 21, "low",    [7,8],     [], "guidance",  "Check school supply list."));
-    tasks.push({ ...T(`k-winter-${slug}`, "school", `${name}: plan winter break coverage`,365, 30, "high",   [10,11],   [], "providers", "Winter break is typically 2 weeks in December."), priority: true });
+    tasks.push(T(`k-winter-${slug}`, "school", `${name}: plan winter break coverage`,365, 30, "high",   [10,11],   [], "providers", "Winter break is typically 2 weeks in December."));
   }
 
   if (age >= 4 && age < 16) {
-    tasks.push({ ...T(`k-camp-${slug}`,   "school", `${name}: summer camp signup`,       365, 90, "high",   [1,2,3,4,5], [], "deadline",  "Popular camps fill months in advance."), priority: true });
+    tasks.push(T(`k-camp-${slug}`,   "school", `${name}: summer camp signup`,       365, 90, "high",   [1,2,3,4,5], [], "deadline",  "Popular camps fill months in advance."));
     tasks.push(T(`k-spring-${slug}`, "school", `${name}: spring break coverage`,    365, 45, "high",   [1,2,3],     [], "providers", "Spring break is typically late March."));
   }
 
@@ -269,8 +269,8 @@ export function petTasks(pet) {
   tasks.push({ ...T(`p-dental-${slug}`,  "pet", `${name}: dental cleaning`,             365, 30, "medium", null, [], "providers", "Annual dental cleaning — involves anesthesia, so clinics often want a pre-op visit first."),                                                                                                                                                                                                              searchQuery: `${type} dental cleaning veterinarian`, reminderLeadDays: 45 });
 
   if (type === "dog") {
-    tasks.push({ ...T(`p-hw-${slug}`,    "pet", `${name}: heartworm prevention refill`, 90, 14, "high",   null, [], "guidance",  "Monthly or quarterly. Missing doses creates real risk."), priority: true });
-    tasks.push({ ...T(`p-vax-${slug}`,   "pet", `${name}: rabies/booster vaccines`,    365, 30, "high",   null, [], "providers", "Rabies legally required in most states."),  searchQuery: "dog veterinary clinic vaccines", reminderLeadDays: 30, priority: true });
+    tasks.push(T(`p-hw-${slug}`,    "pet", `${name}: heartworm prevention refill`, 90, 14, "high",   null, [], "guidance",  "Monthly or quarterly. Missing doses creates real risk."));
+    tasks.push({ ...T(`p-vax-${slug}`,   "pet", `${name}: rabies/booster vaccines`,    365, 30, "high",   null, [], "providers", "Rabies legally required in most states."),  searchQuery: "dog veterinary clinic vaccines", reminderLeadDays: 30 });
     tasks.push({ ...T(`p-nails-${slug}`, "pet", `${name}: nail trim`,                   60, 10, "low",    null, [], "providers", "Every 6-8 weeks."),                           searchQuery: "dog groomer nail trim", reminderLeadDays: 10 });
     if (longCoat) {
       tasks.push({ ...T(`p-groom-${slug}`, "pet", `${name}: grooming appointment`, 60, 14, "low", null, [], "providers", "Every 6-8 weeks for long-coat breeds — book ahead to keep your regular groomer's slot."),              searchQuery: "dog groomer", reminderLeadDays: 21 });
