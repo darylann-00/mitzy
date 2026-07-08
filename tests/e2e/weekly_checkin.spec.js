@@ -131,18 +131,21 @@ test('unchecking an existing task on the review screen keeps it visible, and its
   // above the task list).
   await page.getByRole('button', { name: "Let's do it" }).first().click();
   await expect(page.getByText('Already on your plate')).toBeVisible({ timeout: 10000 });
-  await expect(page.getByText('Submit claim for FSA')).toBeVisible();
+  // The seeded task is genuinely due, so it also renders on the Home screen
+  // behind this overlay — scope to .first() (the overlay instance, which
+  // mounts before the underlying Home content in the DOM).
+  await expect(page.getByText('Submit claim for FSA').first()).toBeVisible();
 
   // Skip the brain-dump textarea — go straight to the review screen.
   await page.getByRole('button', { name: 'Next' }).click();
   await expect(page.getByText("This week's plan")).toBeVisible({ timeout: 10000 });
 
-  const taskLabel = page.getByText('Submit claim for FSA');
+  const taskLabel = page.getByText('Submit claim for FSA').first();
   await expect(taskLabel).toBeVisible();
 
   // Mitzy suggestions should already be visible, no expand needed.
   await expect(page.getByText('Mitzy suggestions')).toBeVisible();
-  await expect(page.getByText('Test smoke & CO detectors')).toBeVisible();
+  await expect(page.getByText('Test smoke & CO detectors').first()).toBeVisible();
 
   // Uncheck the custom task — it should stay on screen, just unchecked.
   await taskLabel.click();
