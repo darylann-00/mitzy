@@ -121,7 +121,7 @@ test('unchecking an existing task on the review screen keeps it visible, and its
 
   await page.goto('/');
   await loginWithDevCredentials(page);
-  await expect(page.getByText('Today', { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText('Today', { exact: true }).first()).toBeVisible({ timeout: 15000 });
 
   await page.getByRole('button', { name: "Let's do it" }).click();
   await expect(page.getByText('Already on your plate')).toBeVisible({ timeout: 10000 });
