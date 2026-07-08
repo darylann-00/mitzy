@@ -34,9 +34,11 @@ async function simulateSwipeLeft(page, element) {
     const el = document.elementFromPoint(sx, sy);
     if (!el) return;
 
-    const makeTouch = (x, y) => ({
-      clientX: x, clientY: y, pageX: x, pageY: y,
-      identifier: 0, target: el,
+    // Current Chrome validates TouchEventInit.touches/changedTouches strictly
+    // against the Touch interface — a plain object literal is no longer
+    // accepted and throws "Failed to convert value to 'Touch'".
+    const makeTouch = (x, y) => new Touch({
+      identifier: 0, target: el, clientX: x, clientY: y, pageX: x, pageY: y,
     });
 
     const fire = (type, x, y) => {
