@@ -10,17 +10,12 @@ export const PROVIDER_HISTORY_KEY   = "mitzy-ph-v6";
 export const VISIT_COUNT_KEY        = "mitzy-visits-v6";
 export const HAZARD_DONE_KEY        = "mitzy-hz-v6";
 export const KNOWLEDGE_REFRESH_KEY  = "mitzy-kr-v6";
-export const TRICKLE_DATE_KEY       = "mitzy-td-v6";
-export const TRICKLE_QUEUE_KEY      = "mitzy-tq-v6";
 export const WELCOME_CHOICE_KEY     = "mitzy-welcome-v1";
 export const CUSTOM_TASKS_KEY       = "mitzy-ct-v1";
 export const FOCUS_SEEN_KEY         = "mitzy-fs-v1";
 export const LIFE_EVENTS_KEY        = "mitzy-le-v1";
-export const LIFE_EVENTS_NUDGE_KEY  = "mitzy-len-v1";
-export const SNOOZE_TIP_KEY        = "mitzy-snztip-v1";
 export const CAL_GRANTED_KEY        = "mitzy-cal-v1";
 export const CAPACITY_STATS_KEY     = "mitzy-cs-v1";
-export const WEEKLY_CHECKIN_NUDGE_KEY = "mitzy-wcn-v1";
 
 export const ASSIST_CACHE_TTL      = 7  * 24 * 60 * 60 * 1000; // 7 days
 export const KNOWLEDGE_REFRESH_TTL = 90 * 24 * 60 * 60 * 1000; // 90 days
@@ -29,9 +24,9 @@ export const KNOWLEDGE_REFRESH_TTL = 90 * 24 * 60 * 60 * 1000; // 90 days
 // Removes stale mitzy-* keys from previous schema versions on startup.
 const CURRENT_KEYS = new Set([
   "mitzy-v6", "mitzy-ob-v6", "mitzy-ob-v6-p", "mitzy-dis-v6", "mitzy-pro-v7",
-  "mitzy-ph-v6", "mitzy-visits-v6", "mitzy-hz-v6", "mitzy-kr-v6", "mitzy-td-v6", "mitzy-tq-v6",
-  "mitzy-welcome-v1", "mitzy-ct-v1", "mitzy-fs-v1", "mitzy-le-v1", "mitzy-len-v1",
-  "mitzy-snztip-v1", "mitzy-cal-v1", "mitzy-cs-v1", "mitzy-wcn-v1",
+  "mitzy-ph-v6", "mitzy-visits-v6", "mitzy-hz-v6", "mitzy-kr-v6",
+  "mitzy-welcome-v1", "mitzy-ct-v1", "mitzy-fs-v1", "mitzy-le-v1",
+  "mitzy-cal-v1", "mitzy-cs-v1",
 ]);
 
 export function cleanupOldKeys() {
@@ -54,18 +49,13 @@ const USER_KEYS = [
   "mitzy-visits-v6",  // VISIT_COUNT_KEY
   "mitzy-hz-v6",      // HAZARD_DONE_KEY
   "mitzy-kr-v6",      // KNOWLEDGE_REFRESH_KEY
-  "mitzy-td-v6",      // TRICKLE_DATE_KEY
-  "mitzy-tq-v6",      // TRICKLE_QUEUE_KEY
   "mitzy-ph-v6",      // PROVIDER_HISTORY_KEY
   "mitzy-welcome-v1", // WELCOME_CHOICE_KEY
   "mitzy-ct-v1",      // CUSTOM_TASKS_KEY
   "mitzy-fs-v1",      // FOCUS_SEEN_KEY
   "mitzy-le-v1",      // LIFE_EVENTS_KEY
-  "mitzy-len-v1",     // LIFE_EVENTS_NUDGE_KEY
-  "mitzy-snztip-v1",  // SNOOZE_TIP_KEY
   "mitzy-cal-v1",     // CAL_GRANTED_KEY
   "mitzy-cs-v1",      // CAPACITY_STATS_KEY
-  "mitzy-wcn-v1",     // WEEKLY_CHECKIN_NUDGE_KEY
 ];
 
 export function clearLocalUserData() {

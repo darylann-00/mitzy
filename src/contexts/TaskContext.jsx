@@ -14,7 +14,7 @@ export const CAPACITY_FOCUS_COUNT = { low: 1, normal: 3, high: 5 };
 const TaskContext = createContext(null);
 
 export function TaskProvider({ user, children }) {
-  const { taskLibrary, region, profile } = useProfileContext();
+  const { taskLibrary, region, profile, updateUiState } = useProfileContext();
   const {
     taskState, setTaskState,
     disabledTasks, setDisabledTasks,
@@ -25,9 +25,9 @@ export function TaskProvider({ user, children }) {
 
   const {
     activePlan, isInPlanMode, planProgress, weekStart,
-    savePlan, confirmPlan, addToPlan,
+    confirmPlan, addToPlan,
     showNudge: showWeeklyNudge, dismissNudge: dismissWeeklyNudge,
-  } = useWeeklyPlan(user, taskState, markScheduled);
+  } = useWeeklyPlan(user, taskState, markScheduled, profile.uiState, updateUiState);
 
   const activeTasks = useMemo(() =>
     taskLibrary.filter(t => !disabledTasks[t.id] && isDependencySatisfied(t, taskState)),
@@ -153,7 +153,7 @@ export function TaskProvider({ user, children }) {
       getStatus, getDays, getNext,
       loading, syncError,
       isInPlanMode, activePlan, planTasks, planProgress, weekStart,
-      savePlan, confirmPlan, addToPlan,
+      confirmPlan, addToPlan,
       showWeeklyNudge, dismissWeeklyNudge,
     }}>
       {children}

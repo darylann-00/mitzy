@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { loadS, saveS, WEEKLY_CHECKIN_NUDGE_KEY } from "../utils/storage";
 import { supabase } from "../lib/supabase";
 
 function getCurrentWeekStart() {
@@ -13,7 +12,7 @@ function getCurrentWeekStart() {
 
 export { getCurrentWeekStart };
 
-export function useWeeklyPlan(user, taskState, markScheduled) {
+export function useWeeklyPlan(user, taskState, markScheduled, uiState, updateUiState) {
   const [activePlan, setActivePlan] = useState(null);
   const [loading, setLoading] = useState(!!user);
 
@@ -61,25 +60,28 @@ export function useWeeklyPlan(user, taskState, markScheduled) {
     return { done, total: activePlan.taskIds.length };
   }, [activePlan, taskState]);
 
-  const savePlan = useCallback(async (taskIds, scheduledDates, userInput) => {
+  const confirmPlan = useCallback(async (taskIds, scheduledDates, userInput) => {
     if (!user) return;
 
-    const draft = {
+    const now = new Date().toISOString();
+    const dates = scheduledDates || {};
+
+    setActivePlan(prev => ({
+      ...prev,
       weekStart,
       taskIds,
-      scheduledDates: scheduledDates || {},
+      scheduledDates: dates,
       userInput: userInput || null,
-      confirmedAt: null,
-    };
-    setActivePlan(prev => ({ ...prev, ...draft }));
+      confirmedAt: now,
+    }));
 
     const row = {
       user_id: user.id,
       week_start: weekStart,
       task_ids: taskIds,
-      scheduled_dates: scheduledDates || {},
+      scheduled_dates: dates,
       user_input: userInput || null,
-      confirmed_at: null,
+      confirmed_at: now,
     };
 
     const { data, error } = await supabase
@@ -92,6 +94,7 @@ export function useWeeklyPlan(user, taskState, markScheduled) {
       setActivePlan(null);
       return;
     }
+
     setActivePlan({
       id: data.id,
       weekStart: data.week_start,
@@ -100,32 +103,13 @@ export function useWeeklyPlan(user, taskState, markScheduled) {
       userInput: data.user_input,
       confirmedAt: data.confirmed_at,
     });
-  }, [user, weekStart]);
 
-  const confirmPlan = useCallback(async () => {
-    if (!user || !activePlan) return;
-
-    const now = new Date().toISOString();
-    const prev = { ...activePlan };
-    setActivePlan(p => ({ ...p, confirmedAt: now }));
-
-    const { error } = await supabase
-      .from("weekly_plans")
-      .update({ confirmed_at: now })
-      .eq("user_id", user.id)
-      .eq("week_start", weekStart);
-
-    if (error) {
-      setActivePlan(prev);
-      return;
-    }
-
-    if (markScheduled && activePlan.scheduledDates) {
-      for (const [taskId, date] of Object.entries(activePlan.scheduledDates)) {
+    if (markScheduled) {
+      for (const [taskId, date] of Object.entries(dates)) {
         if (date) markScheduled(taskId, date);
       }
     }
-  }, [user, activePlan, weekStart, markScheduled]);
+  }, [user, weekStart, markScheduled]);
 
   const addToPlan = useCallback(async (taskId) => {
     if (!user || !activePlan) return;
@@ -148,12 +132,12 @@ export function useWeeklyPlan(user, taskState, markScheduled) {
     }
   }, [user, activePlan, weekStart]);
 
-  const dismissedWeek = loadS(WEEKLY_CHECKIN_NUDGE_KEY, null);
+  const dismissedWeek = uiState?.weeklyCheckinDismissedWeek ?? null;
   const showNudge = !loading && !isInPlanMode && dismissedWeek !== weekStart;
 
   const dismissNudge = useCallback(() => {
-    saveS(WEEKLY_CHECKIN_NUDGE_KEY, weekStart);
-  }, [weekStart]);
+    updateUiState?.({ weeklyCheckinDismissedWeek: weekStart });
+  }, [weekStart, updateUiState]);
 
   return {
     activePlan,
@@ -161,7 +145,6 @@ export function useWeeklyPlan(user, taskState, markScheduled) {
     isInPlanMode,
     planProgress,
     weekStart,
-    savePlan,
     confirmPlan,
     addToPlan,
     showNudge,

@@ -126,6 +126,11 @@ export function useProfile(user, welcomeChoice) {
     }
   };
 
+  // ui_state holds one-time CTA/nudge dismissal flags (snooze tooltip, life-event
+  // nudge, trickle rotation, weekly check-in nudge) — synced to the account so
+  // signing in from a new device doesn't replay every dismissed prompt at once.
+  const updateUiState = (patch) => updateProfile({ uiState: { ...(profile.uiState || {}), ...patch } });
+
   const addCustomTask = async (task) => {
     const next = [...customTasks, task];
     const prev = customTasks;
@@ -217,7 +222,7 @@ export function useProfile(user, welcomeChoice) {
 
   return {
     profile, setProfile, taskLibrary, customTasks,
-    updateProfile, addCustomTask, removeCustomTask,
+    updateProfile, updateUiState, addCustomTask, removeCustomTask,
     addCustomTasksBulk, removeCustomTasksByLifeEvent,
     loading, syncError,
     pendingConflict, resolveConflict,
@@ -294,6 +299,7 @@ function toRow(p) {
     profile_questions: p.profileQuestions ?? null,
     capacity:          p.capacity ?? null,
     insurance:         p.insurance ?? null,
+    ui_state:          p.uiState  ?? {},
   };
 }
 
@@ -316,5 +322,6 @@ function fromRow(row) {
     profileQuestions: row.profile_questions,
     capacity:         row.capacity ?? null,
     insurance:        row.insurance ?? null,
+    uiState:          row.ui_state ?? {},
   };
 }

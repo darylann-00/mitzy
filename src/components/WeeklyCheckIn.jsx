@@ -253,7 +253,7 @@ function BrainDumpTaskCard({ task, onUpdate, dueDate, onDueDateChange }) {
 export function WeeklyCheckIn({ onClose }) {
   const {
     activeTasks, scoredDue, taskState, getStatus, getDays,
-    savePlan, confirmPlan, weekStart,
+    confirmPlan, weekStart,
   } = useTaskContext();
   const { customTasks, addCustomTask } = useProfileContext();
 
@@ -480,8 +480,7 @@ export function WeeklyCheckIn({ onClose }) {
       }
     }
     const taskIds = [...planItems];
-    await savePlan(taskIds, scheduledDates, userInput);
-    await confirmPlan();
+    await confirmPlan(taskIds, scheduledDates, userInput);
     onClose();
   };
 

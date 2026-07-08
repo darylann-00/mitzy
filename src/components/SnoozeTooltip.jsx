@@ -1,15 +1,14 @@
-import { useState } from "react";
-import { loadS, saveS, SNOOZE_TIP_KEY } from "../utils/storage";
+import { useProfileContext } from "../contexts/ProfileContext";
 import { SnoozeIcon } from "./SnoozeIcon";
 
 export function SnoozeTooltip({ visible }) {
-  const [dismissed, setDismissed] = useState(() => !!loadS(SNOOZE_TIP_KEY, false));
+  const { profile, updateUiState } = useProfileContext();
+  const dismissed = !!profile?.uiState?.snoozeTipDismissed;
 
   if (dismissed || !visible) return null;
 
   const dismiss = () => {
-    setDismissed(true);
-    saveS(SNOOZE_TIP_KEY, true);
+    updateUiState({ snoozeTipDismissed: true });
   };
 
   return (
