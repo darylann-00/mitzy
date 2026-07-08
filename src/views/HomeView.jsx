@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { TrickleCard } from "../components/TrickleCard";
 import { SwipeableTaskCard } from "../components/SwipeableTaskCard";
 import { SnoozeTooltip }    from "../components/SnoozeTooltip";
@@ -240,102 +240,140 @@ export function HomeView({
     recordWeeklyStats(homeTasks.length, doneThisWeek);
   }, [homeTasks.length, doneThisWeek]);
 
+  // Nudge cards compete for the same top-of-screen real estate. Priority order
+  // (highest first): life event -> weekly check-in -> trickle -> capacity -> hazard.
+  // Only the top 2 eligible nudges render; the rest wait for a later visit.
+  const nudgeCandidates = [];
+
+  if (lifeEventNudge) {
+    nudgeCandidates.push({
+      key: 'lifeEvent',
+      priority: 0,
+      node: (
+        <LifeEventNudge
+          variant={lifeEventNudge.variant}
+          eventLabel={lifeEventNudge.eventLabel}
+          onPrimary={onLifeEventNudgePrimary}
+          onDismiss={onLifeEventNudgeDismiss}
+        />
+      ),
+    });
+  }
+
+  if (showWeeklyNudge && !isInPlanMode) {
+    nudgeCandidates.push({
+      key: 'weeklyCheckIn',
+      priority: 1,
+      node: (
+        <div style={{ background:'#FFFDE7', borderRadius:14, border:'1px solid #EAE4DA', padding:'18px 18px', marginBottom:4 }}>
+          <div style={{
+            fontSize:11, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase',
+            color:'#B8960A', fontFamily:'DM Sans, sans-serif', marginBottom:6,
+          }}>
+            Weekly check-in
+          </div>
+          <div style={{ fontFamily:"'Righteous', cursive", fontSize:17, color:'#1C2B22', marginBottom:6 }}>
+            Ready to plan your week?
+          </div>
+          <div style={{ fontSize:13, color:'#4A6256', fontFamily:'DM Sans, sans-serif', lineHeight:1.5, marginBottom:14 }}>
+            Take a minute to tell Mitzy what's happening — she'll set up your week.
+          </div>
+          <div style={{ display:'flex', gap:8 }}>
+            <button
+              onClick={onOpenWeeklyCheckIn}
+              style={{ flex:1, padding:'10px', fontSize:13, fontWeight:700, background:'#1A5C3A', color:'#E8F5EE', border:'none', borderRadius:10, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+            >
+              Let's do it
+            </button>
+            <button
+              onClick={dismissWeeklyNudge}
+              style={{ flex:1, padding:'10px', fontSize:13, fontWeight:600, background:'#F0EDE4', color:'#4A6256', border:'none', borderRadius:10, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+            >
+              Skip this week
+            </button>
+          </div>
+        </div>
+      ),
+    });
+  }
+
+  if (trickleTask) {
+    nudgeCandidates.push({
+      key: 'trickle',
+      priority: 2,
+      node: (
+        <TrickleCard
+          task={trickleTask}
+          onAnswer={onTrickleAnswer}
+          onDismiss={onTrickleDismiss}
+          onAssist={onTrickleAssist}
+        />
+      ),
+    });
+  }
+
+  if (capacityNudge && !nudgeDismissed) {
+    nudgeCandidates.push({
+      key: 'capacity',
+      priority: 3,
+      node: (
+        <div style={{ background:'#fff', borderRadius:14, border:'1px solid #EAE4DA', padding:'16px 18px', marginBottom:4 }}>
+          <div style={{ fontSize:14, fontWeight:600, color:'#1C2B22', marginBottom:10, fontFamily:'DM Sans, sans-serif', lineHeight:1.5 }}>
+            {capacityNudge.message}
+          </div>
+          <div style={{ display:'flex', gap:8 }}>
+            <button
+              onClick={() => {
+                updateProfile({ ...profile, capacity: capacityNudge.suggestion });
+                dismissCapacityNudge();
+                setNudgeDismissed(true);
+              }}
+              style={{ flex:1, padding:'10px', fontSize:13, fontWeight:700, background:'#1A5C3A', color:'#E8F5EE', border:'none', borderRadius:10, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+            >
+              {capacityNudge.direction === 'up' ? 'Show me more' : 'Dial it back'}
+            </button>
+            <button
+              onClick={() => { dismissCapacityNudge(); setNudgeDismissed(true); }}
+              style={{ flex:1, padding:'10px', fontSize:13, fontWeight:600, background:'#F0EDE4', color:'#4A6256', border:'none', borderRadius:10, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+            >
+              I'm good
+            </button>
+          </div>
+        </div>
+      ),
+    });
+  }
+
+  if (pendingHazards && !isInPlanMode) {
+    nudgeCandidates.push({
+      key: 'hazard',
+      priority: 4,
+      node: (
+        <HazardCard
+          hazards={pendingHazards}
+          onAccept={onHazardAccept}
+          onDismiss={onHazardDismiss}
+        />
+      ),
+    });
+  }
+
+  const visibleNudges = [...nudgeCandidates].sort((a, b) => a.priority - b.priority).slice(0, 2);
+  const hazardCardVisible = visibleNudges.some(n => n.key === 'hazard');
+
   return (
     <div style={{ background:'#FDFAF2' }}>
       <HomeHeader profile={profile} doneThisWeek={doneThisWeek} />
 
       <div style={{ padding:'20px 18px 160px', maxWidth:680, margin:'0 auto' }}>
 
-        {/* Life event nudge (discovery or wrap-up) */}
-        {lifeEventNudge && (
-          <>
-            <LifeEventNudge
-              variant={lifeEventNudge.variant}
-              eventLabel={lifeEventNudge.eventLabel}
-              onPrimary={onLifeEventNudgePrimary}
-              onDismiss={onLifeEventNudgeDismiss}
-            />
+        {/* Nudge cards — highest-priority 1-2 only, see priority list above */}
+        {visibleNudges.map(n => (
+          <Fragment key={n.key}>
+            {n.node}
             <Divider />
-          </>
-        )}
-
-        {/* Weekly check-in nudge */}
-        {showWeeklyNudge && !isInPlanMode && (
-          <>
-            <div style={{ background:'#FFFDE7', borderRadius:14, border:'1px solid #EAE4DA', padding:'18px 18px', marginBottom:4 }}>
-              <div style={{
-                fontSize:11, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase',
-                color:'#B8960A', fontFamily:'DM Sans, sans-serif', marginBottom:6,
-              }}>
-                Weekly check-in
-              </div>
-              <div style={{ fontFamily:"'Righteous', cursive", fontSize:17, color:'#1C2B22', marginBottom:6 }}>
-                Ready to plan your week?
-              </div>
-              <div style={{ fontSize:13, color:'#4A6256', fontFamily:'DM Sans, sans-serif', lineHeight:1.5, marginBottom:14 }}>
-                Take a minute to tell Mitzy what's happening — she'll set up your week.
-              </div>
-              <div style={{ display:'flex', gap:8 }}>
-                <button
-                  onClick={onOpenWeeklyCheckIn}
-                  style={{ flex:1, padding:'10px', fontSize:13, fontWeight:700, background:'#1A5C3A', color:'#E8F5EE', border:'none', borderRadius:10, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
-                >
-                  Let's do it
-                </button>
-                <button
-                  onClick={dismissWeeklyNudge}
-                  style={{ flex:1, padding:'10px', fontSize:13, fontWeight:600, background:'#F0EDE4', color:'#4A6256', border:'none', borderRadius:10, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
-                >
-                  Skip this week
-                </button>
-              </div>
-            </div>
-            <Divider />
-          </>
-        )}
-
-        {/* Trickle question */}
-        {trickleTask && (
-          <>
-            <TrickleCard
-              task={trickleTask}
-              onAnswer={onTrickleAnswer}
-              onDismiss={onTrickleDismiss}
-              onAssist={onTrickleAssist}
-            />
-            <Divider />
-          </>
-        )}
-
-        {/* Capacity nudge */}
-        {capacityNudge && !nudgeDismissed && (
-          <>
-            <div style={{ background:'#fff', borderRadius:14, border:'1px solid #EAE4DA', padding:'16px 18px', marginBottom:4 }}>
-              <div style={{ fontSize:14, fontWeight:600, color:'#1C2B22', marginBottom:10, fontFamily:'DM Sans, sans-serif', lineHeight:1.5 }}>
-                {capacityNudge.message}
-              </div>
-              <div style={{ display:'flex', gap:8 }}>
-                <button
-                  onClick={() => {
-                    updateProfile({ ...profile, capacity: capacityNudge.suggestion });
-                    dismissCapacityNudge();
-                    setNudgeDismissed(true);
-                  }}
-                  style={{ flex:1, padding:'10px', fontSize:13, fontWeight:700, background:'#1A5C3A', color:'#E8F5EE', border:'none', borderRadius:10, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
-                >
-                  {capacityNudge.direction === 'up' ? 'Show me more' : 'Dial it back'}
-                </button>
-                <button
-                  onClick={() => { dismissCapacityNudge(); setNudgeDismissed(true); }}
-                  style={{ flex:1, padding:'10px', fontSize:13, fontWeight:600, background:'#F0EDE4', color:'#4A6256', border:'none', borderRadius:10, cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
-                >
-                  I'm good
-                </button>
-              </div>
-            </div>
-            <Divider />
-          </>
-        )}
+          </Fragment>
+        ))}
 
         {/* ─── Plan mode ──────────────────────────────────────────────── */}
         {isInPlanMode && (() => {
@@ -530,7 +568,7 @@ export function HomeView({
             )}
 
             {/* Nudge to All page when only one task */}
-            {todayTask && weekTasks.length === 0 && !pendingHazards && (
+            {todayTask && weekTasks.length === 0 && !hazardCardVisible && (
               <div style={{
                 background: '#FFFFFF',
                 borderRadius: 14,
@@ -554,20 +592,8 @@ export function HomeView({
               </div>
             )}
 
-            {/* Hazard card */}
-            {pendingHazards && (
-              <>
-                {homeTasks.length > 0 && <Divider />}
-                <HazardCard
-                  hazards={pendingHazards}
-                  onAccept={onHazardAccept}
-                  onDismiss={onHazardDismiss}
-                />
-              </>
-            )}
-
             {/* Empty state — two variants based on whether user has done anything this week */}
-            {homeTasks.length === 0 && !pendingHazards && (
+            {homeTasks.length === 0 && !hazardCardVisible && (
               doneThisWeek > 0
                 ? <EarnedState doneThisWeek={doneThisWeek} profile={profile} onGoToAll={onGoToAll} />
                 : <QuietState nextUpcomingTask={nextUpcomingTask} getDays={getDays} />
