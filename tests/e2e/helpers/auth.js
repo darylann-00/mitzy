@@ -65,6 +65,36 @@ export async function seedReturnUser(page) {
   });
 }
 
+// Intercepts /rest/v1/profiles so the task library always builds (it's gated
+// entirely on profile.zip — see useProfile.js) regardless of whether the
+// shared PLAYWRIGHT_TEST_EMAIL account currently has a profile row in prod,
+// and regardless of how long a real fetch would take under concurrent CI load.
+export async function mockProfile(page, overrides = {}) {
+  await page.route('**/rest/v1/profiles**', route => {
+    if (route.request().method() !== 'GET') return route.continue();
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([{
+        name: 'Jamie', zip: '97201', own_rent: 'own', age: '1990', gender: 'woman',
+        cars: [], has_car: false, kids: [], has_kids: false, pets: [], has_pets: false,
+        onboarded: true, visit_count: 2, hazard_done: true, profile_questions: null,
+        capacity: 'normal', insurance: null,
+        ...overrides,
+      }]),
+    });
+  });
+}
+
+// Intercepts /rest/v1/custom_tasks GET so profile load doesn't depend on
+// whatever custom tasks the real test account happens to have in prod.
+export async function mockCustomTasks(page, tasks = []) {
+  await page.route('**/rest/v1/custom_tasks**', route => {
+    if (route.request().method() !== 'GET') return route.continue();
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(tasks) });
+  });
+}
+
 // Intercepts the Supabase task_records GET so the test always sees one known
 // overdue task (hm-smoke, requires: []) regardless of the test user's real DB state.
 // Only GETs are intercepted — writes pass through so mark_done can actually save.

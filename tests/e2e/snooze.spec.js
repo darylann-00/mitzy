@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loginWithDevCredentials, seedReturnUser, mockTaskRecords } from './helpers/auth.js';
+import { loginWithDevCredentials, seedReturnUser, mockTaskRecords, mockProfile, mockCustomTasks } from './helpers/auth.js';
 
 function mockTaskRecordsWithSnoozeSupport(page) {
   const lastDone = new Date(Date.now() - 400 * 86400000).toISOString();
@@ -60,12 +60,14 @@ async function simulateSwipeLeft(page, element) {
 
 test('swipe left on task card opens snooze picker, pick preset moves task to snoozed section', async ({ page }) => {
   await mockTaskRecordsWithSnoozeSupport(page);
+  await mockProfile(page);
+  await mockCustomTasks(page);
   await seedReturnUser(page);
   await page.goto('/');
   await loginWithDevCredentials(page);
 
   // Wait for home screen
-  await expect(page.getByText('Today', { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText('Today', { exact: true }).first()).toBeVisible({ timeout: 15000 });
 
   // Dismiss the snooze tooltip if it's showing so it doesn't interfere
   const snoozeTooltip = page.getByText('Swipe left on a task to snooze it for later');
@@ -119,11 +121,13 @@ test('unsnooze a task from the snoozed section', async ({ page }) => {
     return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
   });
 
+  await mockProfile(page);
+  await mockCustomTasks(page);
   await seedReturnUser(page);
   await page.goto('/');
   await loginWithDevCredentials(page);
 
-  await expect(page.getByText('Today', { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText('Today', { exact: true }).first()).toBeVisible({ timeout: 15000 });
 
   // Switch to All tab
   await page.getByText('All', { exact: true }).click();

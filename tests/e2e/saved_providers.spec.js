@@ -70,7 +70,7 @@ test('a manually saved provider persists through Supabase, not just local state'
   await page.goto('/');
   await loginWithDevCredentials(page);
 
-  await expect(page.getByText('Today', { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText('Today', { exact: true }).first()).toBeVisible({ timeout: 15000 });
   await page.getByText('Profile', { exact: true }).click();
 
   await expect(page.getByText('No providers saved yet')).toBeVisible();
@@ -81,8 +81,11 @@ test('a manually saved provider persists through Supabase, not just local state'
   // click outside, not Escape, and the full-screen overlay div they render
   // would otherwise intercept later clicks.
   await page.mouse.click(5, 5);
+  // This picker only commits a value to form state when a suggestion is
+  // clicked — typing alone (or a plain .fill()) is not enough, and clicking
+  // outside instead would revert the field back to empty.
   await page.getByPlaceholder('e.g. plumber, dentist, vet').fill('plumber');
-  await page.mouse.click(5, 5);
+  await page.getByRole('button', { name: 'Plumber', exact: true }).click();
   await page.getByRole('button', { name: 'Good', exact: true }).click();
   await page.getByRole('button', { name: 'Save provider' }).click();
 
@@ -97,7 +100,7 @@ test('a manually saved provider persists through Supabase, not just local state'
   // local component state is gone, so this only shows up if it reloaded from
   // the saved_providers table.
   await page.reload();
-  await expect(page.getByText('Today', { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText('Today', { exact: true }).first()).toBeVisible({ timeout: 15000 });
   await page.getByText('Profile', { exact: true }).click();
   await expect(page.getByText('Riverside Plumbing')).toBeVisible();
 });

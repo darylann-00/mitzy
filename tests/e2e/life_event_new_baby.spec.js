@@ -60,7 +60,7 @@ test('user starts a new-baby life event from Profile', async ({ page }) => {
   await loginWithDevCredentials(page);
 
   // Wait for app shell
-  await expect(page.getByText('Today', { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText('Today', { exact: true }).first()).toBeVisible({ timeout: 15000 });
 
   // Profile tab
   await page.getByText('Profile', { exact: true }).click();

@@ -8,5 +8,5 @@ test('returning user signs in and reaches home screen', async ({ page }) => {
   await loginWithDevCredentials(page);
 
   // BottomDock is always visible once authenticated
-  await expect(page.getByText('Today', { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText('Today', { exact: true }).first()).toBeVisible({ timeout: 15000 });
 });
