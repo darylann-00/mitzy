@@ -1,16 +1,27 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 
+// Format a Date as YYYY-MM-DD in the user's local timezone. toISOString() is
+// UTC — for US-evening users the UTC date is already "tomorrow", which shifted
+// week_start by a day and made a plan saved in the evening unfindable the next
+// morning.
+function toLocalISO(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function getCurrentWeekStart() {
   const now = new Date();
   const day = now.getDay();
   const diff = day === 0 ? 6 : day - 1;
   const monday = new Date(now);
   monday.setDate(now.getDate() - diff);
-  return monday.toISOString().slice(0, 10);
+  return toLocalISO(monday);
 }
 
-export { getCurrentWeekStart };
+export { getCurrentWeekStart, toLocalISO };
 
 export function useWeeklyPlan(user, taskState, markScheduled, uiState, updateUiState) {
   const [activePlan, setActivePlan] = useState(null);
@@ -61,7 +72,7 @@ export function useWeeklyPlan(user, taskState, markScheduled, uiState, updateUiS
   }, [activePlan, taskState]);
 
   const confirmPlan = useCallback(async (taskIds, scheduledDates, userInput) => {
-    if (!user) return;
+    if (!user) return { error: new Error("Not signed in") };
 
     const now = new Date().toISOString();
     const dates = scheduledDates || {};
@@ -92,7 +103,7 @@ export function useWeeklyPlan(user, taskState, markScheduled, uiState, updateUiS
 
     if (error) {
       setActivePlan(null);
-      return;
+      return { error };
     }
 
     setActivePlan({
@@ -109,6 +120,7 @@ export function useWeeklyPlan(user, taskState, markScheduled, uiState, updateUiS
         if (date) markScheduled(taskId, date);
       }
     }
+    return { error: null };
   }, [user, weekStart, markScheduled]);
 
   const addToPlan = useCallback(async (taskId) => {
@@ -132,6 +144,29 @@ export function useWeeklyPlan(user, taskState, markScheduled, uiState, updateUiS
     }
   }, [user, activePlan, weekStart]);
 
+  // Snoozing a task is a promise to hide it until a chosen date — it should
+  // also leave the frozen weekly plan so the two features don't contradict.
+  const removeFromPlan = useCallback(async (taskId) => {
+    if (!user || !activePlan || !activePlan.taskIds.includes(taskId)) return;
+
+    const newIds = activePlan.taskIds.filter(id => id !== taskId);
+    const newDates = { ...activePlan.scheduledDates };
+    delete newDates[taskId];
+
+    const prev = { ...activePlan };
+    setActivePlan(p => ({ ...p, taskIds: newIds, scheduledDates: newDates }));
+
+    const { error } = await supabase
+      .from("weekly_plans")
+      .update({ task_ids: newIds, scheduled_dates: newDates })
+      .eq("user_id", user.id)
+      .eq("week_start", weekStart);
+
+    if (error) {
+      setActivePlan(prev);
+    }
+  }, [user, activePlan, weekStart]);
+
   const dismissedWeek = uiState?.weeklyCheckinDismissedWeek ?? null;
   const showNudge = !loading && !isInPlanMode && dismissedWeek !== weekStart;
 
@@ -147,6 +182,7 @@ export function useWeeklyPlan(user, taskState, markScheduled, uiState, updateUiS
     weekStart,
     confirmPlan,
     addToPlan,
+    removeFromPlan,
     showNudge,
     dismissNudge,
   };

@@ -25,9 +25,16 @@ export function TaskProvider({ user, children }) {
 
   const {
     activePlan, isInPlanMode, planProgress, weekStart,
-    confirmPlan, addToPlan,
+    confirmPlan, addToPlan, removeFromPlan,
     showNudge: showWeeklyNudge, dismissNudge: dismissWeeklyNudge,
   } = useWeeklyPlan(user, taskState, markScheduled, profile.uiState, updateUiState);
+
+  // Snooze means "hide until this date" — if the task is in the frozen weekly
+  // plan, it leaves the plan too so plan mode doesn't keep showing it.
+  const snoozeTaskAndUnplan = useCallback(async (id, untilDate) => {
+    await snoozeTask(id, untilDate);
+    if (isInPlanMode) await removeFromPlan(id);
+  }, [snoozeTask, isInPlanMode, removeFromPlan]);
 
   const activeTasks = useMemo(() =>
     taskLibrary.filter(t => !disabledTasks[t.id] && isDependencySatisfied(t, taskState)),
@@ -149,11 +156,11 @@ export function TaskProvider({ user, children }) {
       activeTasks, visibleTasks, scoredDue, homeTasks, doneThisWeek,
       snoozedTasks, nextUpcomingTask,
       markDone, markScheduled, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, setDueDate, setStepProgress,
-      snoozeTask, unsnoozeTask,
+      snoozeTask: snoozeTaskAndUnplan, unsnoozeTask,
       getStatus, getDays, getNext,
       loading, syncError,
       isInPlanMode, activePlan, planTasks, planProgress, weekStart,
-      confirmPlan, addToPlan,
+      confirmPlan, addToPlan, removeFromPlan,
       showWeeklyNudge, dismissWeeklyNudge,
     }}>
       {children}

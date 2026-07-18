@@ -31,12 +31,12 @@ Rules:
 - For each "newTaskSuggestions" entry, also extract recurrence and timing if mentioned:
   - "intervalDays": if the user describes a repeating cadence (e.g. "every month" = 30, "every week" = 7, "every two weeks" = 14, "every year" = 365), set this to the interval in days. If it's a one-off with no repeat mentioned, set it to null.
   - "startDate": if the user mentions a day/date for the first occurrence (e.g. "on Tuesday"), convert it to an ISO date the same way as for matches (relative to weekStart). If no date is mentioned, set it to null.
-- For "gapFill": pick the most important tasks from "backlogTasks" (by their list position, which reflects priority). Fill remaining capacity:
+- For "gapFill": pick the most important tasks from "backlogTasks" (by their list position, which reflects priority). Capacity applies ONLY to gapFill — it limits how many extra tasks Mitzy adds on top of the user's own. NEVER drop or trim autoDueTasks, matches, or newTaskSuggestions to fit capacity; those are the user's own commitments and are always kept in full.
   - capacity "low" = 1 total tasks for the week
   - capacity "normal" = 5 total tasks for the week
   - capacity "high" = 8 total tasks for the week
-  - Subtract autoDueTasks count and matches count from the capacity to determine how many gap-fill slots remain. If zero or negative, return empty gapFill.
-  - Do NOT include any task that's already in autoDueTasks.
+  - Subtract the combined count of autoDueTasks, matches, and newTaskSuggestions from the capacity to determine how many gap-fill slots remain. If zero or negative, return empty gapFill (but still return all matches and newTaskSuggestions).
+  - Do NOT include any task that's already in autoDueTasks or matches.
 - Keep "reason" strings short — one sentence max, in a friendly tone.
 - If the user input is empty or has no task-related content, return empty matches and newTaskSuggestions, but still fill gapFill.`;
 
