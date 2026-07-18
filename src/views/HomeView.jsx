@@ -409,10 +409,17 @@ export function HomeView({
                   <span style={{ fontSize:13, fontWeight:600, color:'#1C2B22', fontFamily:'DM Sans, sans-serif' }}>
                     {planProgress.done} of {planProgress.total} done
                   </span>
-                  {planProgress.done === planProgress.total && planProgress.total > 0 && (
+                  {planProgress.done === planProgress.total && planProgress.total > 0 ? (
                     <span style={{ fontSize:12, color:'#06A77D', fontWeight:600, fontFamily:'DM Sans, sans-serif' }}>
                       All done!
                     </span>
+                  ) : (
+                    <button
+                      onClick={onOpenWeeklyCheckIn}
+                      style={{ background:'none', border:'none', cursor:'pointer', fontSize:12, color:'#1A5C3A', fontWeight:600, fontFamily:'DM Sans, sans-serif', textDecoration:'underline', padding:0 }}
+                    >
+                      Adjust plan
+                    </button>
                   )}
                 </div>
                 <div style={{ display:'flex', gap:3 }}>
