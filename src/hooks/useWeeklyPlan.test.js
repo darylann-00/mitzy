@@ -1,3 +1,4 @@
+/* eslint-env node */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { getCurrentWeekStart, toLocalISO } from './useWeeklyPlan';
 
