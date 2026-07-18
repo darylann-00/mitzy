@@ -219,7 +219,7 @@ export function HomeView({
   onOpenWeeklyCheckIn,
 }) {
   const { profile, providerHistory, updateProfile } = useProfileContext();
-  const { homeTasks, doneThisWeek, getStatus, getDays, taskState, isInPlanMode, planTasks, planProgress, showWeeklyNudge, dismissWeeklyNudge, activePlan } = useTaskContext();
+  const { homeTasks, doneThisWeek, getStatus, getDays, taskState, isInPlanMode, planTasks, planProgress, showWeeklyNudge, dismissWeeklyNudge, activePlan, scoredDue } = useTaskContext();
   const todayTask = homeTasks[0] ?? null;
   const isDueThisWeek = (t) => {
     const s = getStatus(t);
@@ -389,6 +389,15 @@ export function HomeView({
           const scheduled = pendingTasks.filter(t => scheduledDates[t.id]);
           const unscheduled = pendingTasks.filter(t => !scheduledDates[t.id]);
 
+          // Tasks that became genuinely due mid-week but aren't in the frozen
+          // plan. The plan stays finite — these get one quiet line, not cards.
+          const planIds = new Set(activePlan?.taskIds || []);
+          const cameUp = scoredDue.filter(t => {
+            if (planIds.has(t.id)) return false;
+            const s = getStatus(t);
+            return s === 'due' || s === 'needed';
+          });
+
           // Group scheduled tasks by date
           const byDate = {};
           scheduled.forEach(t => {
@@ -509,6 +518,21 @@ export function HomeView({
               {/* All plan tasks done */}
               {planProgress.done === planProgress.total && planProgress.total > 0 && (
                 <EarnedState doneThisWeek={planProgress.done} profile={profile} onGoToAll={onGoToAll} />
+              )}
+
+              {/* Quiet pointer to newly-due tasks outside the frozen plan */}
+              {cameUp.length > 0 && (
+                <div style={{ textAlign:'center', marginTop:16 }}>
+                  <button
+                    onClick={onGoToAll}
+                    style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:'#4A6256', fontFamily:'DM Sans, sans-serif', display:'inline-flex', alignItems:'center', gap:4 }}
+                  >
+                    {cameUp.length} thing{cameUp.length !== 1 ? 's' : ''} came up this week — take a look
+                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                      <polyline points="4,2 10,7 4,12" stroke="#4A6256" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                </div>
               )}
             </>
           );

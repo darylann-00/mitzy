@@ -123,6 +123,10 @@ test('locking in the week persists confirmed_at and switches Home into plan mode
   // the nudge is gone and the plan-mode progress bar is showing.
   await expect(page.getByText('Ready to plan your week?')).not.toBeVisible();
   await expect(page.getByText(/of \d+ done/)).toBeVisible({ timeout: 10000 });
+
+  // hm-smoke is genuinely due but outside the frozen plan — plan mode points
+  // to it with a quiet "came up" line instead of rendering a card.
+  await expect(page.getByText(/came up this week/)).toBeVisible();
 });
 
 test('unchecking an existing task on the review screen keeps it visible, and its due date stays editable', async ({ page }) => {
