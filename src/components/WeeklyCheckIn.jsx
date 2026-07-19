@@ -7,7 +7,7 @@ import { formatDueDate } from "./TaskCard";
 import { DateField } from "./DateField";
 import { CategoryTile } from "./CategoryIcons";
 import { supabase } from "../lib/supabase";
-import { toLocalISO } from "../hooks/useWeeklyPlan";
+import { toLocalISO, weekRangeLabel } from "../hooks/useWeeklyPlan";
 
 const LOADING_MESSAGES = [
   "Reading your week…",
@@ -533,7 +533,7 @@ export function WeeklyCheckIn({ onClose }) {
               {existingPlan.ids.length > 0 ? 'Adjust your week' : 'Weekly check-in'}
             </div>
             <div style={{ fontSize: 13, color: '#B8DCC8', fontFamily: 'DM Sans, sans-serif' }}>
-              {existingPlan.ids.length > 0 ? "Change what's on your plate" : "Let's see what your week looks like"}
+              {existingPlan.ids.length > 0 ? "Change what's on your plate" : "Let's plan this week"} · {weekRangeLabel(weekStart)}
             </div>
           </div>
           <button onClick={onClose} style={{
@@ -690,7 +690,7 @@ export function WeeklyCheckIn({ onClose }) {
               Your week
             </div>
             <div style={{ fontSize: 13, color: '#B8DCC8', fontFamily: 'DM Sans, sans-serif' }}>
-              {planItems.size} task{planItems.size !== 1 ? 's' : ''} planned
+              {planItems.size} task{planItems.size !== 1 ? 's' : ''} planned · {weekRangeLabel(weekStart)}
             </div>
           </div>
           <button onClick={() => { setErrorKind(null); setStep('input'); }} style={{

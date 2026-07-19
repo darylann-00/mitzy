@@ -8,6 +8,8 @@ import { useProfileContext } from "../contexts/ProfileContext";
 import { useTaskContext }    from "../contexts/TaskContext";
 import { useCalendarContext } from "../contexts/CalendarContext";
 import { useCapacityNudge, recordWeeklyStats, dismissCapacityNudge } from "../hooks/useCapacityNudge";
+import { becameDueAfterPlan } from "../utils/taskLogic";
+import { weekRangeLabel } from "../hooks/useWeeklyPlan";
 
 // ─── Shared header pattern ─────────────────────────────────────────────────────
 export function AppHeader({ rightContent }) {
@@ -389,13 +391,15 @@ export function HomeView({
           const scheduled = pendingTasks.filter(t => scheduledDates[t.id]);
           const unscheduled = pendingTasks.filter(t => !scheduledDates[t.id]);
 
-          // Tasks that became genuinely due mid-week but aren't in the frozen
-          // plan. The plan stays finite — these get one quiet line, not cards.
+          // Tasks that became due only AFTER the plan was locked in and aren't
+          // in it. Tasks already due at planning time were offered during the
+          // check-in and deliberately left out — they don't count as "came up".
+          // The plan stays finite — these get one quiet line, not cards.
           const planIds = new Set(activePlan?.taskIds || []);
           const cameUp = scoredDue.filter(t => {
             if (planIds.has(t.id)) return false;
-            const s = getStatus(t);
-            return s === 'due' || s === 'needed';
+            if (getStatus(t) !== 'due') return false;
+            return becameDueAfterPlan(getDays(t), activePlan?.confirmedAt);
           });
 
           // Group scheduled tasks by date
@@ -417,6 +421,11 @@ export function HomeView({
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
                   <span style={{ fontSize:13, fontWeight:600, color:'#1C2B22', fontFamily:'DM Sans, sans-serif' }}>
                     {planProgress.done} of {planProgress.total} done
+                    {activePlan?.weekStart && (
+                      <span style={{ fontWeight:500, color:'#4A6256', marginLeft:8 }}>
+                        · {weekRangeLabel(activePlan.weekStart)}
+                      </span>
+                    )}
                   </span>
                   {planProgress.done === planProgress.total && planProgress.total > 0 ? (
                     <span style={{ fontSize:12, color:'#06A77D', fontWeight:600, fontFamily:'DM Sans, sans-serif' }}>

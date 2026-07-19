@@ -128,9 +128,13 @@ test('locking in the week persists confirmed_at and switches Home into plan mode
   await expect(page.getByText('Ready to plan your week?')).not.toBeVisible();
   await expect(page.getByText(/of \d+ done/)).toBeVisible({ timeout: 10000 });
 
-  // hm-smoke is genuinely due but outside the frozen plan — plan mode points
-  // to it with a quiet "came up" line instead of rendering a card.
-  await expect(page.getByText(/came up this week/)).toBeVisible();
+  // hm-smoke is overdue but was already due when the plan was confirmed (it
+  // was offered as a suggestion and left out), so it must NOT be counted as
+  // "came up" — that line is reserved for tasks that become due mid-week.
+  await expect(page.getByText(/came up this week/)).toHaveCount(0);
+
+  // The plan-mode progress card names the week it covers.
+  await expect(page.getByText(/of \d+ done/)).toContainText('–');
 });
 
 test('unchecking an existing task on the review screen keeps it visible, and its due date stays editable', async ({ page }) => {

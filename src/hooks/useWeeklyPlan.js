@@ -21,7 +21,16 @@ function getCurrentWeekStart() {
   return toLocalISO(monday);
 }
 
-export { getCurrentWeekStart, toLocalISO };
+// "Jul 13 – Jul 19" for a given Monday — used anywhere the UI needs to say
+// which week a plan covers.
+function weekRangeLabel(weekStart) {
+  const start = new Date(weekStart + 'T12:00:00');
+  const end = new Date(start.getTime() + 6 * 86400000);
+  const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return `${fmt(start)} – ${fmt(end)}`;
+}
+
+export { getCurrentWeekStart, toLocalISO, weekRangeLabel };
 
 export function useWeeklyPlan(user, taskState, markScheduled, uiState, updateUiState) {
   const [activePlan, setActivePlan] = useState(null);
