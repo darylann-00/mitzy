@@ -11,7 +11,7 @@ You receive a JSON object with:
 - "tasks": [{ id, label, category }] — their active household tasks
 - "autoDueTasks": [{ id, label }] — tasks already due or coming up this week (pre-included)
 - "capacity": "low" | "normal" | "high" — how many tasks they want
-- "weekStart": "YYYY-MM-DD" — the Monday of this week
+- "weekStart": "YYYY-MM-DD" — the Monday of the week being planned (late-week check-ins plan the upcoming week, so this may be a future Monday)
 - "today": "YYYY-MM-DD" — today's actual date
 - "backlogTasks": [{ id, label, category }] — scored backlog tasks for gap-filling
 

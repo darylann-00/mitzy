@@ -24,7 +24,7 @@ export function TaskProvider({ user, children }) {
   } = useTasks(user);
 
   const {
-    activePlan, isInPlanMode, planProgress, weekStart,
+    activePlan, isInPlanMode, planProgress, weekStart, planningNextWeek, planFloor,
     confirmPlan, addToPlan, removeFromPlan,
     showNudge: showWeeklyNudge, dismissNudge: dismissWeeklyNudge,
   } = useWeeklyPlan(user, taskState, markScheduled, profile.uiState, updateUiState);
@@ -159,7 +159,7 @@ export function TaskProvider({ user, children }) {
       snoozeTask: snoozeTaskAndUnplan, unsnoozeTask,
       getStatus, getDays, getNext,
       loading, syncError,
-      isInPlanMode, activePlan, planTasks, planProgress, weekStart,
+      isInPlanMode, activePlan, planTasks, planProgress, weekStart, planningNextWeek, planFloor,
       confirmPlan, addToPlan, removeFromPlan,
       showWeeklyNudge, dismissWeeklyNudge,
     }}>

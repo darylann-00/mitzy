@@ -99,7 +99,9 @@ test('locking in the week persists confirmed_at and switches Home into plan mode
   await loginWithDevCredentials(page);
   await expect(page.getByText('Today', { exact: true }).first()).toBeVisible({ timeout: 15000 });
 
-  await expect(page.getByText('Ready to plan your week?')).toBeVisible({ timeout: 10000 });
+  // Copy is "your week" Mon–Thu and "next week" Fri–Sun — match either so the
+  // suite passes regardless of which day CI runs.
+  await expect(page.getByText(/Ready to plan (your|next) week\?/)).toBeVisible({ timeout: 10000 });
   // "Let's do it" also labels each due task's own quick-action button, so this
   // must be scoped to the first match (the weekly check-in nudge, which renders
   // above the task list).
@@ -125,7 +127,7 @@ test('locking in the week persists confirmed_at and switches Home into plan mode
 
   // Overlay closes and Home reflects the confirmed plan immediately —
   // the nudge is gone and the plan-mode progress bar is showing.
-  await expect(page.getByText('Ready to plan your week?')).not.toBeVisible();
+  await expect(page.getByText(/Ready to plan (your|next) week\?/)).not.toBeVisible();
   await expect(page.getByText(/of \d+ done/)).toBeVisible({ timeout: 10000 });
 
   // hm-smoke is overdue but was already due when the plan was confirmed (it

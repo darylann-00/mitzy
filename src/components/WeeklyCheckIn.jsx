@@ -254,7 +254,7 @@ function BrainDumpTaskCard({ task, onUpdate, dueDate, onDueDateChange }) {
 export function WeeklyCheckIn({ onClose }) {
   const {
     activeTasks, scoredDue, taskState, getStatus, getDays,
-    confirmPlan, weekStart, activePlan,
+    confirmPlan, weekStart, activePlan, planningNextWeek, planFloor,
   } = useTaskContext();
   const { profile, customTasks, addCustomTasksBulk } = useProfileContext();
 
@@ -533,7 +533,9 @@ export function WeeklyCheckIn({ onClose }) {
               {existingPlan.ids.length > 0 ? 'Adjust your week' : 'Weekly check-in'}
             </div>
             <div style={{ fontSize: 13, color: '#B8DCC8', fontFamily: 'DM Sans, sans-serif' }}>
-              {existingPlan.ids.length > 0 ? "Change what's on your plate" : "Let's plan this week"} · {weekRangeLabel(weekStart)}
+              {existingPlan.ids.length > 0
+                ? "Change what's on your plate"
+                : planningNextWeek ? "Let's plan next week" : "Let's plan this week"} · {weekRangeLabel(weekStart)}
             </div>
           </div>
           <button onClick={onClose} style={{
@@ -666,7 +668,8 @@ export function WeeklyCheckIn({ onClose }) {
       .filter(Boolean)
       .filter(t => {
         const entry = taskState[t.id];
-        return !(entry?.lastDone && entry.lastDone >= weekStart);
+        const floor = planFloor ?? weekStart;
+        return !(entry?.lastDone && entry.lastDone >= floor);
       });
 
     const hasAddedSuggestions = mergedSuggestions.some(s => planItems.has(s.taskId));

@@ -1,6 +1,6 @@
 /* eslint-env node */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { getCurrentWeekStart, toLocalISO } from './useWeeklyPlan';
+import { getCurrentWeekStart, getPlanningWeekStart, toLocalISO } from './useWeeklyPlan';
 
 // Regression tests for the UTC-drift bug: getCurrentWeekStart used to mix
 // local getDay() with toISOString() (UTC), so for US-evening users the saved
@@ -35,6 +35,41 @@ describe('getCurrentWeekStart', () => {
     // Sunday 2026-07-19 20:00 EDT
     vi.setSystemTime(new Date('2026-07-19T20:00:00-04:00'));
     expect(getCurrentWeekStart()).toBe('2026-07-13');
+  });
+});
+
+// Fri/Sat/Sun check-ins plan the upcoming week; Mon–Thu plan the current one.
+describe('getPlanningWeekStart', () => {
+  const realTZ = process.env.TZ;
+
+  beforeEach(() => {
+    process.env.TZ = 'America/New_York';
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    process.env.TZ = realTZ;
+  });
+
+  it('targets the current week Mon–Thu', () => {
+    vi.setSystemTime(new Date('2026-07-15T10:00:00-04:00')); // Wednesday
+    expect(getPlanningWeekStart()).toBe('2026-07-13');
+  });
+
+  it('targets the upcoming week on Friday', () => {
+    vi.setSystemTime(new Date('2026-07-17T10:00:00-04:00'));
+    expect(getPlanningWeekStart()).toBe('2026-07-20');
+  });
+
+  it('targets the upcoming week on Saturday evening', () => {
+    vi.setSystemTime(new Date('2026-07-18T23:30:00-04:00'));
+    expect(getPlanningWeekStart()).toBe('2026-07-20');
+  });
+
+  it('targets the upcoming week on Sunday', () => {
+    vi.setSystemTime(new Date('2026-07-19T09:00:00-04:00'));
+    expect(getPlanningWeekStart()).toBe('2026-07-20');
   });
 });
 

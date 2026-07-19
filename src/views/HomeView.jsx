@@ -221,7 +221,7 @@ export function HomeView({
   onOpenWeeklyCheckIn,
 }) {
   const { profile, providerHistory, updateProfile } = useProfileContext();
-  const { homeTasks, doneThisWeek, getStatus, getDays, taskState, isInPlanMode, planTasks, planProgress, showWeeklyNudge, dismissWeeklyNudge, activePlan, scoredDue } = useTaskContext();
+  const { homeTasks, doneThisWeek, getStatus, getDays, taskState, isInPlanMode, planTasks, planProgress, showWeeklyNudge, dismissWeeklyNudge, activePlan, scoredDue, planningNextWeek, planFloor } = useTaskContext();
   const todayTask = homeTasks[0] ?? null;
   const isDueThisWeek = (t) => {
     const s = getStatus(t);
@@ -275,10 +275,12 @@ export function HomeView({
             Weekly check-in
           </div>
           <div style={{ fontFamily:"'Righteous', cursive", fontSize:17, color:'#1C2B22', marginBottom:6 }}>
-            Ready to plan your week?
+            {planningNextWeek ? 'Ready to plan next week?' : 'Ready to plan your week?'}
           </div>
           <div style={{ fontSize:13, color:'#4A6256', fontFamily:'DM Sans, sans-serif', lineHeight:1.5, marginBottom:14 }}>
-            Take a minute to tell Mitzy what's happening — she'll set up your week.
+            {planningNextWeek
+              ? "Take a minute to tell Mitzy what's coming — she'll set up next week."
+              : "Take a minute to tell Mitzy what's happening — she'll set up your week."}
           </div>
           <div style={{ display:'flex', gap:8 }}>
             <button
@@ -382,11 +384,11 @@ export function HomeView({
           const scheduledDates = activePlan?.scheduledDates || {};
           const doneTasks = planTasks.filter(t => {
             const entry = taskState[t.id];
-            return entry?.lastDone && entry.lastDone >= activePlan?.weekStart;
+            return entry?.lastDone && planFloor && entry.lastDone >= planFloor;
           });
           const pendingTasks = planTasks.filter(t => {
             const entry = taskState[t.id];
-            return !(entry?.lastDone && entry.lastDone >= activePlan?.weekStart);
+            return !(entry?.lastDone && planFloor && entry.lastDone >= planFloor);
           });
           const scheduled = pendingTasks.filter(t => scheduledDates[t.id]);
           const unscheduled = pendingTasks.filter(t => !scheduledDates[t.id]);
