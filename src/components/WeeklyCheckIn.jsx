@@ -434,19 +434,21 @@ export function WeeklyCheckIn({ onClose }) {
     setStep('review');
   };
 
-  const dismissMatch = (matchTaskId, mentionText) => {
-    setDismissedMatches(prev => new Set(prev).add(matchTaskId));
+  const dismissMatch = (match) => {
+    setDismissedMatches(prev => new Set(prev).add(match.taskId));
     setPlanItems(prev => {
       const next = new Set(prev);
-      next.delete(matchTaskId);
+      next.delete(match.taskId);
       return next;
     });
-    // Queue a custom task for what they actually said — persisted on lock-in
+    // Queue a custom task for what they actually said — persisted on lock-in.
+    // Reuse what the matching API already extracted: the cleaned-up task title
+    // and the parsed date, so the new task isn't the raw brain-dump snippet.
     const taskId = genTaskId();
     const task = {
       id: taskId,
       cat: 'home',
-      label: mentionText || 'Custom task',
+      label: match.mentionLabel || match.mentionText || 'Custom task',
       oneTime: true,
       intervalDays: null,
       windowDays: 14,
@@ -456,6 +458,9 @@ export function WeeklyCheckIn({ onClose }) {
     };
     setBrainDumpTasks(prev => [...prev, task]);
     setPlanItems(prev => new Set(prev).add(taskId));
+    if (match.scheduledDate) {
+      setScheduledDates(prev => ({ ...prev, [taskId]: match.scheduledDate }));
+    }
   };
 
   const updateBrainDumpTask = (taskId, updates) => {
@@ -801,7 +806,7 @@ export function WeeklyCheckIn({ onClose }) {
                         </ToggleCard>
                         {m.mentionText && (
                           <button
-                            onClick={() => dismissMatch(m.taskId, m.mentionText)}
+                            onClick={() => dismissMatch(m)}
                             style={{
                               background: 'none', border: 'none', cursor: 'pointer',
                               fontSize: 11, color: C.muted, fontFamily: 'DM Sans, sans-serif',

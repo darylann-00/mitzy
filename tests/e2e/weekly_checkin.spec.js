@@ -4,9 +4,13 @@ import { loginWithDevCredentials, seedReturnUser, mockTaskRecords, mockProfile }
 // YYYY-MM-DD from local date parts — mirrors the app's toLocalISO. Using
 // toISOString() here would reintroduce the UTC-drift bug this suite guards
 // against (US-evening runs would expect "tomorrow").
-function localToday() {
-  const d = new Date();
+function localISO(offsetDays = 0) {
+  const d = new Date(Date.now() + offsetDays * 86400000);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function localToday() {
+  return localISO(0);
 }
 
 // Seeds one custom one-time task (due in 2 days) plus one overdue library task
@@ -274,6 +278,59 @@ test('brain dump tasks are only saved to custom_tasks when the plan is locked in
   const savedLabels = customTaskPosts.flat().map(r => r.label);
   expect(savedLabels).toContain('Buy dog food');
   expect(planBody.task_ids.some(id => String(id).startsWith('custom-'))).toBe(true);
+});
+
+// Regression test: dismissing a wrong match with "Not what I meant" used to
+// create a task whose label was the raw brain-dump snippet, and dropped the
+// date the matching API had already parsed. It must use the API's cleaned-up
+// mentionLabel and carry the parsed date onto the new task.
+test('"not what I meant" converts a match into a task with the cleaned label and parsed date', async ({ page }) => {
+  await mockTaskRecords(page);
+  await mockProfile(page);
+  await mockWeeklyPlansEndpoint(page);
+  await page.route('**/rest/v1/custom_tasks**', route => {
+    if (route.request().method() !== 'GET') return route.continue();
+    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  });
+  await seedReturnUser(page);
+
+  const scheduledDate = localISO(1);
+  await page.route('**/api/weekly-checkin', route => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        matches: [{
+          taskId: 'hm-smoke',
+          scheduledDate,
+          confidence: 0.9,
+          mentionText: 'go to store, run errands on monday',
+          mentionLabel: 'Go to store & run errands',
+        }],
+        newTaskSuggestions: [],
+        gapFill: [],
+      }),
+    });
+  });
+
+  await page.goto('/');
+  await loginWithDevCredentials(page);
+  await expect(page.getByText('Today', { exact: true }).first()).toBeVisible({ timeout: 15000 });
+
+  await page.getByRole('button', { name: "Let's do it" }).first().click();
+  await page.getByPlaceholder(/vet Thursday/).fill('go to store, run errands on monday');
+  await page.getByRole('button', { name: 'Plan my week' }).click();
+
+  await expect(page.getByText("This week's plan")).toBeVisible({ timeout: 10000 });
+  await page.getByRole('button', { name: 'Not what I meant — add as a separate task' }).click();
+
+  // The new task uses the cleaned-up label, not the verbatim snippet…
+  await expect(page.getByText('Go to store & run errands')).toBeVisible();
+  // …and the parsed date came along instead of an empty "Set a date".
+  const dateLabel = new Date(scheduledDate + 'T12:00:00')
+    .toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  await expect(page.getByRole('button', { name: dateLabel }).first()).toBeVisible();
+  await expect(page.getByText('Set a date')).toHaveCount(0);
 });
 
 // The "Adjust plan" entry point: once a week is locked in, plan mode offers a

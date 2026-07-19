@@ -17,7 +17,7 @@ You receive a JSON object with:
 
 Return ONLY valid JSON in this shape — no markdown, no prose:
 {
-  "matches": [{ "taskId": string, "scheduledDate": string, "confidence": number, "mentionText": string }],
+  "matches": [{ "taskId": string, "scheduledDate": string, "confidence": number, "mentionText": string, "mentionLabel": string }],
   "newTaskSuggestions": [{ "label": string, "reason": string, "intervalDays": number | null, "startDate": string | null }],
   "gapFill": [{ "taskId": string, "reason": string }]
 }
@@ -27,6 +27,7 @@ Rules:
 - Match mentions against the "tasks" list. Only emit matches with confidence >= 0.7.
 - When the user mentions a day of the week (e.g., "Thursday"), convert it to an ISO date. Monday = weekStart, Tuesday = weekStart + 1, etc. If that date is before "today", it has already passed this week — add 7 days so it lands on the same weekday next week instead.
 - "mentionText" is the relevant snippet from the user's input that triggered the match.
+- "mentionLabel" is a short, cleaned-up task title for that same mention, written the way a to-do would be (capitalized, no filler words, no day/date words since the date is captured in "scheduledDate"). Example: mention "go to store, run errands on monday" → mentionLabel "Go to store & run errands". It's used as the task name if the user says the match was wrong.
 - If a mention doesn't match any task, add it to "newTaskSuggestions" with a short reason.
 - For each "newTaskSuggestions" entry, also extract recurrence and timing if mentioned:
   - "intervalDays": if the user describes a repeating cadence (e.g. "every month" = 30, "every week" = 7, "every two weeks" = 14, "every year" = 365), set this to the interval in days. If it's a one-off with no repeat mentioned, set it to null.
@@ -168,7 +169,10 @@ export default async function handler(req) {
         m && typeof m.taskId === 'string' && taskIds.has(m.taskId)
         && typeof m.confidence === 'number' && m.confidence >= 0.7
         && typeof m.scheduledDate === 'string'
-      ).slice(0, 20)
+      ).map(m => ({
+        ...m,
+        mentionLabel: typeof m.mentionLabel === 'string' ? m.mentionLabel.slice(0, 200) : '',
+      })).slice(0, 20)
     : [];
 
   const dateRe = /^\d{4}-\d{2}-\d{2}$/;
