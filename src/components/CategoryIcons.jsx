@@ -198,6 +198,18 @@ export const HAZARD_ICON_CONFIG = {
   flood:      { Icon: FloodIcon,       color: '#06A77D' },
 };
 
+// Two interlocked rings — getting married.
+export function WeddingRingsIcon({ color = '#B08A10', bg = '#FFFBEE', size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="8" fill={bg} />
+      <circle cx="6.9" cy="9.6" r="3.4" stroke={color} strokeWidth="1.8" fill="none" />
+      <circle cx="11.1" cy="9.6" r="3.4" stroke={color} strokeWidth="1.8" fill="none" />
+      <path d="M9 4 L7.8 5.4 L9 6.4 L10.2 5.4 Z" fill={color} />
+    </svg>
+  );
+}
+
 // Two rings drifting apart — divorce / separation.
 export function RingsIcon({ color = '#4A6256', bg = '#F0EDE4', size = 18 }) {
   return (
@@ -224,6 +236,7 @@ export function TulipIcon({ color = '#6B8DD6', bg = '#EEF2FB', size = 18 }) {
 
 export const LIFE_EVENT_ICON_CONFIG = {
   'new-baby':          BabyIcon,
+  'marriage':          WeddingRingsIcon,
   'divorce':           RingsIcon,
   'loss-of-loved-one': TulipIcon,
 };

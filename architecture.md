@@ -19,8 +19,8 @@ Read this when touching state, data, or non-trivial component wiring.
   /views            — HomeView, AllView, ProfileView, TaskDetailView
   /data             — constants.js, tasks.js, taskFactory.js, insuranceProviders.js,
                       providerTypes.js, zipCodes.js
-    /lifeEvents     — index.js (registry), newBaby.js, divorce.js,
-                      lossOfLovedOne.js, eventDates.js (due-date math)
+    /lifeEvents     — index.js (registry), newBaby.js, marriage.js,
+                      divorce.js, lossOfLovedOne.js, eventDates.js (due-date math)
   /hooks            — useAuth, useProfile, useTasks, useSession, useProviders,
                       useLifeEvents, useCapacityNudge, useWeeklyPlan
   /lib              — supabase.js, googleCalendar.js

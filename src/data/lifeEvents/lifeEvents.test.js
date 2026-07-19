@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { tasksForIntake as babyTasks } from "./newBaby";
 import { DIVORCE, tasksForIntake as divorceTasks, retroactiveCandidates as divorceRetro } from "./divorce";
 import { LOSS_OF_LOVED_ONE, tasksForIntake as lossTasks, retroactiveCandidates as lossRetro, retroactivePhases as lossRetroPhases } from "./lossOfLovedOne";
+import { MARRIAGE, tasksForIntake as marriageTasks, retroactiveCandidates as marriageRetro } from "./marriage";
 import { LIFE_EVENT_DEFS } from "./index";
 import { computeDueDate, MIN_LEAD_DAYS } from "./eventDates";
 
@@ -20,10 +21,44 @@ describe("registry", () => {
     });
   });
 
-  it("sad events suppress celebration; new baby does not", () => {
+  it("sad events suppress celebration; happy ones do not", () => {
     expect(DIVORCE.suppressCelebration).toBe(true);
     expect(LOSS_OF_LOVED_ONE.suppressCelebration).toBe(true);
     expect(LIFE_EVENT_DEFS['new-baby'].suppressCelebration).toBeFalsy();
+    expect(MARRIAGE.suppressCelebration).toBeFalsy();
+  });
+});
+
+describe("marriage", () => {
+  const base = { date: daysFromNow(120), nameChange: true, combiningFinances: true, hasInsuranceOrRetirement: true };
+
+  it("includes before-the-day tasks for a future wedding, with the license due ahead of it", () => {
+    const tasks = marriageTasks(base);
+    const license = tasks.find(t => t.id === 'marriage-license');
+    expect(license).toBeTruthy();
+    expect(license.dueDate).toBe(daysFromNow(99)); // wedding − 21 days
+  });
+
+  it("skips license and prenup entirely when the wedding already happened", () => {
+    const ids = marriageTasks({ ...base, date: daysAgo(10) }).map(t => t.id);
+    expect(ids).not.toContain('marriage-license');
+    expect(ids).not.toContain('prenup');
+    expect(ids).toContain('add-spouse-insurance');
+  });
+
+  it("gates name change, joint accounts, and beneficiaries on intake answers", () => {
+    const ids = marriageTasks({ ...base, nameChange: false, combiningFinances: false, hasInsuranceOrRetirement: false }).map(t => t.id);
+    expect(ids).not.toContain('name-change');
+    expect(ids).not.toContain('joint-accounts');
+    expect(ids).not.toContain('update-beneficiaries');
+  });
+
+  it("offers the after-wedding retro checklist only once the wedding is 30+ days past", () => {
+    expect(marriageRetro(base)).toHaveLength(0);
+    expect(marriageRetro({ ...base, date: daysAgo(10) })).toHaveLength(0);
+    const retro = marriageRetro({ ...base, date: daysAgo(60) });
+    expect(retro.length).toBeGreaterThan(0);
+    expect(retro.every(t => t.phase === 'AFTER')).toBe(true);
   });
 });
 

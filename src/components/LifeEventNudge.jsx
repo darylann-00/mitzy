@@ -47,7 +47,7 @@ export function LifeEventNudge({ variant, eventLabel, onPrimary, onDismiss }) {
         <div style={HEADER_LABEL}>New from Mitzy</div>
         <div style={TITLE}>Going through something big?</div>
         <div style={BODY}>
-          A new baby, a divorce, losing someone close — Mitzy can walk you through the admin, one task at a time. Set one up from your Profile.
+          Getting married, a new baby, a divorce, losing someone close — Mitzy can walk you through the admin, one task at a time. Set one up from your Profile.
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button style={BUTTON_PRIMARY}    onClick={onPrimary}>Show me</button>
