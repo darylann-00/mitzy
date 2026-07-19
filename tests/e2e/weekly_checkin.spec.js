@@ -136,6 +136,9 @@ test('locking in the week persists confirmed_at and switches Home into plan mode
 test('unchecking an existing task on the review screen keeps it visible, and its due date stays editable', async ({ page }) => {
   const inTwoDays = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
   await mockWeeklyCheckInData(page, { dueDate: inTwoDays });
+  // Never depend on the shared test account's real weekly_plans state — a
+  // confirmed plan in prod puts Home in plan mode and hides the nudge.
+  await mockWeeklyPlansEndpoint(page);
   await seedReturnUser(page);
 
   await page.goto('/');
@@ -189,6 +192,9 @@ test('brain dump submission sends today\'s actual date to the matching API', asy
   // Non-default capacity so the assertion below proves the profile value is
   // passed through (a hardcoded 'normal' would fail here).
   await mockProfile(page, { capacity: 'low' });
+  // Never depend on the shared test account's real weekly_plans state — a
+  // confirmed plan in prod puts Home in plan mode and hides the nudge.
+  await mockWeeklyPlansEndpoint(page);
   await page.route('**/rest/v1/custom_tasks**', route => {
     if (route.request().method() !== 'GET') return route.continue();
     route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
