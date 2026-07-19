@@ -229,7 +229,6 @@ function LifeEventGroup({ event, tasks, taskState, getStatus, getDays, providerH
             onSelect={onSelectTask}
             onDone={onDoneTask}
             showCategoryIcon
-            subtitle=""
             pendingMatch={match}
             onMatchConfirm={match ? () => onMatchConfirm(task.id, match.eventDate) : undefined}
             onMatchDismiss={match ? () => onMatchDismiss(task.id) : undefined}

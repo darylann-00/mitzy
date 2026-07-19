@@ -2,13 +2,6 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "../lib/supabase";
 import { loadS, saveS, LIFE_EVENTS_KEY } from "../utils/storage";
 import { getEventDef } from "../data/lifeEvents";
-import { tasksForIntake as newBabyTasksForIntake } from "../data/lifeEvents/newBaby";
-
-// Per-event-type task generator. As we add more events, register their
-// intake → tasks function here.
-const TASK_GENERATORS = {
-  'new-baby': newBabyTasksForIntake,
-};
 
 // Convert a bundle template into a custom_task row. Each user's instance gets
 // a unique id (event-id-prefixed) so multiple instances of the same event
@@ -19,7 +12,8 @@ function bundleTaskToCustomTask(t, lifeEventId, eventType) {
     cat:                 t.cat,
     label:               t.label,
     intervalDays:        null,
-    windowDays:          null,
+    windowDays:          t.windowDays ?? null,
+    dueDate:             t.dueDate ?? null,
     stakes:              t.stakes ?? 'medium',
     activeMonths:        null,
     assistType:          t.assistType ?? null,
@@ -79,10 +73,11 @@ export function useLifeEvents({ user, customTasks, addCustomTasksBulk, removeCus
   );
 
   // Tasks for the active event, hydrated from the user's custom_tasks list.
-  // Sorted by phase order for predictable display (T1 → T2 → T3 → POST).
+  // Sorted by the event def's phase order for predictable display.
   const activeEventTasks = useMemo(() => {
     if (!activeEvent || !customTasks) return [];
-    const phaseOrder = { T1: 0, T2: 1, T3: 2, POST: 3 };
+    const phases = getEventDef(activeEvent.type)?.phases ?? [];
+    const phaseOrder = Object.fromEntries(phases.map((p, i) => [p, i]));
     return customTasks
       .filter(t => t.lifeEventId === activeEvent.id)
       .sort((a, b) => (phaseOrder[a.eventPhase] ?? 99) - (phaseOrder[b.eventPhase] ?? 99));
@@ -107,9 +102,8 @@ export function useLifeEvents({ user, customTasks, addCustomTasksBulk, removeCus
       return next;
     });
 
-    const generate = TASK_GENERATORS[type];
-    if (generate) {
-      const bundleTasks = generate(answers);
+    if (def.tasksForIntake) {
+      const bundleTasks = def.tasksForIntake(answers);
       const tasks = bundleTasks.map(t => bundleTaskToCustomTask(t, event.id, type));
       await addCustomTasksBulk(tasks);
     }

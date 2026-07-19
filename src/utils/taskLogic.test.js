@@ -62,4 +62,18 @@ describe("taskStatus — one-time tasks", () => {
     const entry = { dueDate: daysAgo(1) };
     expect(taskStatus(baseTask, { t2: entry })).toBe("due");
   });
+
+  it("falls back to the task definition's dueDate when the record has none (life event bundles)", () => {
+    const task = { ...baseTask, dueDate: daysFromNow(20) };
+    expect(taskStatus(task, {})).toBe("coming-up");
+
+    const overdueTask = { ...baseTask, dueDate: daysAgo(2) };
+    expect(taskStatus(overdueTask, {})).toBe("due");
+  });
+
+  it("prefers a user-set record dueDate over the task definition default", () => {
+    const task = { ...baseTask, dueDate: daysAgo(2) };
+    const entry = { dueDate: daysFromNow(90) };
+    expect(taskStatus(task, { t2: entry })).toBe("unknown");
+  });
 });

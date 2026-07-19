@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import "./styles/app.css";
 
 import { loadS, saveS, ONBOARDED_KEY, PROFILE_DONE_KEY, VISIT_COUNT_KEY, WELCOME_CHOICE_KEY } from "./utils/storage";
-import { LIFE_EVENT_DEFS } from "./data/lifeEvents";
+import { LIFE_EVENT_DEFS, getEventDef } from "./data/lifeEvents";
 import { detectHazards } from "./utils/hazards";
 import { EM_UNIVERSAL, EM_HAZARD } from "./data/tasks";
 import { supabase } from "./lib/supabase";
@@ -26,7 +26,7 @@ import { MarkDoneModal } from "./components/MarkDoneModal";
 import { TaskCreator }   from "./components/TaskCreator";
 import { WeeklyCheckIn } from "./components/WeeklyCheckIn";
 import { ProfileConflictModal } from "./components/ProfileConflictModal";
-import { NewBabyIntake } from "./components/LifeEventIntake";
+import { NewBabyIntake, GenericEventIntake } from "./components/LifeEventIntake";
 import { tasksForIntake as newBabyTasksForIntake } from "./data/lifeEvents/newBaby";
 import { SnoozePicker } from "./components/SnoozePicker";
 import { SnoozeTooltip } from "./components/SnoozeTooltip";
@@ -139,7 +139,10 @@ function Overlays({
   weeklyCheckInOpen, onWeeklyCheckInClose,
   lifeEventIntake, onLifeEventIntakeClose, onStartLifeEventConfirm,
 }) {
-  const { pendingConflict, resolveConflict } = useProfileContext();
+  const { pendingConflict, resolveConflict, profile } = useProfileContext();
+  const genericEventDef = lifeEventIntake && lifeEventIntake !== 'new-baby'
+    ? getEventDef(lifeEventIntake)
+    : null;
 
   return (
     <>
@@ -154,6 +157,15 @@ function Overlays({
           onClose={onLifeEventIntakeClose}
           onStart={(answers) => onStartLifeEventConfirm('new-baby', answers)}
           generateTaskList={newBabyTasksForIntake}
+        />
+      )}
+      {genericEventDef && (
+        <GenericEventIntake
+          def={genericEventDef}
+          // Seed answers Mitzy already knows so the intake never re-asks.
+          initialAnswers={{ hasKids: profile?.hasKids === true }}
+          onClose={onLifeEventIntakeClose}
+          onStart={(answers) => onStartLifeEventConfirm(lifeEventIntake, answers)}
         />
       )}
     </>
@@ -207,7 +219,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
   const [weeklyCheckInOpen, setWeeklyCheckInOpen] = useState(false);
   const [activeCategory,  setActiveCategory]  = useState('all');
   const [dueOnly,         setDueOnly]         = useState(false);
-  const [lifeEventIntake, setLifeEventIntake] = useState(null); // null | 'new-baby'
+  const [lifeEventIntake, setLifeEventIntake] = useState(null); // null | life event type key
   const [snoozePickerTask, setSnoozePickerTask] = useState(null);
   const nudgeState = profile.uiState?.lifeEventNudge ?? { discoveryDismissed: false, wrapupDismissed: {} };
 

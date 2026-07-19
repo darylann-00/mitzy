@@ -3,6 +3,8 @@
 // All bundle tasks become one-time custom_tasks with life_event_id set; the
 // existing task pipeline handles status, scheduling, and completion.
 
+import { computeDueDate } from './eventDates';
+
 export const NEW_BABY_PHASES = ['T1', 'T2', 'T3', 'POST'];
 
 export const NEW_BABY_PHASE_LABELS = {
@@ -48,17 +50,19 @@ const REQUIRES_RETIREMENT     = new Set(['update-retirement-bene']);
 // Task templates — copy is plain and direct, no confetti suppression needed
 // since babies are good news. Stakes are high (admin/legal) and medium
 // (setup/prep) to drive sensible scoring against the user's other tasks.
+// windowDays = booking lead: how many days before the due date the task
+// starts surfacing as "coming up" (defaults to 7 when unset).
 const BUNDLE = [
   // ── First trimester ─────────────────────────────────────────────
-  { id: 'choose-ob',              phase: 'T1', cat: 'health',  label: 'Choose an OB or midwife',                      stakes: 'high',   assistType: 'providers',         searchQuery: 'OB-GYN or midwife' },
-  { id: 'first-prenatal',         phase: 'T1', cat: 'health',  label: 'Schedule first prenatal appointment',          stakes: 'high',   assistType: 'guidance' },
-  { id: 'choose-hospital',        phase: 'T1', cat: 'health',  label: 'Research and choose a birth hospital or birth center', stakes: 'high',   assistType: 'providers',         searchQuery: 'birth hospital or birth center' },
+  { id: 'choose-ob',              phase: 'T1', cat: 'health',  label: 'Choose an OB or midwife',                      stakes: 'high',   assistType: 'providers',         searchQuery: 'OB-GYN or midwife', windowDays: 21 },
+  { id: 'first-prenatal',         phase: 'T1', cat: 'health',  label: 'Schedule first prenatal appointment',          stakes: 'high',   assistType: 'guidance',          windowDays: 21 },
+  { id: 'choose-hospital',        phase: 'T1', cat: 'health',  label: 'Research and choose a birth hospital or birth center', stakes: 'high',   assistType: 'providers',         searchQuery: 'birth hospital or birth center', windowDays: 21 },
   // ── Second trimester ────────────────────────────────────────────
-  { id: 'tour-hospital',          phase: 'T2', cat: 'health',  label: 'Tour the birth hospital or birth center',      stakes: 'medium', assistType: 'guidance' },
+  { id: 'tour-hospital',          phase: 'T2', cat: 'health',  label: 'Tour the birth hospital or birth center',      stakes: 'medium', assistType: 'guidance',          windowDays: 14 },
   { id: 'pre-register-hospital',  phase: 'T2', cat: 'health',  label: 'Pre-register at the hospital',                 stakes: 'medium', assistType: 'guidance' },
-  { id: 'choose-pediatrician',    phase: 'T2', cat: 'health',  label: 'Choose a pediatrician',                        stakes: 'high',   assistType: 'providers',         searchQuery: 'pediatrician' },
-  { id: 'childbirth-class',       phase: 'T2', cat: 'health',  label: 'Sign up for a childbirth class',               stakes: 'medium', assistType: 'guidance' },
-  { id: 'cpr-class',              phase: 'T2', cat: 'health',  label: 'Sign up for an infant CPR class',              stakes: 'medium', assistType: 'guidance' },
+  { id: 'choose-pediatrician',    phase: 'T2', cat: 'health',  label: 'Choose a pediatrician',                        stakes: 'high',   assistType: 'providers',         searchQuery: 'pediatrician', windowDays: 21 },
+  { id: 'childbirth-class',       phase: 'T2', cat: 'health',  label: 'Sign up for a childbirth class',               stakes: 'medium', assistType: 'guidance',          windowDays: 30 },
+  { id: 'cpr-class',              phase: 'T2', cat: 'health',  label: 'Sign up for an infant CPR class',              stakes: 'medium', assistType: 'guidance',          windowDays: 14 },
   { id: 'review-leave',           phase: 'T2', cat: 'finance', label: 'Review parental leave policy with your employer', stakes: 'high',   assistType: 'guidance' },
   { id: 'update-will',            phase: 'T2', cat: 'finance', label: 'Create or update your will',                   stakes: 'high',   assistType: 'guidance_companies' },
   // ── Third trimester ─────────────────────────────────────────────
@@ -76,18 +80,28 @@ const BUNDLE = [
   { id: 'update-retirement-bene', phase: 'POST', cat: 'finance', label: 'Update retirement account beneficiaries',    stakes: 'high',   assistType: 'guidance' },
 ];
 
-export const NEW_BABY = {
-  id:    'new-baby',
-  label: 'New baby',
-  bundle: BUNDLE,
-  phaseLabels: NEW_BABY_PHASE_LABELS,
-};
-
 // ─── Intake-driven helpers ──────────────────────────────────────────
 
 const DAY_MS = 86400000;
 const T2_START_DAYS_TO_DUE = 180; // ~26 weeks pregnant
 const T3_START_DAYS_TO_DUE = 90;  // ~30 weeks pregnant
+
+// Due dates relative to the baby's due date (negative = before). Phase
+// defaults, with per-task overrides where the real deadline is sharper —
+// e.g. the first pediatrician visit happens days after birth, not weeks.
+const PHASE_DUE_OFFSETS = { T1: -180, T2: -90, T3: -21, POST: 30 };
+const DUE_OFFSET_OVERRIDES = {
+  'choose-ob':                  -215,
+  'first-prenatal':             -210,
+  'install-car-seat':           -30,
+  'hospital-bag':               -30,
+  'add-baby-insurance':          21,  // enrollment window opens at birth
+  'first-pediatrician':           5,
+  'birth-cert':                  21,
+  'ssn':                         45,
+  'update-life-insurance-bene':  60,
+  'update-retirement-bene':      60,
+};
 
 export function daysToDue(dueDateIso) {
   if (!dueDateIso) return null;
@@ -135,6 +149,8 @@ export function retroactiveCandidates(answers) {
 
 // Final task list to create after intake. Filters by conceptionPath, account
 // gates, post-birth skips, and any items the user checked off as already done.
+// Each surviving task gets a due date anchored to the baby's due date (clamped
+// so mid-stream joiners see catch-up tasks as "coming up", not overdue).
 export function tasksForIntake(answers) {
   const post = isPostBirth(answers);
   const alreadyDone = new Set(answers?.alreadyDone || []);
@@ -145,5 +161,18 @@ export function tasksForIntake(answers) {
     if (REQUIRES_LIFE_INSURANCE.has(t.id) && !answers.hasLifeInsurance)    return false;
     if (REQUIRES_RETIREMENT.has(t.id)     && !answers.hasRetirement)       return false;
     return true;
-  });
+  }).map(t => ({
+    ...t,
+    dueDate: computeDueDate(answers?.dueDate, DUE_OFFSET_OVERRIDES[t.id] ?? PHASE_DUE_OFFSETS[t.phase]),
+  }));
 }
+
+export const NEW_BABY = {
+  id:    'new-baby',
+  label: 'New baby',
+  bundle: BUNDLE,
+  phases: NEW_BABY_PHASES,
+  phaseLabels: NEW_BABY_PHASE_LABELS,
+  retroactiveCandidates,
+  tasksForIntake,
+};
