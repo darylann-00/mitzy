@@ -96,6 +96,21 @@ export function taskScore(task, lastDone, intervalDaysOverride, oneTimeOverride,
   return stakeWeight * Math.min(daysSince / intervalDays, 2);
 }
 
+// ─── Weekly plan: "came up" check ─────────────────────────────────────────────
+
+// True when a task's due date falls strictly after the day the weekly plan was
+// confirmed — i.e. it became due mid-week, after the user locked their plan.
+// Tasks already due at planning time were offered during the check-in and
+// deliberately left out, so they don't count as "came up".
+export function becameDueAfterPlan(daysUntilDue, confirmedAt) {
+  if (daysUntilDue === null || daysUntilDue === undefined || !confirmedAt) return false;
+  const due = new Date(Date.now() + daysUntilDue * 86400000);
+  const y = due.getFullYear();
+  const m = String(due.getMonth() + 1).padStart(2, '0');
+  const d = String(due.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}` > confirmedAt.slice(0, 10);
+}
+
 // ─── Dependency check ─────────────────────────────────────────────────────────
 
 export function isDependencySatisfied(task, taskState) {
