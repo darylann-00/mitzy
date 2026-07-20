@@ -2,7 +2,7 @@ import { useState } from "react";
 import { TaskCard } from "../components/TaskCard";
 import { SwipeableTaskCard } from "../components/SwipeableTaskCard";
 import { SnoozeIcon } from "../components/SnoozeIcon";
-import { HouseIcon, CarIcon, HeartIcon, KidIcon, CalendarIcon, SirenIcon, PetIcon, CategoryTile, LIFE_EVENT_ICON_CONFIG } from "../components/CategoryIcons";
+import { HouseIcon, CarIcon, HeartIcon, KidIcon, CalendarIcon, SirenIcon, PetIcon, OtherIcon, CategoryTile, LIFE_EVENT_ICON_CONFIG } from "../components/CategoryIcons";
 import { TaskAnswerChips } from "../components/TaskAnswerChips";
 import { AppHeader } from "./HomeView";
 import { useProfileContext } from "../contexts/ProfileContext";
@@ -49,6 +49,7 @@ const ALL_CATS = [
   { key: 'school',    label: 'Kids',      Icon: KidIcon,      color:'#4A6256', bg:'#F0EDE4' },
   { key: 'emergency', label: 'Emergency', Icon: SirenIcon,    color:'#D62828', bg:'#FDE8E8' },
   { key: 'pet',       label: 'Pet',       Icon: PetIcon,      color:'#F4C430', bg:'#FFFBEE' },
+  { key: 'other',     label: 'Other',     Icon: OtherIcon,    color:'#4A6256', bg:'#F0EDE4' },
 ];
 
 // ─── Toggle ────────────────────────────────────────────────────────────────────
