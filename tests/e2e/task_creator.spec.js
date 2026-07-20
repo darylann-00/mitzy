@@ -51,11 +51,9 @@ test('manual mode saves a custom task with the Other category and a custom frequ
   await page.getByPlaceholder('e.g. Clean washing machine').fill('Descale the espresso machine');
   await page.getByRole('button', { name: 'Other' }).click();
 
-  // Custom frequency: every 2 months → 60 days.
-  await page.getByRole('button', { name: 'Custom' }).click();
-  await page.getByPlaceholder('3').fill('2');
-  await page.getByRole('button', { name: 'Set' }).click();
-  await expect(page.getByText('every 2 months').first()).toBeVisible();
+  // Custom frequency via the "Every N unit" control: every 2 months → 60 days.
+  await page.getByRole('spinbutton').fill('2');
+  await page.getByRole('combobox').selectOption('months');
 
   await page.getByRole('button', { name: /high/i }).click();
   await page.getByRole('button', { name: 'Add to my tasks' }).click();

@@ -17,13 +17,13 @@ function getFrequencyPresets(defaultDays) {
   return [...new Set([...below, defaultDays])];
 }
 
-export function FrequencyPicker({ value, defaultDays, onChange, oneTime, onToggleOneTime, presets }) {
+export function FrequencyPicker({ value, defaultDays, onChange, oneTime, onToggleOneTime }) {
   const [showCustom, setShowCustom] = useState(false);
   const [customNum, setCustomNum] = useState('');
   const [customUnit, setCustomUnit] = useState('months');
   const customNumRef = useRef(null);
 
-  const baseChips = presets || getFrequencyPresets(defaultDays);
+  const baseChips = getFrequencyPresets(defaultDays);
   const chips = value && !baseChips.includes(value)
     ? [...baseChips, value].sort((a, b) => a - b)
     : baseChips;

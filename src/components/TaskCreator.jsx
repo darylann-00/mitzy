@@ -6,7 +6,6 @@ import { supabase } from "../lib/supabase";
 import { TaskConfirmCard } from "./TaskConfirmCard";
 import { BrainDumpReview } from "./BrainDumpReview";
 import { CategoryTile } from "./CategoryIcons";
-import { FrequencyPicker, formatIntervalDays } from "./FrequencyPicker";
 
 const PLACEHOLDERS = [
   "e.g. fix iPad screen",
@@ -16,7 +15,7 @@ const PLACEHOLDERS = [
   "e.g. change HVAC filter, schedule dentist, get car inspected",
 ];
 
-const MANUAL_FREQ_PRESETS = [7, 30, 90, 180, 365];
+const FREQ_UNIT_DAYS = { days: 1, weeks: 7, months: 30, years: 365 };
 
 const EXAMPLE_PROMPTS = [
   "change HVAC filter",
@@ -84,7 +83,8 @@ export function TaskCreator({ onClose }) {
   // Manual mode state
   const [manualLabel, setManualLabel] = useState('');
   const [manualCat, setManualCat] = useState('home');
-  const [manualFreq, setManualFreq] = useState(90);
+  const [manualFreqNum, setManualFreqNum] = useState('3');
+  const [manualFreqUnit, setManualFreqUnit] = useState('months');
   const [manualOneTime, setManualOneTime] = useState(false);
   const [manualStakes, setManualStakes] = useState('medium');
   const [manualErr, setManualErr] = useState('');
@@ -303,6 +303,9 @@ export function TaskCreator({ onClose }) {
 
   const handleManualAdd = async () => {
     if (!manualLabel.trim()) { setManualErr("Give it a name first"); return; }
+    const freqN = parseInt(manualFreqNum, 10);
+    if (!manualOneTime && (!freqN || freqN < 1)) { setManualErr("Pick how often it repeats"); return; }
+    const manualFreq = freqN * FREQ_UNIT_DAYS[manualFreqUnit];
     setSaving(true);
     setSaveError(null);
     try {
@@ -541,17 +544,60 @@ export function TaskCreator({ onClose }) {
                 </div>
               </div>
               <div style={CARD}>
-                <div style={{ ...MICRO_LABEL, marginBottom: 4 }}>How often</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: C.ink, fontFamily: 'DM Sans, sans-serif', marginBottom: 10 }}>
-                  {manualOneTime ? 'One time' : formatIntervalDays(manualFreq)}
+                <div style={{ ...MICRO_LABEL, marginBottom: 8 }}>How often</div>
+                <div style={{ display: 'flex', gap: 6, marginBottom: manualOneTime ? 0 : 12 }}>
+                  {[
+                    { key: false, label: 'Recurring' },
+                    { key: true,  label: 'One time' },
+                  ].map(({ key, label }) => {
+                    const active = manualOneTime === key;
+                    return (
+                      <button
+                        key={label}
+                        onClick={() => setManualOneTime(key)}
+                        style={{
+                          padding: '6px 14px', borderRadius: 20, fontSize: 13, fontWeight: 700,
+                          fontFamily: 'DM Sans, sans-serif', cursor: 'pointer', border: '1.5px solid',
+                          borderColor: active ? C.brand : '#EAE4DA',
+                          background: active ? C.brand : '#fff',
+                          color: active ? '#E8F5EE' : C.ink,
+                        }}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
                 </div>
-                <FrequencyPicker
-                  value={manualFreq}
-                  presets={MANUAL_FREQ_PRESETS}
-                  onChange={setManualFreq}
-                  oneTime={manualOneTime}
-                  onToggleOneTime={setManualOneTime}
-                />
+                {!manualOneTime && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: C.ink, fontFamily: 'DM Sans, sans-serif' }}>Every</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={manualFreqNum}
+                      onChange={e => { setManualFreqNum(e.target.value); if (manualErr) setManualErr(''); }}
+                      style={{
+                        width: 64, padding: '9px 8px', fontSize: 14, fontWeight: 600,
+                        fontFamily: 'DM Sans, sans-serif', border: '1.5px solid #EAE4DA',
+                        borderRadius: 10, background: '#fff', color: C.ink, textAlign: 'center',
+                      }}
+                    />
+                    <select
+                      value={manualFreqUnit}
+                      onChange={e => setManualFreqUnit(e.target.value)}
+                      style={{
+                        padding: '9px 10px', fontSize: 14, fontWeight: 600,
+                        fontFamily: 'DM Sans, sans-serif', border: '1.5px solid #EAE4DA',
+                        borderRadius: 10, background: '#fff', color: C.ink,
+                      }}
+                    >
+                      <option value="days">days</option>
+                      <option value="weeks">weeks</option>
+                      <option value="months">months</option>
+                      <option value="years">years</option>
+                    </select>
+                  </div>
+                )}
               </div>
               <div style={CARD}>
                 <div style={{ ...MICRO_LABEL, marginBottom: 8 }}>How important</div>
