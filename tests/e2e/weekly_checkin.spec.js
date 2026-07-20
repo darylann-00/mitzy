@@ -1,5 +1,17 @@
 import { test, expect } from '@playwright/test';
-import { loginWithDevCredentials, seedReturnUser, mockTaskRecords } from './helpers/auth.js';
+import { loginWithDevCredentials, seedReturnUser, mockTaskRecords, mockProfile } from './helpers/auth.js';
+
+// YYYY-MM-DD from local date parts — mirrors the app's toLocalISO. Using
+// toISOString() here would reintroduce the UTC-drift bug this suite guards
+// against (US-evening runs would expect "tomorrow").
+function localISO(offsetDays = 0) {
+  const d = new Date(Date.now() + offsetDays * 86400000);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function localToday() {
+  return localISO(0);
+}
 
 // Seeds one custom one-time task (due in 2 days) plus one overdue library task
 // (hm-smoke) so the review screen has both "already on your plate" and
@@ -87,7 +99,9 @@ test('locking in the week persists confirmed_at and switches Home into plan mode
   await loginWithDevCredentials(page);
   await expect(page.getByText('Today', { exact: true }).first()).toBeVisible({ timeout: 15000 });
 
-  await expect(page.getByText('Ready to plan your week?')).toBeVisible({ timeout: 10000 });
+  // Copy is "your week" Mon–Thu and "next week" Fri–Sun — match either so the
+  // suite passes regardless of which day CI runs.
+  await expect(page.getByText(/Ready to plan (your|next) week\?/)).toBeVisible({ timeout: 10000 });
   // "Let's do it" also labels each due task's own quick-action button, so this
   // must be scoped to the first match (the weekly check-in nudge, which renders
   // above the task list).
@@ -113,13 +127,24 @@ test('locking in the week persists confirmed_at and switches Home into plan mode
 
   // Overlay closes and Home reflects the confirmed plan immediately —
   // the nudge is gone and the plan-mode progress bar is showing.
-  await expect(page.getByText('Ready to plan your week?')).not.toBeVisible();
+  await expect(page.getByText(/Ready to plan (your|next) week\?/)).not.toBeVisible();
   await expect(page.getByText(/of \d+ done/)).toBeVisible({ timeout: 10000 });
+
+  // hm-smoke is overdue but was already due when the plan was confirmed (it
+  // was offered as a suggestion and left out), so it must NOT be counted as
+  // "came up" — that line is reserved for tasks that become due mid-week.
+  await expect(page.getByText(/came up this week/)).toHaveCount(0);
+
+  // The plan-mode progress card names the week it covers.
+  await expect(page.getByText(/of \d+ done/)).toContainText('–');
 });
 
 test('unchecking an existing task on the review screen keeps it visible, and its due date stays editable', async ({ page }) => {
   const inTwoDays = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
   await mockWeeklyCheckInData(page, { dueDate: inTwoDays });
+  // Never depend on the shared test account's real weekly_plans state — a
+  // confirmed plan in prod puts Home in plan mode and hides the nudge.
+  await mockWeeklyPlansEndpoint(page);
   await seedReturnUser(page);
 
   await page.goto('/');
@@ -170,6 +195,12 @@ test('unchecking an existing task on the review screen keeps it visible, and its
 // day-of-week judgment happens inside the mocked Claude call, not in JS.
 test('brain dump submission sends today\'s actual date to the matching API', async ({ page }) => {
   await mockTaskRecords(page);
+  // Non-default capacity so the assertion below proves the profile value is
+  // passed through (a hardcoded 'normal' would fail here).
+  await mockProfile(page, { capacity: 'low' });
+  // Never depend on the shared test account's real weekly_plans state — a
+  // confirmed plan in prod puts Home in plan mode and hides the nudge.
+  await mockWeeklyPlansEndpoint(page);
   await page.route('**/rest/v1/custom_tasks**', route => {
     if (route.request().method() !== 'GET') return route.continue();
     route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
@@ -195,6 +226,160 @@ test('brain dump submission sends today\'s actual date to the matching API', asy
   await page.getByRole('button', { name: 'Plan my week' }).click();
 
   await expect.poll(() => requestBody).not.toBeNull();
-  expect(requestBody.today).toBe(new Date().toISOString().slice(0, 10));
+  expect(requestBody.today).toBe(localToday());
   expect(requestBody.weekStart).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  expect(requestBody.capacity).toBe('low');
+});
+
+// Regression test: brain-dump tasks used to be written to custom_tasks the
+// moment the matching API responded, so backing out of the check-in (or
+// unchecking one on review) left stray tasks in the library. They must only
+// be persisted on "Lock in my week".
+test('brain dump tasks are only saved to custom_tasks when the plan is locked in', async ({ page }) => {
+  await mockTaskRecords(page);
+  await mockProfile(page);
+  await mockWeeklyPlansEndpoint(page);
+  await seedReturnUser(page);
+
+  const customTaskPosts = [];
+  await page.route('**/rest/v1/custom_tasks**', route => {
+    const method = route.request().method();
+    if (method === 'GET') {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+    }
+    if (method === 'POST') {
+      let parsed = [];
+      try { parsed = JSON.parse(route.request().postData() || '[]'); } catch {}
+      customTaskPosts.push(parsed);
+      return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(parsed) });
+    }
+    return route.continue();
+  });
+
+  await page.route('**/api/weekly-checkin', route => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        matches: [],
+        gapFill: [],
+        newTaskSuggestions: [{ label: 'Buy dog food', reason: 'From your brain dump', intervalDays: null, startDate: null }],
+      }),
+    });
+  });
+
+  await page.goto('/');
+  await loginWithDevCredentials(page);
+  await expect(page.getByText('Today', { exact: true }).first()).toBeVisible({ timeout: 15000 });
+
+  await page.getByRole('button', { name: "Let's do it" }).first().click();
+  await page.getByPlaceholder(/vet Thursday/).fill('Need to buy dog food');
+  await page.getByRole('button', { name: 'Plan my week' }).click();
+
+  // The brain-dump task is on the review screen but not persisted yet.
+  await expect(page.getByText('Buy dog food')).toBeVisible({ timeout: 10000 });
+  expect(customTaskPosts).toHaveLength(0);
+
+  const planUpsert = page.waitForRequest(req =>
+    req.url().includes('/rest/v1/weekly_plans') && req.method() === 'POST'
+  );
+  await page.getByRole('button', { name: 'Lock in my week' }).click();
+  const planBody = JSON.parse((await planUpsert).postData());
+
+  await expect.poll(() => customTaskPosts.length).toBeGreaterThan(0);
+  const savedLabels = customTaskPosts.flat().map(r => r.label);
+  expect(savedLabels).toContain('Buy dog food');
+  expect(planBody.task_ids.some(id => String(id).startsWith('custom-'))).toBe(true);
+});
+
+// Regression test: dismissing a wrong match with "Not what I meant" used to
+// create a task whose label was the raw brain-dump snippet, and dropped the
+// date the matching API had already parsed. It must use the API's cleaned-up
+// mentionLabel and carry the parsed date onto the new task.
+test('"not what I meant" converts a match into a task with the cleaned label and parsed date', async ({ page }) => {
+  await mockTaskRecords(page);
+  await mockProfile(page);
+  await mockWeeklyPlansEndpoint(page);
+  await page.route('**/rest/v1/custom_tasks**', route => {
+    if (route.request().method() !== 'GET') return route.continue();
+    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  });
+  await seedReturnUser(page);
+
+  const scheduledDate = localISO(1);
+  await page.route('**/api/weekly-checkin', route => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        matches: [{
+          taskId: 'hm-smoke',
+          scheduledDate,
+          confidence: 0.9,
+          mentionText: 'go to store, run errands on monday',
+          mentionLabel: 'Go to store & run errands',
+        }],
+        newTaskSuggestions: [],
+        gapFill: [],
+      }),
+    });
+  });
+
+  await page.goto('/');
+  await loginWithDevCredentials(page);
+  await expect(page.getByText('Today', { exact: true }).first()).toBeVisible({ timeout: 15000 });
+
+  await page.getByRole('button', { name: "Let's do it" }).first().click();
+  await page.getByPlaceholder(/vet Thursday/).fill('go to store, run errands on monday');
+  await page.getByRole('button', { name: 'Plan my week' }).click();
+
+  await expect(page.getByText("This week's plan")).toBeVisible({ timeout: 10000 });
+  await page.getByRole('button', { name: 'Not what I meant — add as a separate task' }).click();
+
+  // The new task uses the cleaned-up label, not the verbatim snippet…
+  await expect(page.getByText('Go to store & run errands')).toBeVisible();
+  // …and the parsed date came along instead of an empty "Set a date".
+  const dateLabel = new Date(scheduledDate + 'T12:00:00')
+    .toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  await expect(page.getByRole('button', { name: dateLabel }).first()).toBeVisible();
+  await expect(page.getByText('Set a date')).toHaveCount(0);
+});
+
+// The "Adjust plan" entry point: once a week is locked in, plan mode offers a
+// way back into the check-in, seeded with the already-confirmed plan.
+test('adjust plan reopens the check-in seeded with the locked plan', async ({ page }) => {
+  const inTwoDays = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
+  await mockWeeklyCheckInData(page, { dueDate: inTwoDays });
+  await mockWeeklyPlansEndpoint(page);
+  await seedReturnUser(page);
+
+  await page.goto('/');
+  await loginWithDevCredentials(page);
+  await expect(page.getByText('Today', { exact: true }).first()).toBeVisible({ timeout: 15000 });
+
+  // Lock in a first plan.
+  await page.getByRole('button', { name: "Let's do it" }).first().click();
+  await expect(page.getByText('Already on your plate')).toBeVisible({ timeout: 10000 });
+  await page.getByRole('button', { name: 'Next' }).click();
+  await expect(page.getByText("This week's plan")).toBeVisible({ timeout: 10000 });
+  await page.getByRole('button', { name: 'Lock in my week' }).click();
+  await expect(page.getByText(/of \d+ done/)).toBeVisible({ timeout: 10000 });
+
+  // Plan mode offers "Adjust plan", which reopens the check-in in adjust mode.
+  await page.getByRole('button', { name: 'Adjust plan' }).click();
+  await expect(page.getByText('Adjust your week')).toBeVisible({ timeout: 10000 });
+
+  // The confirmed plan's task carries into the review screen, and re-locking
+  // upserts it again.
+  await page.getByRole('button', { name: 'Next' }).click();
+  await expect(page.getByText("This week's plan")).toBeVisible({ timeout: 10000 });
+  await expect(page.getByText('Submit claim for FSA').first()).toBeVisible();
+
+  const reUpsert = page.waitForRequest(req =>
+    req.url().includes('/rest/v1/weekly_plans') && req.method() === 'POST'
+  );
+  await page.getByRole('button', { name: 'Lock in my week' }).click();
+  const body = JSON.parse((await reUpsert).postData());
+  expect(body.task_ids).toContain('custom-test-1');
+  expect(body.confirmed_at).toBeTruthy();
 });
