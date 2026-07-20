@@ -8,6 +8,8 @@ import { useProfileContext } from "../contexts/ProfileContext";
 import { useTaskContext }    from "../contexts/TaskContext";
 import { useCalendarContext } from "../contexts/CalendarContext";
 import { useCapacityNudge, recordWeeklyStats, dismissCapacityNudge } from "../hooks/useCapacityNudge";
+import { becameDueAfterPlan } from "../utils/taskLogic";
+import { weekRangeLabel } from "../hooks/useWeeklyPlan";
 
 // ─── Shared header pattern ─────────────────────────────────────────────────────
 export function AppHeader({ rightContent }) {
@@ -219,7 +221,7 @@ export function HomeView({
   onOpenWeeklyCheckIn,
 }) {
   const { profile, providerHistory, updateProfile } = useProfileContext();
-  const { homeTasks, doneThisWeek, getStatus, getDays, taskState, isInPlanMode, planTasks, planProgress, showWeeklyNudge, dismissWeeklyNudge, activePlan } = useTaskContext();
+  const { homeTasks, doneThisWeek, getStatus, getDays, taskState, isInPlanMode, planTasks, planProgress, showWeeklyNudge, dismissWeeklyNudge, activePlan, scoredDue, planningNextWeek, planFloor } = useTaskContext();
   const todayTask = homeTasks[0] ?? null;
   const isDueThisWeek = (t) => {
     const s = getStatus(t);
@@ -273,10 +275,12 @@ export function HomeView({
             Weekly check-in
           </div>
           <div style={{ fontFamily:"'Righteous', cursive", fontSize:17, color:'#1C2B22', marginBottom:6 }}>
-            Ready to plan your week?
+            {planningNextWeek ? 'Ready to plan next week?' : 'Ready to plan your week?'}
           </div>
           <div style={{ fontSize:13, color:'#4A6256', fontFamily:'DM Sans, sans-serif', lineHeight:1.5, marginBottom:14 }}>
-            Take a minute to tell Mitzy what's happening — she'll set up your week.
+            {planningNextWeek
+              ? "Take a minute to tell Mitzy what's coming — she'll set up next week."
+              : "Take a minute to tell Mitzy what's happening — she'll set up your week."}
           </div>
           <div style={{ display:'flex', gap:8 }}>
             <button
@@ -380,14 +384,25 @@ export function HomeView({
           const scheduledDates = activePlan?.scheduledDates || {};
           const doneTasks = planTasks.filter(t => {
             const entry = taskState[t.id];
-            return entry?.lastDone && entry.lastDone >= activePlan?.weekStart;
+            return entry?.lastDone && planFloor && entry.lastDone >= planFloor;
           });
           const pendingTasks = planTasks.filter(t => {
             const entry = taskState[t.id];
-            return !(entry?.lastDone && entry.lastDone >= activePlan?.weekStart);
+            return !(entry?.lastDone && planFloor && entry.lastDone >= planFloor);
           });
           const scheduled = pendingTasks.filter(t => scheduledDates[t.id]);
           const unscheduled = pendingTasks.filter(t => !scheduledDates[t.id]);
+
+          // Tasks that became due only AFTER the plan was locked in and aren't
+          // in it. Tasks already due at planning time were offered during the
+          // check-in and deliberately left out — they don't count as "came up".
+          // The plan stays finite — these get one quiet line, not cards.
+          const planIds = new Set(activePlan?.taskIds || []);
+          const cameUp = scoredDue.filter(t => {
+            if (planIds.has(t.id)) return false;
+            if (getStatus(t) !== 'due') return false;
+            return becameDueAfterPlan(getDays(t), activePlan?.confirmedAt);
+          });
 
           // Group scheduled tasks by date
           const byDate = {};
@@ -408,11 +423,23 @@ export function HomeView({
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
                   <span style={{ fontSize:13, fontWeight:600, color:'#1C2B22', fontFamily:'DM Sans, sans-serif' }}>
                     {planProgress.done} of {planProgress.total} done
+                    {activePlan?.weekStart && (
+                      <span style={{ fontWeight:500, color:'#4A6256', marginLeft:8 }}>
+                        · {weekRangeLabel(activePlan.weekStart)}
+                      </span>
+                    )}
                   </span>
-                  {planProgress.done === planProgress.total && planProgress.total > 0 && (
+                  {planProgress.done === planProgress.total && planProgress.total > 0 ? (
                     <span style={{ fontSize:12, color:'#06A77D', fontWeight:600, fontFamily:'DM Sans, sans-serif' }}>
                       All done!
                     </span>
+                  ) : (
+                    <button
+                      onClick={onOpenWeeklyCheckIn}
+                      style={{ background:'none', border:'none', cursor:'pointer', fontSize:12, color:'#1A5C3A', fontWeight:600, fontFamily:'DM Sans, sans-serif', textDecoration:'underline', padding:0 }}
+                    >
+                      Adjust plan
+                    </button>
                   )}
                 </div>
                 <div style={{ display:'flex', gap:3 }}>
@@ -502,6 +529,21 @@ export function HomeView({
               {/* All plan tasks done */}
               {planProgress.done === planProgress.total && planProgress.total > 0 && (
                 <EarnedState doneThisWeek={planProgress.done} profile={profile} onGoToAll={onGoToAll} />
+              )}
+
+              {/* Quiet pointer to newly-due tasks outside the frozen plan */}
+              {cameUp.length > 0 && (
+                <div style={{ textAlign:'center', marginTop:16 }}>
+                  <button
+                    onClick={onGoToAll}
+                    style={{ background:'none', border:'none', cursor:'pointer', fontSize:13, color:'#4A6256', fontFamily:'DM Sans, sans-serif', display:'inline-flex', alignItems:'center', gap:4 }}
+                  >
+                    {cameUp.length} thing{cameUp.length !== 1 ? 's' : ''} came up this week — take a look
+                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                      <polyline points="4,2 10,7 4,12" stroke="#4A6256" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                </div>
               )}
             </>
           );
