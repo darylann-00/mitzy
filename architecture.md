@@ -20,7 +20,8 @@ Read this when touching state, data, or non-trivial component wiring.
   /data             — constants.js, tasks.js, taskFactory.js, insuranceProviders.js,
                       providerTypes.js, zipCodes.js
     /lifeEvents     — index.js (registry), newBaby.js, marriage.js,
-                      divorce.js, lossOfLovedOne.js, eventDates.js (due-date math)
+                      nameChange.js, divorce.js, lossOfLovedOne.js,
+                      eventDates.js (due-date math)
   /hooks            — useAuth, useProfile, useTasks, useSession, useProviders,
                       useLifeEvents, useCapacityNudge, useWeeklyPlan
   /lib              — supabase.js, googleCalendar.js
@@ -86,4 +87,5 @@ Read this when touching state, data, or non-trivial component wiring.
 - `task_records` has `interval_days` column (migration: `supabase/migrations/20260423_add_interval_days_to_task_records.sql`).
 - `custom_tasks.due_date` (migration `20260718_add_due_date_to_custom_tasks.sql`) is the definition-level default due date for one-time custom tasks — life event bundles compute it from the event's anchor date. `taskStatus()` and `getDays()` resolve `entry?.dueDate ?? task.dueDate`, so a user-set `task_records.due_date` always wins over the definition default.
 - Life event defs are self-describing: `phases` drives sort order in `useLifeEvents`, `intake.steps` drives `GenericEventIntake`, `tasksForIntake(answers)` generates the bundle, `suppressCelebration` kills confetti event-wide. Registering a def in `src/data/lifeEvents/index.js` + an icon in `LIFE_EVENT_ICON_CONFIG` is all a new event needs (plus a bespoke intake component only if its branching outgrows the generic step types).
+- Intake `booleans` step fields support `allowUnsure: true`, rendering a third "Not sure yet" chip that stores the string `'unsure'` as the answer. Gating functions in defs that use it must check `=== true`, not truthiness — `'unsure'` is a non-empty string and would otherwise pass a `!answers?.x` gate. `useLifeEvents.resolveEventAnswer(eventId, key, value)` lets the user come back later (surfaced in ProfileView's Life events card) and settle an unresolved decision; it patches `life_events.intake_answers` and adds any newly-unlocked tasks via `def.tasksForIntake`, filtered against existing `customTasks` by `eventBundleKey` so nothing is created twice.
 - `detectHazards(zip)` in `hazards.js` looks up `/data/zip-to-fips.json` → `/data/nri-county-risk.json` (both fetched same-origin, memoized in a module-level promise so repeat calls from `App.js` and `useSession.js` don't refetch). FEMA's current NRI schema uses `IFLD` (Inland Flooding) not the older `RFLD` code, and rating strings are `"Relatively Low/Moderate/High"` + `"Very Low/High"` — not `"Medium"`/`"High"`.

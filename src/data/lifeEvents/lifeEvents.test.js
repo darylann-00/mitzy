@@ -3,6 +3,7 @@ import { tasksForIntake as babyTasks } from "./newBaby";
 import { DIVORCE, tasksForIntake as divorceTasks, retroactiveCandidates as divorceRetro } from "./divorce";
 import { LOSS_OF_LOVED_ONE, tasksForIntake as lossTasks, retroactiveCandidates as lossRetro, retroactivePhases as lossRetroPhases } from "./lossOfLovedOne";
 import { MARRIAGE, tasksForIntake as marriageTasks, retroactiveCandidates as marriageRetro } from "./marriage";
+import { NAME_CHANGE, tasksForIntake as nameChangeTasks, retroactiveCandidates as nameChangeRetro } from "./nameChange";
 import { LIFE_EVENT_DEFS } from "./index";
 import { computeDueDate, MIN_LEAD_DAYS } from "./eventDates";
 
@@ -21,6 +22,14 @@ describe("registry", () => {
     });
   });
 
+  it("every bundle task has a why so the task detail view isn't just generic filler", () => {
+    Object.values(LIFE_EVENT_DEFS).forEach(def => {
+      def.bundle.forEach(t => {
+        expect(t.why, `${def.id}/${t.id} is missing why`).toBeTruthy();
+      });
+    });
+  });
+
   it("sad events suppress celebration; happy ones do not", () => {
     expect(DIVORCE.suppressCelebration).toBe(true);
     expect(LOSS_OF_LOVED_ONE.suppressCelebration).toBe(true);
@@ -30,7 +39,7 @@ describe("registry", () => {
 });
 
 describe("marriage", () => {
-  const base = { date: daysFromNow(120), nameChange: true, combiningFinances: true, hasInsuranceOrRetirement: true };
+  const base = { date: daysFromNow(120), combiningFinances: true, hasInsuranceOrRetirement: true };
 
   it("includes before-the-day tasks for a future wedding, with the license due ahead of it", () => {
     const tasks = marriageTasks(base);
@@ -46,11 +55,22 @@ describe("marriage", () => {
     expect(ids).toContain('add-spouse-insurance');
   });
 
-  it("gates name change, joint accounts, and beneficiaries on intake answers", () => {
-    const ids = marriageTasks({ ...base, nameChange: false, combiningFinances: false, hasInsuranceOrRetirement: false }).map(t => t.id);
-    expect(ids).not.toContain('name-change');
+  it("gates joint accounts and beneficiaries on intake answers", () => {
+    const ids = marriageTasks({ ...base, combiningFinances: false, hasInsuranceOrRetirement: false }).map(t => t.id);
     expect(ids).not.toContain('joint-accounts');
     expect(ids).not.toContain('update-beneficiaries');
+  });
+
+  it('treats an unresolved "not sure yet" answer as not-yet-true, not as a yes', () => {
+    // A loose truthy check would let this through since 'unsure' is a
+    // non-empty string — passesGates must compare with === true.
+    const ids = marriageTasks({ ...base, combiningFinances: 'unsure' }).map(t => t.id);
+    expect(ids).not.toContain('joint-accounts');
+  });
+
+  it("no longer bundles a name-change task — that's its own life event", () => {
+    const ids = MARRIAGE.bundle.map(t => t.id);
+    expect(ids).not.toContain('name-change');
   });
 
   it("offers the after-wedding retro checklist only once the wedding is 30+ days past", () => {
@@ -59,6 +79,32 @@ describe("marriage", () => {
     const retro = marriageRetro({ ...base, date: daysAgo(60) });
     expect(retro.length).toBeGreaterThan(0);
     expect(retro.every(t => t.phase === 'AFTER')).toBe(true);
+  });
+});
+
+describe("name change", () => {
+  it("paces the two ID-record tasks (CORE) ahead of everything else (REST)", () => {
+    const tasks = nameChangeTasks({ date: daysFromNow(10) });
+    const byId = Object.fromEntries(tasks.map(t => [t.id, t.dueDate]));
+    expect(byId['update-ssn-card'] < byId['update-bank-accounts']).toBe(true);
+    expect(byId['update-drivers-license'] < byId['update-passport']).toBe(true);
+  });
+
+  it("works from a past start date too", () => {
+    const tasks = nameChangeTasks({ date: daysAgo(5) });
+    expect(tasks.length).toBe(NAME_CHANGE.bundle.length);
+  });
+
+  it("widens the retro checklist the longer ago the user started", () => {
+    expect(nameChangeRetro({ date: daysAgo(5) })).toHaveLength(0);
+    expect(nameChangeRetro({ date: daysAgo(20) }).every(t => t.phase === 'CORE')).toBe(true);
+    const wide = nameChangeRetro({ date: daysAgo(60) });
+    expect(new Set(wide.map(t => t.phase))).toEqual(new Set(['CORE', 'REST']));
+  });
+
+  it("drops tasks the user marked already done", () => {
+    const ids = nameChangeTasks({ date: daysAgo(60), alreadyDone: ['update-ssn-card'] }).map(t => t.id);
+    expect(ids).not.toContain('update-ssn-card');
   });
 });
 

@@ -4,12 +4,14 @@
 // icon in CategoryIcons' LIFE_EVENT_ICON_CONFIG).
 import { NEW_BABY } from './newBaby';
 import { MARRIAGE } from './marriage';
+import { NAME_CHANGE } from './nameChange';
 import { DIVORCE } from './divorce';
 import { LOSS_OF_LOVED_ONE } from './lossOfLovedOne';
 
 export const LIFE_EVENT_DEFS = {
   'new-baby':          NEW_BABY,
   'marriage':          MARRIAGE,
+  'name-change':       NAME_CHANGE,
   'divorce':           DIVORCE,
   'loss-of-loved-one': LOSS_OF_LOVED_ONE,
 };

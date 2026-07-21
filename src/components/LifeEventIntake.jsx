@@ -414,9 +414,14 @@ function StepBooleansGeneric({ step, stepLabel, onNext }) {
           <div style={{ fontSize: 13, fontWeight: 700, color: C.ink, fontFamily: 'DM Sans, sans-serif', marginBottom: 8 }}>
             {f.label}
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <ChipButton active={vals[f.key] === true}  onClick={() => setVals(v => ({ ...v, [f.key]: true }))}>Yes</ChipButton>
             <ChipButton active={vals[f.key] === false} onClick={() => setVals(v => ({ ...v, [f.key]: false }))}>No</ChipButton>
+            {f.allowUnsure && (
+              <ChipButton active={vals[f.key] === 'unsure'} onClick={() => setVals(v => ({ ...v, [f.key]: 'unsure' }))}>
+                Not sure yet
+              </ChipButton>
+            )}
           </div>
         </div>
       ))}

@@ -210,6 +210,18 @@ export function WeddingRingsIcon({ color = '#B08A10', bg = '#FFFBEE', size = 18 
   );
 }
 
+// A name tag with a signature line — changing your name.
+export function NameTagIcon({ color = '#4A6256', bg = '#F0EDE4', size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="8" fill={bg} />
+      <rect x="4" y="6.5" width="10" height="6" rx="1.5" stroke={color} strokeWidth="1.6" fill="none" />
+      <circle cx="6.6" cy="9.5" r="1" fill={color} />
+      <path d="M9.2 8.4 L12.5 8.4 M9.2 10.4 L11.5 10.4" stroke={color} strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 // Two rings drifting apart — divorce / separation.
 export function RingsIcon({ color = '#4A6256', bg = '#F0EDE4', size = 18 }) {
   return (
@@ -237,6 +249,7 @@ export function TulipIcon({ color = '#6B8DD6', bg = '#EEF2FB', size = 18 }) {
 export const LIFE_EVENT_ICON_CONFIG = {
   'new-baby':          BabyIcon,
   'marriage':          WeddingRingsIcon,
+  'name-change':       NameTagIcon,
   'divorce':           RingsIcon,
   'loss-of-loved-one': TulipIcon,
 };

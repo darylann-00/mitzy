@@ -111,6 +111,41 @@ export function useLifeEvents({ user, customTasks, addCustomTasksBulk, removeCus
     return event;
   }, [user, addCustomTasksBulk]);
 
+  // Update one intake answer on an in-progress event — e.g. resolving a "not
+  // sure yet" decision once the user has actually decided — and add any
+  // tasks that answer newly unlocks. Tasks already created (including ones
+  // the user marked done or removed) are matched by eventBundleKey and never
+  // recreated.
+  const resolveEventAnswer = useCallback(async (eventId, key, value) => {
+    if (!user) return;
+    const event = events.find(e => e.id === eventId);
+    if (!event) return;
+    const nextAnswers = { ...event.intakeAnswers, [key]: value };
+
+    const { error } = await supabase
+      .from('life_events')
+      .update({ intake_answers: nextAnswers, updated_at: new Date().toISOString() })
+      .eq('id', eventId);
+    if (error) throw error;
+
+    setEvents(prev => {
+      const next = prev.map(e => e.id === eventId ? { ...e, intakeAnswers: nextAnswers } : e);
+      saveS(LIFE_EVENTS_KEY, next);
+      return next;
+    });
+
+    const def = getEventDef(event.type);
+    if (def?.tasksForIntake) {
+      const existingKeys = new Set(
+        (customTasks ?? []).filter(t => t.lifeEventId === eventId).map(t => t.eventBundleKey)
+      );
+      const newBundleTasks = def.tasksForIntake(nextAnswers).filter(t => !existingKeys.has(t.id));
+      if (newBundleTasks.length > 0) {
+        await addCustomTasksBulk(newBundleTasks.map(t => bundleTaskToCustomTask(t, eventId, event.type)));
+      }
+    }
+  }, [user, events, customTasks, addCustomTasksBulk]);
+
   const completeEvent = useCallback(async (id) => {
     if (!user) return;
     const { error } = await supabase
@@ -144,7 +179,7 @@ export function useLifeEvents({ user, customTasks, addCustomTasksBulk, removeCus
 
   return {
     events, activeEvent, activeEventTasks,
-    startEvent, completeEvent, dismissEvent,
+    startEvent, completeEvent, dismissEvent, resolveEventAnswer,
     loading,
   };
 }
