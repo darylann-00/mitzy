@@ -59,9 +59,12 @@ export function taskStatus(task, taskState) {
   if (entry?.scheduledDate && new Date(entry.scheduledDate) <= new Date()) return "confirm";
   if (isOneTime) {
     if (entry?.lastDone) return "ok";
-    if (entry?.dueDate) {
+    // A user-set date on the record wins; task.dueDate is the definition-level
+    // default (life event bundles compute one from the event date).
+    const dueDate = entry?.dueDate ?? task.dueDate;
+    if (dueDate) {
       const leadDays = task.reminderLeadDays ?? task.windowDays ?? 7;
-      const daysUntil = Math.ceil((new Date(entry.dueDate) - Date.now()) / 86400000);
+      const daysUntil = Math.ceil((new Date(dueDate) - Date.now()) / 86400000);
       if (daysUntil < 0)        return "due";
       if (daysUntil <= leadDays) return "coming-up";
     }

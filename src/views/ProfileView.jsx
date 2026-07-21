@@ -403,6 +403,7 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
   const [hazardPreview,  setHazardPreview]  = useState(null); // { hazards, tasks } | null
   const [pendingRemove,  setPendingRemove]  = useState(null); // { type: 'car'|'kid'|'pet', index: number }
   const [confirmDismissEvent, setConfirmDismissEvent] = useState(false);
+  const [resolvingKey, setResolvingKey] = useState(null);
   const [editingProvider, setEditingProvider] = useState(null); // provider id being edited
   const [editProviderVote, setEditProviderVote] = useState(null);
   const [editProviderNotes, setEditProviderNotes] = useState('');
@@ -1029,6 +1030,19 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
           const doneCount = eventTasks.filter(t => taskState[t.id]?.lastDone).length;
           const totalCount = eventTasks.length;
 
+          // Decisions the user said "not sure yet" to during intake — surfaced
+          // here so they can come back and resolve once they've decided,
+          // without re-running the whole intake.
+          const pendingDecisions = (def?.intake?.steps ?? [])
+            .flatMap(s => s.type === 'booleans' ? s.fields.filter(f => f.allowUnsure) : [])
+            .filter(f => active?.intakeAnswers?.[f.key] === 'unsure');
+
+          const handleResolve = async (key, value) => {
+            setResolvingKey(key);
+            try { await lifeEvents.resolveEventAnswer(active.id, key, value); }
+            finally { setResolvingKey(null); }
+          };
+
           return (
             <div style={S.sectionCard}>
               <SectionHeader icon={<LifeEventsIcon size={16} />} iconBg="#FFFBEE" title="Life events" />
@@ -1053,6 +1067,36 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
                       Find your event tasks at the top of the All tab.
                     </div>
                   </div>
+
+                  {pendingDecisions.length > 0 && (
+                    <div style={{ padding:'12px 16px', borderBottom:'1px solid #F5F0E8', background:'#FFFBEE' }}>
+                      <div style={{ fontSize:11, fontWeight:700, letterSpacing:'0.06em', textTransform:'uppercase', color:'#B08A10', fontFamily:'DM Sans, sans-serif', marginBottom:8 }}>
+                        Still deciding
+                      </div>
+                      {pendingDecisions.map(f => (
+                        <div key={f.key} style={{ marginBottom:8, display:'flex', alignItems:'center', justifyContent:'space-between', gap:10 }}>
+                          <span style={{ fontSize:13, color:C.ink, fontFamily:'DM Sans, sans-serif', flex:1 }}>{f.label}</span>
+                          <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+                            <button
+                              disabled={resolvingKey === f.key}
+                              onClick={() => handleResolve(f.key, true)}
+                              style={{ fontSize:12, fontWeight:700, color:'#1A5C3A', background:'#E8F5EE', border:'none', borderRadius:20, padding:'5px 12px', cursor: resolvingKey === f.key ? 'default' : 'pointer' }}
+                            >
+                              Yes
+                            </button>
+                            <button
+                              disabled={resolvingKey === f.key}
+                              onClick={() => handleResolve(f.key, false)}
+                              style={{ fontSize:12, fontWeight:700, color:'#4A6256', background:'#F0EDE4', border:'none', borderRadius:20, padding:'5px 12px', cursor: resolvingKey === f.key ? 'default' : 'pointer' }}
+                            >
+                              No
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   <div style={{ padding:'10px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                     {!confirmDismissEvent ? (
                       <>

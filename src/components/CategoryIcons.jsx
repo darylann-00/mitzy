@@ -210,8 +210,60 @@ export const HAZARD_ICON_CONFIG = {
   flood:      { Icon: FloodIcon,       color: '#06A77D' },
 };
 
+// Two interlocked rings — getting married.
+export function WeddingRingsIcon({ color = '#B08A10', bg = '#FFFBEE', size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="8" fill={bg} />
+      <circle cx="6.9" cy="9.6" r="3.4" stroke={color} strokeWidth="1.8" fill="none" />
+      <circle cx="11.1" cy="9.6" r="3.4" stroke={color} strokeWidth="1.8" fill="none" />
+      <path d="M9 4 L7.8 5.4 L9 6.4 L10.2 5.4 Z" fill={color} />
+    </svg>
+  );
+}
+
+// A name tag with a signature line — changing your name.
+export function NameTagIcon({ color = '#4A6256', bg = '#F0EDE4', size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="8" fill={bg} />
+      <rect x="4" y="6.5" width="10" height="6" rx="1.5" stroke={color} strokeWidth="1.6" fill="none" />
+      <circle cx="6.6" cy="9.5" r="1" fill={color} />
+      <path d="M9.2 8.4 L12.5 8.4 M9.2 10.4 L11.5 10.4" stroke={color} strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// Two rings drifting apart — divorce / separation.
+export function RingsIcon({ color = '#4A6256', bg = '#F0EDE4', size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="8" fill={bg} />
+      <circle cx="6" cy="10" r="3.4" stroke={color} strokeWidth="1.8" fill="none" />
+      <circle cx="12.5" cy="8" r="3.4" stroke={color} strokeWidth="1.8" fill="none" />
+      <path d="M12.5 3 L12.5 4.6" stroke={color} strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// A single tulip — remembrance, for loss of a loved one.
+export function TulipIcon({ color = '#6B8DD6', bg = '#EEF2FB', size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="8" fill={bg} />
+      <path d="M9 9 L9 14.5" stroke="#06A77D" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M9 12.5 Q11.5 12 12.3 10" stroke="#06A77D" strokeWidth="1.4" strokeLinecap="round" fill="none" />
+      <path d="M5.8 4.2 L5.8 7.2 Q5.8 9.8 9 9.8 Q12.2 9.8 12.2 7.2 L12.2 4.2 L10.4 5.8 L9 4 L7.6 5.8 Z" fill={color} />
+    </svg>
+  );
+}
+
 export const LIFE_EVENT_ICON_CONFIG = {
-  'new-baby': BabyIcon,
+  'new-baby':          BabyIcon,
+  'marriage':          WeddingRingsIcon,
+  'name-change':       NameTagIcon,
+  'divorce':           RingsIcon,
+  'loss-of-loved-one': TulipIcon,
 };
 
 // Map category key → icon component + colors
