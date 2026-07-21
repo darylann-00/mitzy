@@ -150,7 +150,7 @@ function Overlays({
       {markDoneModal && <MarkDoneModal task={markDoneModal} onDone={onMarkDone} onClose={onMarkDoneClose} />}
       {assistTask    && <AssistPanel task={assistTask} onClose={onAssistClose} />}
       {creatorOpen   && <TaskCreator onClose={onCreatorClose} />}
-      {weeklyCheckInOpen && <WeeklyCheckIn onClose={onWeeklyCheckInClose} />}
+      {weeklyCheckInOpen && <WeeklyCheckIn onClose={onWeeklyCheckInClose} targetWeek={weeklyCheckInOpen} />}
       {pendingConflict && <ProfileConflictModal onResolve={resolveConflict} />}
       {lifeEventIntake === 'new-baby' && (
         <NewBabyIntake
@@ -216,7 +216,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
   const [assistTask,      setAssistTask]      = useState(null);
   const [markDoneModal,   setMarkDoneModal]   = useState(null);
   const [creatorOpen,     setCreatorOpen]     = useState(false);
-  const [weeklyCheckInOpen, setWeeklyCheckInOpen] = useState(false);
+  const [weeklyCheckInOpen, setWeeklyCheckInOpen] = useState(null);
   const [activeCategory,  setActiveCategory]  = useState('all');
   const [dueOnly,         setDueOnly]         = useState(false);
   const [lifeEventIntake, setLifeEventIntake] = useState(null); // null | life event type key
@@ -377,7 +377,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
     markDoneModal, onMarkDone: handleMarkDone, onMarkDoneClose: handleMarkDoneClose,
     assistTask, onAssistClose: () => setAssistTask(null),
     creatorOpen, onCreatorClose: () => setCreatorOpen(false),
-    weeklyCheckInOpen, onWeeklyCheckInClose: () => setWeeklyCheckInOpen(false),
+    weeklyCheckInOpen, onWeeklyCheckInClose: () => setWeeklyCheckInOpen(null),
     lifeEventIntake,
     onLifeEventIntakeClose: () => setLifeEventIntake(null),
     onStartLifeEventConfirm: handleStartLifeEventConfirm,
@@ -464,7 +464,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
           onHazardDismiss={() => setPendingHazards(null)}
           onMatchConfirm={handleMatchConfirm}
           onMatchDismiss={handleMatchDismiss}
-          onOpenWeeklyCheckIn={() => setWeeklyCheckInOpen(true)}
+          onOpenWeeklyCheckIn={(mode) => setWeeklyCheckInOpen(mode || 'current')}
         />
       )}
 
