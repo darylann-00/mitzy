@@ -24,6 +24,23 @@ export function buildAssistPrompt(task, profile) {
     : "";
 
   const ctx  = `${ins}${car}${kids}${pets}Location: ${loc}.`;
+
+  // Guidance tasks with static steps: the steps already render in TaskDetailView's
+  // "What to expect" card, so ask only for the user-specific delta — never a
+  // paraphrase of what's on screen.
+  if ((task.assistType === "guidance" || !task.assistType) && task.guidance) {
+    return `Task: "${task.label}".
+
+The user is already looking at these standard how-to steps on screen:
+${task.guidance}
+
+The user's household: ${ctx}
+
+Add ONLY what is specific to this user's situation. Do not repeat, rephrase, or summarize the steps above — they can already read them. Consider: timing keyed to their region's climate, age- or model-specific notes for their home, car, kids, or pets, what their insurance may cover, and red flags specific to their setup. Include a bullet only if a different household would get materially different advice — never pad. If you mention a cost, give a rough range and mark it as approximate. If you have nothing meaningful to add beyond the steps, say so in one sentence.
+
+Under 150 words. Markdown bullets, each starting with a **bold** lead-in.`;
+  }
+
   const noteOrGuidance = task.guidance || task.note || '';
   const base = `Task: "${task.label}".${noteOrGuidance ? ` Context: ${noteOrGuidance}.` : ''} ${ctx} Only reference the above context if it's directly relevant to this task — do not mention it otherwise.`;
 
