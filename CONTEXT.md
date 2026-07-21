@@ -73,7 +73,7 @@ Supabase project: `https://uftxbegrnlvlgkbitibp.supabase.co` (production). All t
 
 - **Auth UX** — Supabase Google OAuth (primary) + magic link (fallback). `BrandSplash` (full green background + Memphis shapes + four-dot wordmark) renders during `authLoading` to avoid flash-of-white on PWA cold launches. `LoginGate` normalizes magic-link emails (`trim().toLowerCase()`) at submit so case/whitespace variants resolve to one Supabase auth record. Success screen has a "Resend" button gated by a 30s cooldown (`RESEND_COOLDOWN_MS`) — cooldown starts on first send; restarts on each successful resend; re-enables immediately on error.
 
-- **Welcome gate (returning vs new)** — `WelcomeGate` is the first screen on cold launch (before `SlimOnboarding`). Two buttons: "I'm new here" or "I've used Mitzy before". Choice persisted to `WELCOME_CHOICE_KEY` (`mitzy-welcome-v1`). `'returning'` skips onboarding and goes straight to `LoginGate` → server profile loads from Supabase into local state. `'new'` keeps the original onboarding → priority-setup → login flow. If a returning user signs in with no server profile (typo, wrong account), `App.js` flips them to `'new'` and routes through onboarding. Welcome key is included in `USER_KEYS`, so reset/sign-out clears it.
+- **Landing page (returning vs new)** — `LandingPage` is the first screen on cold launch (before `SlimOnboarding`). Marketing page (hero, product screenshot, benefits, pricing — Free vs. Mitzy Pro at $4.99/mo, closing CTA) with two entry points: "Start my free trial" or "Sign in" in the nav. Choice persisted to `WELCOME_CHOICE_KEY` (`mitzy-welcome-v1`) as `'new'` or `'returning'`. `'returning'` skips onboarding and goes straight to `LoginGate` → server profile loads from Supabase into local state. `'new'` keeps the original onboarding → priority-setup → login flow. If a returning user signs in with no server profile (typo, wrong account), `App.js` flips them to `'new'` and routes through onboarding. Welcome key is included in `USER_KEYS`, so reset/sign-out clears it. Pricing tiers are marketing copy only — the app does not yet enforce the Free/Pro split (see "What's Mocked / Incomplete").
 
 - **Profile conflict modal** — `useProfile` is now server-first. When a user signs in, the hook fetches the Supabase profile before any upsert. If the server has a meaningful profile (name or zip set) AND the user picked `'new'` AND local has fields the server doesn't, `pendingConflict` is set and `<ProfileConflictModal>` overlays the app. Options: "Use my saved setup" (loads server, discards local) or "Replace with new setup" (requires explicit "Yes, replace" confirm before the upsert overwrites the server). Closes the prior silent-overwrite bug where local onboarding data clobbered an existing server profile on sign-in.
 
@@ -86,6 +86,7 @@ Supabase project: `https://uftxbegrnlvlgkbitibp.supabase.co` (production). All t
 | Knowledge refresh | Stubbed. |
 | `task.why` + `task.guidance` fields | Null for all current tasks — UI falls back to `task.note` and generic copy. |
 | Provider data | Claude-generated, no verification. |
+| Mitzy Pro paywall | Landing page displays Free vs. Pro ($4.99/mo) pricing, but the app has no billing integration and does not gate AI Assist, provider search, or the Task Creator's AI mode behind a subscription — all users currently get full access. |
 
 ---
 
@@ -140,7 +141,7 @@ Four-dot 2×2 grid (red/orange/green/yellow) + "mitzy" in Righteous. App icon: f
 ## App Flow
 
 ```
-WelcomeGate → (new) SlimOnboarding → PrioritySetup → LoginGate → App (3-tab nav)
+LandingPage → (new) SlimOnboarding → PrioritySetup → LoginGate → App (3-tab nav)
             → (returning) LoginGate → App
                                    ├─ HomeView
                                    ├─ AllView
@@ -182,6 +183,7 @@ Baseline e2e tests run on every PR: `sign_in`, `onboarding`, `mark_done`. Featur
 
 1. Zip error message copy in onboarding (deferred).
 2. Task Creator polish — edge cases in multi-task review, speech-to-text testing.
+3. Wire up real billing (Stripe or similar) and enforce the Mitzy Pro paywall on AI features to match the landing page's pricing claims.
 
 ## Known Gaps / Mocked
 
