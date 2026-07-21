@@ -189,6 +189,18 @@ export function FloodIcon({ color = '#06A77D', bg = '#E8F5EE', size = 18 }) {
   );
 }
 
+// "Other" category — four-dot motif from the Mitzy logo
+export function OtherIcon({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <circle cx="5.5"  cy="5.5"  r="3" fill="#D62828" />
+      <circle cx="12.5" cy="5.5"  r="3" fill="#F77F00" />
+      <circle cx="5.5"  cy="12.5" r="3" fill="#06A77D" />
+      <circle cx="12.5" cy="12.5" r="3" fill="#F4C430" />
+    </svg>
+  );
+}
+
 export const HAZARD_ICON_CONFIG = {
   earthquake: { Icon: EarthquakeIcon,  color: '#D62828' },
   wildfire:   { Icon: WildfireIcon,    color: '#D62828' },
@@ -263,6 +275,7 @@ export const CAT_ICON_CONFIG = {
   finance:   { Icon: CalendarIcon, color: '#F77F00', bg: '#FFF3E0', tileBg: '#FFF3E0'  },
   emergency: { Icon: SirenIcon,    color: '#D62828', bg: '#FDE8E8', tileBg: '#FDE8E8'  },
   pet:       { Icon: PetIcon,      color: '#F4C430', bg: '#FFFBEE', tileBg: '#FFFBEE'  },
+  other:     { Icon: OtherIcon,    color: '#4A6256', bg: '#F0EDE4', tileBg: '#F0EDE4'  },
 };
 
 export function CategoryTile({ cat, size = 26 }) {

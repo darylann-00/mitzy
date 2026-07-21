@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { C, CAT_META } from "../data/constants";
+import { CategoryTile } from "./CategoryIcons";
 import { TaskConfirmCard } from "./TaskConfirmCard";
 import { formatIntervalDays } from "./FrequencyPicker";
 
@@ -112,14 +113,7 @@ export function BrainDumpReview({ tasks: initialTasks, onSave, onCancel, saving,
                 padding: 0, textAlign: 'left',
               }}
             >
-              <div style={{
-                width: 28, height: 28, borderRadius: 8,
-                background: `${meta.color}15`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 14, flexShrink: 0,
-              }}>
-                {meta.emoji}
-              </div>
+              <CategoryTile cat={task.cat} size={28} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{
                   fontSize: 14, fontWeight: 600, color: C.ink,
