@@ -5,6 +5,7 @@ import { useTaskContext } from "../contexts/TaskContext";
 import { supabase } from "../lib/supabase";
 import { TaskConfirmCard } from "./TaskConfirmCard";
 import { BrainDumpReview } from "./BrainDumpReview";
+import { CategoryTile } from "./CategoryIcons";
 
 const PLACEHOLDERS = [
   "e.g. fix iPad screen",
@@ -14,13 +15,22 @@ const PLACEHOLDERS = [
   "e.g. change HVAC filter, schedule dentist, get car inspected",
 ];
 
-const FREQ_OPTIONS = [
-  { label: "Monthly",      days: 30  },
-  { label: "Every 3 mo",   days: 90  },
-  { label: "Every 6 mo",   days: 180 },
-  { label: "Yearly",       days: 365 },
-  { label: "Every 2 years", days: 730 },
+const FREQ_UNIT_DAYS = { days: 1, weeks: 7, months: 30, years: 365 };
+
+const EXAMPLE_PROMPTS = [
+  "change HVAC filter",
+  "book the dog's vet visit",
+  "clean the gutters",
 ];
+
+const MICRO_LABEL = {
+  fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
+  color: '#4A6256', fontFamily: "'Righteous', cursive",
+};
+
+const CARD = {
+  background: '#fff', borderRadius: 14, border: '1px solid #EAE4DA', padding: '13px 15px',
+};
 
 function PulseLoader({ messages }) {
   const [idx, setIdx] = useState(0);
@@ -73,9 +83,12 @@ export function TaskCreator({ onClose }) {
   // Manual mode state
   const [manualLabel, setManualLabel] = useState('');
   const [manualCat, setManualCat] = useState('home');
-  const [manualFreq, setManualFreq] = useState(90);
+  const [manualFreqNum, setManualFreqNum] = useState('3');
+  const [manualFreqUnit, setManualFreqUnit] = useState('months');
+  const [manualOneTime, setManualOneTime] = useState(false);
   const [manualStakes, setManualStakes] = useState('medium');
   const [manualErr, setManualErr] = useState('');
+  const [inputFocused, setInputFocused] = useState(false);
 
   const abortRef = useRef(null);
   const regenTimerRef = useRef(null);
@@ -290,6 +303,9 @@ export function TaskCreator({ onClose }) {
 
   const handleManualAdd = async () => {
     if (!manualLabel.trim()) { setManualErr("Give it a name first"); return; }
+    const freqN = parseInt(manualFreqNum, 10);
+    if (!manualOneTime && (!freqN || freqN < 1)) { setManualErr("Pick how often it repeats"); return; }
+    const manualFreq = freqN * FREQ_UNIT_DAYS[manualFreqUnit];
     setSaving(true);
     setSaveError(null);
     try {
@@ -297,8 +313,9 @@ export function TaskCreator({ onClose }) {
         id: genTaskId(),
         cat: manualCat,
         label: manualLabel.trim(),
-        intervalDays: manualFreq,
-        windowDays: Math.round(manualFreq * 0.2),
+        intervalDays: manualOneTime ? null : manualFreq,
+        windowDays: manualOneTime ? 14 : Math.max(3, Math.round(manualFreq * 0.2)),
+        oneTime: manualOneTime,
         stakes: manualStakes,
         activeMonths: null,
         requires: [],
@@ -325,10 +342,10 @@ export function TaskCreator({ onClose }) {
     return null;
   })();
 
-  const STAKES_COLORS = { low: C.mint, medium: C.yellow, high: C.coral };
+  const STAKES_COLORS = { low: C.green, medium: C.yellow, high: C.red };
 
   const subtitleText = (() => {
-    if (mode === 'manual') return 'Add a quick reminder';
+    if (mode === 'manual') return 'Set it up exactly how you want';
     if (stage === 'input')        return 'Tell Mitzy what you need to get done';
     if (stage === 'loading')      return 'Mitzy is working on it…';
     if (stage === 'confirm')      return 'Review and tweak before saving';
@@ -372,68 +389,99 @@ export function TaskCreator({ onClose }) {
         </div>
       </div>
 
-      {/* Mode switcher */}
-      {stage === 'input' && (
-        <div style={{ display: 'flex', gap: 0, background: '#0F3D27', borderRadius: 10, padding: 3, margin: '0 18px', flexShrink: 0, marginTop: -4 }}>
-          <button
-            onClick={() => setMode('ai')}
-            style={{
-              flex: 1, padding: '8px 0', border: 'none', borderRadius: 8,
-              fontFamily: 'DM Sans, sans-serif', fontSize: 13, fontWeight: 600,
-              cursor: 'pointer', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', gap: 5, transition: 'all 0.15s',
-              background: mode === 'ai' ? '#E8F5EE' : 'transparent',
-              color: mode === 'ai' ? '#1A5C3A' : '#7DD8B0',
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2 L13.4 10.6 L22 12 L13.4 13.4 L12 22 L10.6 13.4 L2 12 L10.6 10.6 Z" fill="currentColor" />
-            </svg>
-            Mitzy magic
-          </button>
-          <button
-            onClick={() => setMode('manual')}
-            style={{
-              flex: 1, padding: '8px 0', border: 'none', borderRadius: 8,
-              fontFamily: 'DM Sans, sans-serif', fontSize: 13, fontWeight: 600,
-              cursor: 'pointer', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', gap: 5, transition: 'all 0.15s',
-              background: mode === 'manual' ? '#E8F5EE' : 'transparent',
-              color: mode === 'manual' ? '#1A5C3A' : '#7DD8B0',
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-            </svg>
-            Do it myself
-          </button>
-        </div>
-      )}
-
       {/* Body */}
       <div style={{ flex: 1, overflowY: 'auto', background: '#FDFAF2' }}>
         <div style={{ padding: '16px 18px 32px', maxWidth: 640, margin: '0 auto' }}>
 
+          {/* Mode switcher */}
+          {stage === 'input' && (
+            <div style={{ display: 'flex', background: C.surface, borderRadius: 999, padding: 4, marginBottom: 16 }}>
+              {[
+                { key: 'ai', label: 'Mitzy magic', icon: (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2 L13.4 10.6 L22 12 L13.4 13.4 L12 22 L10.6 13.4 L2 12 L10.6 10.6 Z" fill="currentColor" />
+                  </svg>
+                ) },
+                { key: 'manual', label: 'Do it myself', icon: (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                  </svg>
+                ) },
+              ].map(({ key, label, icon }) => {
+                const active = mode === key;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setMode(key)}
+                    style={{
+                      flex: 1, padding: '9px 0', border: 'none', borderRadius: 999,
+                      fontFamily: 'DM Sans, sans-serif', fontSize: 13, fontWeight: 700,
+                      cursor: 'pointer', display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', gap: 6, transition: 'all 0.15s',
+                      background: active ? '#fff' : 'transparent',
+                      color: active ? C.brand : C.muted,
+                      boxShadow: active ? '0 1px 4px rgba(28,43,34,0.12)' : 'none',
+                    }}
+                  >
+                    {icon}
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {/* AI input */}
           {stage === 'input' && mode === 'ai' && (
             <div>
-              <div style={{ fontSize: 13, color: C.muted, marginBottom: 8, fontFamily: 'DM Sans, sans-serif' }}>
-                One task or a whole list — Mitzy will figure it out.
+              <div style={{
+                background: '#fff', borderRadius: 16,
+                border: `1.5px solid ${inputFocused ? C.brand : '#EAE4DA'}`,
+                boxShadow: '0 2px 12px rgba(28,43,34,0.05)',
+                transition: 'border-color 0.15s', overflow: 'hidden',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '13px 15px 0' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2 L13.4 10.6 L22 12 L13.4 13.4 L12 22 L10.6 13.4 L2 12 L10.6 10.6 Z" fill={C.brand} />
+                  </svg>
+                  <span style={MICRO_LABEL}>Brain dump</span>
+                </div>
+                <textarea
+                  autoFocus
+                  value={prompt}
+                  onChange={e => setPrompt(e.target.value)}
+                  onFocus={() => setInputFocused(true)}
+                  onBlur={() => setInputFocused(false)}
+                  placeholder={PLACEHOLDERS[phIdx]}
+                  rows={5}
+                  style={{
+                    width: '100%', padding: '10px 15px 4px', fontSize: 15,
+                    fontFamily: 'DM Sans, sans-serif', border: 'none', outline: 'none',
+                    background: 'transparent', color: C.ink,
+                    resize: 'none', minHeight: 110, boxSizing: 'border-box',
+                    lineHeight: 1.5,
+                  }}
+                />
+                <div style={{ padding: '0 15px 13px', fontSize: 12, color: C.muted, fontFamily: 'DM Sans, sans-serif' }}>
+                  One task or a whole list — Mitzy will figure it out.
+                </div>
               </div>
-              <textarea
-                autoFocus
-                value={prompt}
-                onChange={e => setPrompt(e.target.value)}
-                placeholder={PLACEHOLDERS[phIdx]}
-                rows={5}
-                style={{
-                  width: '100%', padding: '12px 14px', fontSize: 15,
-                  fontFamily: 'DM Sans, sans-serif', border: '1.5px solid #EAE4DA',
-                  borderRadius: 14, background: '#fff', color: C.ink,
-                  resize: 'vertical', minHeight: 110, boxSizing: 'border-box',
-                  lineHeight: 1.5,
-                }}
-              />
+              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+                <span style={{ fontSize: 12, color: C.muted, fontWeight: 600, fontFamily: 'DM Sans, sans-serif' }}>Try:</span>
+                {EXAMPLE_PROMPTS.map(text => (
+                  <button
+                    key={text}
+                    onClick={() => setPrompt(p => p.trim() ? `${p.trimEnd()}\n${text}` : text)}
+                    style={{
+                      padding: '6px 11px', borderRadius: 20, border: '1.5px solid #EAE4DA',
+                      background: '#fff', fontSize: 12, fontWeight: 600, color: C.ink,
+                      cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+                    }}
+                  >
+                    {text}
+                  </button>
+                ))}
+              </div>
               {errorMessage && (
                 <div style={{ marginTop: 10, fontSize: 13, color: C.red, fontFamily: 'DM Sans, sans-serif' }}>{errorMessage}</div>
               )}
@@ -455,15 +503,15 @@ export function TaskCreator({ onClose }) {
 
           {/* Manual mode */}
           {stage === 'input' && mode === 'manual' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div>
-                <div style={{ fontSize: 13, color: C.muted, fontWeight: 600, marginBottom: 6, fontFamily: 'DM Sans, sans-serif' }}>Task name</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={CARD}>
+                <div style={{ ...MICRO_LABEL, marginBottom: 8 }}>Task</div>
                 <input
                   autoFocus
                   type="text"
                   placeholder="e.g. Clean washing machine"
                   value={manualLabel}
-                  onChange={e => setManualLabel(e.target.value)}
+                  onChange={e => { setManualLabel(e.target.value); if (manualErr) setManualErr(''); }}
                   style={{
                     width: '100%', padding: '10px 12px', fontSize: 15,
                     fontFamily: 'DM Sans, sans-serif', border: '1.5px solid #EAE4DA',
@@ -471,82 +519,125 @@ export function TaskCreator({ onClose }) {
                   }}
                 />
               </div>
-              <div>
-                <div style={{ fontSize: 13, color: C.muted, fontWeight: 600, marginBottom: 6, fontFamily: 'DM Sans, sans-serif' }}>Category</div>
+              <div style={CARD}>
+                <div style={{ ...MICRO_LABEL, marginBottom: 8 }}>Category</div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {Object.entries(CAT_META).map(([k, v]) => (
-                    <button
-                      key={k}
-                      onClick={() => setManualCat(k)}
-                      style={{
-                        padding: '7px 12px', borderRadius: 10, border: 'none',
-                        fontFamily: 'DM Sans, sans-serif', fontSize: 13, fontWeight: 600,
-                        cursor: 'pointer',
-                        background: manualCat === k ? v.color : C.light,
-                        color: manualCat === k ? C.white : C.ink,
-                      }}
-                    >
-                      {v.emoji} {v.label}
-                    </button>
-                  ))}
+                  {Object.entries(CAT_META).map(([k, v]) => {
+                    const active = manualCat === k;
+                    return (
+                      <button
+                        key={k}
+                        onClick={() => setManualCat(k)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 7,
+                          padding: '6px 12px 6px 7px', borderRadius: 10, cursor: 'pointer',
+                          border: `1.5px solid ${active ? C.brand : '#EAE4DA'}`,
+                          background: active ? C.brandLight : '#fff',
+                          fontFamily: 'DM Sans, sans-serif', fontSize: 13, fontWeight: 600, color: C.ink,
+                        }}
+                      >
+                        <CategoryTile cat={k} size={24} />
+                        {v.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-              <div>
-                <div style={{ fontSize: 13, color: C.muted, fontWeight: 600, marginBottom: 6, fontFamily: 'DM Sans, sans-serif' }}>How often?</div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {FREQ_OPTIONS.map(o => (
-                    <button
-                      key={o.days}
-                      onClick={() => setManualFreq(o.days)}
+              <div style={CARD}>
+                <div style={{ ...MICRO_LABEL, marginBottom: 8 }}>How often</div>
+                <div style={{ display: 'flex', gap: 6, marginBottom: manualOneTime ? 0 : 12 }}>
+                  {[
+                    { key: false, label: 'Recurring' },
+                    { key: true,  label: 'One time' },
+                  ].map(({ key, label }) => {
+                    const active = manualOneTime === key;
+                    return (
+                      <button
+                        key={label}
+                        onClick={() => setManualOneTime(key)}
+                        style={{
+                          padding: '6px 14px', borderRadius: 20, fontSize: 13, fontWeight: 700,
+                          fontFamily: 'DM Sans, sans-serif', cursor: 'pointer', border: '1.5px solid',
+                          borderColor: active ? C.brand : '#EAE4DA',
+                          background: active ? C.brand : '#fff',
+                          color: active ? '#E8F5EE' : C.ink,
+                        }}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {!manualOneTime && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: C.ink, fontFamily: 'DM Sans, sans-serif' }}>Every</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={manualFreqNum}
+                      onChange={e => { setManualFreqNum(e.target.value); if (manualErr) setManualErr(''); }}
                       style={{
-                        padding: '7px 12px', borderRadius: 10,
-                        border: `1.5px solid ${manualFreq === o.days ? C.brand : '#EAE4DA'}`,
-                        background: manualFreq === o.days ? C.brand : '#fff',
-                        fontFamily: 'DM Sans, sans-serif', fontSize: 12, fontWeight: 600,
-                        cursor: 'pointer',
-                        color: manualFreq === o.days ? '#E8F5EE' : C.ink,
+                        width: 64, padding: '9px 8px', fontSize: 14, fontWeight: 600,
+                        fontFamily: 'DM Sans, sans-serif', border: '1.5px solid #EAE4DA',
+                        borderRadius: 10, background: '#fff', color: C.ink, textAlign: 'center',
+                      }}
+                    />
+                    <select
+                      value={manualFreqUnit}
+                      onChange={e => setManualFreqUnit(e.target.value)}
+                      style={{
+                        padding: '9px 10px', fontSize: 14, fontWeight: 600,
+                        fontFamily: 'DM Sans, sans-serif', border: '1.5px solid #EAE4DA',
+                        borderRadius: 10, background: '#fff', color: C.ink,
                       }}
                     >
-                      {o.label}
-                    </button>
-                  ))}
-                </div>
+                      <option value="days">days</option>
+                      <option value="weeks">weeks</option>
+                      <option value="months">months</option>
+                      <option value="years">years</option>
+                    </select>
+                  </div>
+                )}
               </div>
-              <div>
-                <div style={{ fontSize: 13, color: C.muted, fontWeight: 600, marginBottom: 8, fontFamily: 'DM Sans, sans-serif' }}>How important?</div>
+              <div style={CARD}>
+                <div style={{ ...MICRO_LABEL, marginBottom: 8 }}>How important</div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  {["low", "medium", "high"].map(s => (
-                    <button
-                      key={s}
-                      onClick={() => setManualStakes(s)}
-                      style={{
-                        flex: 1, padding: '10px', fontSize: 14,
-                        background: manualStakes === s ? STAKES_COLORS[s] : C.light,
-                        color: manualStakes === s ? C.white : C.ink,
-                        border: 'none', borderRadius: 12, fontWeight: 600,
-                        cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
-                      }}
-                    >
-                      {s}
-                    </button>
-                  ))}
+                  {["low", "medium", "high"].map(s => {
+                    const active = manualStakes === s;
+                    return (
+                      <button
+                        key={s}
+                        onClick={() => setManualStakes(s)}
+                        style={{
+                          flex: 1, padding: '10px 0', fontSize: 13, fontWeight: 700,
+                          textTransform: 'capitalize',
+                          background: active ? STAKES_COLORS[s] : '#fff',
+                          color: active ? (s === 'medium' ? C.ink : '#fff') : C.ink,
+                          border: `1.5px solid ${active ? STAKES_COLORS[s] : '#EAE4DA'}`,
+                          borderRadius: 12,
+                          cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+                        }}
+                      >
+                        {s}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-              {manualErr && <div style={{ fontSize: 13, color: C.coral, fontFamily: 'DM Sans, sans-serif' }}>{manualErr}</div>}
-              {saveError && <div style={{ fontSize: 13, color: C.coral, fontFamily: 'DM Sans, sans-serif' }}>{saveError}</div>}
+              {manualErr && <div style={{ fontSize: 13, color: C.red, fontFamily: 'DM Sans, sans-serif' }}>{manualErr}</div>}
+              {saveError && <div style={{ fontSize: 13, color: C.red, fontFamily: 'DM Sans, sans-serif' }}>{saveError}</div>}
               <button
                 onClick={handleManualAdd}
                 disabled={saving}
                 style={{
-                  width: '100%', padding: '14px', fontSize: 16,
-                  background: saving ? '#7A9B8E' : C.coral, color: C.white,
+                  width: '100%', padding: '14px', fontSize: 15, marginTop: 4,
+                  background: saving ? '#7A9B8E' : C.brand, color: '#E8F5EE',
                   border: 'none', borderRadius: 14, fontWeight: 700,
-                  boxShadow: '0 4px 12px rgba(255,92,92,0.3)',
                   cursor: saving ? 'default' : 'pointer',
                   fontFamily: 'DM Sans, sans-serif',
                 }}
               >
-                {saving ? 'Saving…' : 'add to my list →'}
+                {saving ? 'Saving…' : 'Add to my tasks'}
               </button>
             </div>
           )}

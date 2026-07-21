@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { taskStatus } from "./taskLogic";
+import { taskStatus, becameDueAfterPlan } from "./taskLogic";
 
 const daysFromNow = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
 const daysAgo = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
@@ -61,5 +61,27 @@ describe("taskStatus — one-time tasks", () => {
   it("reports due once the due date has passed", () => {
     const entry = { dueDate: daysAgo(1) };
     expect(taskStatus(baseTask, { t2: entry })).toBe("due");
+  });
+});
+
+describe("becameDueAfterPlan — weekly plan 'came up' check", () => {
+  it("excludes tasks already overdue when the plan was confirmed", () => {
+    // due 7 days ago, plan confirmed today
+    expect(becameDueAfterPlan(-7, new Date().toISOString())).toBe(false);
+  });
+
+  it("excludes tasks due the same day the plan was confirmed", () => {
+    expect(becameDueAfterPlan(0, new Date().toISOString())).toBe(false);
+  });
+
+  it("includes tasks that became due after the plan was confirmed", () => {
+    // due today, plan confirmed 3 days ago
+    const confirmed = new Date(Date.now() - 3 * 86400000).toISOString();
+    expect(becameDueAfterPlan(0, confirmed)).toBe(true);
+  });
+
+  it("returns false with no due information or no confirmation", () => {
+    expect(becameDueAfterPlan(null, new Date().toISOString())).toBe(false);
+    expect(becameDueAfterPlan(0, null)).toBe(false);
   });
 });

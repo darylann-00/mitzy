@@ -118,7 +118,7 @@ Return shape (success):
   "tier": 1 | 2 | 3 | 3.5,
   "task": {
     "label": "<short imperative, e.g. 'Fertilize orchid'>",
-    "cat": "home" | "car" | "health" | "school" | "finance" | "emergency" | "pet",
+    "cat": "home" | "car" | "health" | "school" | "finance" | "emergency" | "pet" | "other",
     "intervalDays": <integer or null if oneTime>,
     "windowDays": <integer; ~20% of intervalDays, min 3, max 30; or 14 for one-time>,
     "stakes": "low" | "medium" | "high",
