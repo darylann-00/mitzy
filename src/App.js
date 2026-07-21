@@ -16,7 +16,7 @@ import { CalendarProvider, useCalendarContext } from "./contexts/CalendarContext
 
 import { LoginGate }      from "./components/LoginGate";
 import { BrandSplash }    from "./components/BrandSplash";
-import { WelcomeGate }    from "./components/WelcomeGate";
+import { LandingPage }    from "./components/LandingPage";
 import { SlimOnboarding } from "./onboarding/SlimOnboarding";
 import { PrioritySetup }  from "./onboarding/PrioritySetup";
 
@@ -391,10 +391,16 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
   if (user && !serverProfileChecked) return <BrandSplash />;
 
   if (!welcomeChoice) {
-    return <WelcomeGate onChoose={(choice) => {
-      saveS(WELCOME_CHOICE_KEY, choice);
-      setWelcomeChoice(choice);
-    }} />;
+    return <LandingPage
+      onGetStarted={() => {
+        saveS(WELCOME_CHOICE_KEY, 'new');
+        setWelcomeChoice('new');
+      }}
+      onSignIn={() => {
+        saveS(WELCOME_CHOICE_KEY, 'returning');
+        setWelcomeChoice('returning');
+      }}
+    />;
   }
   if (welcomeChoice === 'returning' && !user) {
     return <LoginGate sendMagicLink={sendMagicLink} signInWithGoogle={signInWithGoogle} signInWithPassword={signInWithPassword} authError={authError} welcomeChoice={welcomeChoice} />;

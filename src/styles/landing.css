@@ -1,0 +1,108 @@
+/* ─── Landing page layout ────────────────────────────────── */
+.lp-wrap {
+  background: #FDFAF2;
+  min-height: 100vh;
+}
+
+.lp-inner {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.lp-hero {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.lp-hero-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.lp-h1 {
+  font-family: 'Righteous', cursive;
+  font-size: 34px;
+  line-height: 1.15;
+  color: #1C2B22;
+  margin: 0 0 16px;
+  max-width: 480px;
+}
+
+.lp-hero-sub {
+  font-size: 17px;
+  line-height: 1.6;
+  color: #4A6256;
+  margin: 0 auto 32px;
+  max-width: 400px;
+}
+
+.lp-benefits-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  text-align: center;
+}
+
+.lp-pricing-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  max-width: 460px;
+  margin: 0 auto;
+}
+
+/* ─── Desktop layout ─────────────────────────────────────── */
+@media (min-width: 900px) {
+  .lp-inner {
+    max-width: 1120px;
+    padding: 0 48px;
+  }
+
+  .lp-hero {
+    display: grid;
+    grid-template-columns: 1fr 440px;
+    align-items: center;
+    gap: 48px;
+    text-align: left;
+    margin-bottom: 72px;
+  }
+
+  .lp-hero-copy {
+    align-items: flex-start;
+  }
+
+  .lp-h1 {
+    font-size: 48px;
+    max-width: 560px;
+  }
+
+  .lp-hero-sub {
+    margin: 0 0 32px;
+    max-width: 460px;
+  }
+
+  .lp-phone {
+    max-width: 320px !important;
+    margin: 0 !important;
+  }
+
+  .lp-benefits {
+    padding: 56px 64px !important;
+  }
+
+  .lp-benefits-grid {
+    max-width: 900px;
+    margin: 0 auto;
+    gap: 40px;
+  }
+
+  .lp-pricing-grid {
+    max-width: 620px;
+  }
+
+  .lp-bottom-cta {
+    padding: 64px 56px !important;
+  }
+}

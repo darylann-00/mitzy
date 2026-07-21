@@ -13,7 +13,7 @@ Read this when touching state, data, or non-trivial component wiring.
                       TrickleCard, HazardCard, LifeEventIntake, LifeEventNudge,
                       GuidedSteps, MatchConfirmationChip, SnoozePicker, SnoozeIcon,
                       SnoozeTooltip, MonthCalendar, DateField, FrequencyPicker,
-                      Celebration, Sheet, CategoryIcons, BottomNav, WelcomeGate,
+                      Celebration, Sheet, CategoryIcons, BottomNav, LandingPage,
                       LoginGate, BrandSplash, ProfileConflictModal, WeeklyCheckIn
   /contexts         — ProfileContext, TaskContext, CalendarContext
   /views            — HomeView, AllView, ProfileView, TaskDetailView
