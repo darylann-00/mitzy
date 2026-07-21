@@ -6,7 +6,7 @@ test('new user completes onboarding and reaches home screen', async ({ page }) =
 
   // LandingPage
   await expect(page.getByText('Stop carrying your household')).toBeVisible();
-  await page.getByRole('button', { name: 'Start my free trial' }).click();
+  await page.getByRole('button', { name: 'Start my free trial' }).first().click();
 
   // SlimOnboarding — welcome screen
   await expect(page.getByText('Your household, handled.')).toBeVisible();
