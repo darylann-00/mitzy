@@ -5,12 +5,13 @@ import { C } from "../data/constants";
 import {
   retroactiveCandidates,
   isPostBirth,
+  NEW_BABY_PHASE_LABELS,
 } from "../data/lifeEvents/newBaby";
-import { NEW_BABY_PHASE_LABELS } from "../data/lifeEvents/newBaby";
 
-// Multi-step intake sheet for the New Baby life event. v1 only — when we add
-// more events, generalize step config off the event def. Until then, keeping
-// this concrete and readable beats premature abstraction.
+// Life event intake sheets. NewBabyIntake is bespoke (its branching —
+// conception path, post-birth gating — doesn't fit a generic step config).
+// GenericEventIntake renders any other event from its def's `intake.steps`
+// config plus the shared retro + confirm steps.
 
 const LABEL_STYLE = {
   fontSize: 11, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase',
@@ -157,10 +158,11 @@ function StepAccounts({ onNext }) {
 }
 
 // ─── Step: retroactive checklist ────────────────────────────────────
-// Asks the user which already-relevant tasks they've already handled. For
-// post-birth users we show a single un-labeled list. For mid-pregnancy users
-// we group by trimester so the framing matches their mental model.
-function StepRetroactive({ candidates, post, onNext }) {
+// Asks the user which already-relevant tasks they've already handled.
+// `grouped` splits the list under phase headers (from `phaseLabels`);
+// otherwise a single flat list. `stepLabel` and `question` let each event
+// keep its own framing.
+function StepRetroactive({ candidates, grouped: groupByPhase, phaseLabels, stepLabel, question, onNext }) {
   const [checked, setChecked] = useState(new Set());
 
   const toggle = (id) => {
@@ -172,22 +174,18 @@ function StepRetroactive({ candidates, post, onNext }) {
   };
 
   const grouped = useMemo(() => {
-    if (post) return [{ phase: null, items: candidates }];
+    if (!groupByPhase) return [{ phase: null, items: candidates }];
     const byPhase = {};
     candidates.forEach(t => {
       (byPhase[t.phase] ??= []).push(t);
     });
     return Object.entries(byPhase).map(([phase, items]) => ({ phase, items }));
-  }, [candidates, post]);
+  }, [candidates, groupByPhase]);
 
   return (
     <>
-      <div style={LABEL_STYLE}>Step 4 of 4</div>
-      <div style={QUESTION_STYLE}>
-        {post
-          ? "Mark anything you've already handled."
-          : "You're already a bit further along — anything below already done?"}
-      </div>
+      <div style={LABEL_STYLE}>{stepLabel}</div>
+      <div style={QUESTION_STYLE}>{question}</div>
       <div style={HELP_STYLE}>
         We'll skip these so they don't clutter your list.
       </div>
@@ -196,7 +194,7 @@ function StepRetroactive({ candidates, post, onNext }) {
         <div key={phase ?? 'all'} style={{ marginBottom: 14 }}>
           {phase && (
             <div style={{ ...LABEL_STYLE, marginBottom: 6, color: C.muted }}>
-              {NEW_BABY_PHASE_LABELS[phase]}
+              {phaseLabels?.[phase] ?? phase}
             </div>
           )}
           {items.map(t => {
@@ -339,7 +337,12 @@ export function NewBabyIntake({ onClose, onStart, generateTaskList }) {
       {step === 'retro' && (
         <StepRetroactive
           candidates={retroactiveCandidates(answers)}
-          post={isPostBirth(answers)}
+          grouped={!isPostBirth(answers)}
+          phaseLabels={NEW_BABY_PHASE_LABELS}
+          stepLabel="Step 4 of 4"
+          question={isPostBirth(answers)
+            ? "Mark anything you've already handled."
+            : "You're already a bit further along — anything below already done?"}
           onNext={(alreadyDone) => {
             setAnswers(a => ({ ...a, alreadyDone }));
             setStep('confirm');
@@ -356,6 +359,161 @@ export function NewBabyIntake({ onClose, onStart, generateTaskList }) {
           onCancel={() => {
             const cands = retroactiveCandidates(answers);
             setStep(cands.length > 0 ? 'retro' : 'accounts');
+          }}
+        />
+      )}
+    </Sheet>
+  );
+}
+
+// ─── Generic steps (config-driven) ──────────────────────────────────
+
+function StepDateGeneric({ step, stepLabel, value, onNext }) {
+  const [date, setDate] = useState(value || '');
+  const today = new Date().toISOString().slice(0, 10);
+  return (
+    <>
+      <div style={LABEL_STYLE}>{stepLabel}</div>
+      <div style={QUESTION_STYLE}>{step.question}</div>
+      {step.help && <div style={HELP_STYLE}>{step.help}</div>}
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <MonthCalendar value={date} onChange={setDate} max={step.allowPast ? today : undefined} />
+      </div>
+      <PrimaryButton disabled={!date} onClick={() => onNext(date)}>
+        Continue
+      </PrimaryButton>
+    </>
+  );
+}
+
+function StepChoiceGeneric({ step, stepLabel, onNext }) {
+  return (
+    <>
+      <div style={LABEL_STYLE}>{stepLabel}</div>
+      <div style={QUESTION_STYLE}>{step.question}</div>
+      {step.help && <div style={HELP_STYLE}>{step.help}</div>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {step.options.map(opt => (
+          <ChipButton key={opt.value} onClick={() => onNext(opt.value)}>{opt.label}</ChipButton>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function StepBooleansGeneric({ step, stepLabel, onNext }) {
+  const [vals, setVals] = useState({});
+  const ready = step.fields.every(f => vals[f.key] != null);
+  return (
+    <>
+      <div style={LABEL_STYLE}>{stepLabel}</div>
+      <div style={QUESTION_STYLE}>{step.question}</div>
+      {step.help && <div style={HELP_STYLE}>{step.help}</div>}
+      {step.fields.map(f => (
+        <div key={f.key} style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.ink, fontFamily: 'DM Sans, sans-serif', marginBottom: 8 }}>
+            {f.label}
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <ChipButton active={vals[f.key] === true}  onClick={() => setVals(v => ({ ...v, [f.key]: true }))}>Yes</ChipButton>
+            <ChipButton active={vals[f.key] === false} onClick={() => setVals(v => ({ ...v, [f.key]: false }))}>No</ChipButton>
+            {f.allowUnsure && (
+              <ChipButton active={vals[f.key] === 'unsure'} onClick={() => setVals(v => ({ ...v, [f.key]: 'unsure' }))}>
+                Not sure yet
+              </ChipButton>
+            )}
+          </div>
+        </div>
+      ))}
+      <PrimaryButton disabled={!ready} onClick={() => onNext(vals)}>
+        Continue
+      </PrimaryButton>
+    </>
+  );
+}
+
+// ─── Generic container ──────────────────────────────────────────────
+// Drives any event whose def carries `intake.steps` (see divorce.js /
+// lossOfLovedOne.js). Flow: configured steps → retro checklist (when the
+// def says some tasks may already be handled) → confirm.
+export function GenericEventIntake({ def, initialAnswers, onClose, onStart }) {
+  const steps = def.intake?.steps ?? [];
+  // pos: index into steps, then 'retro' | 'confirm'
+  const [pos, setPos]         = useState(0);
+  const [answers, setAnswers] = useState(() => ({ ...(initialAnswers || {}) }));
+  const [busy, setBusy]       = useState(false);
+  const [error, setError]     = useState(null);
+
+  const retroCandidates = (a) => def.retroactiveCandidates ? def.retroactiveCandidates(a) : [];
+
+  const advance = (updatedAnswers) => {
+    setAnswers(updatedAnswers);
+    const nextIdx = pos + 1;
+    if (nextIdx < steps.length) { setPos(nextIdx); return; }
+    setPos(retroCandidates(updatedAnswers).length > 0 ? 'retro' : 'confirm');
+  };
+
+  const handleStepNext = (step, value) => {
+    const updated = step.type === 'booleans'
+      ? { ...answers, ...value }
+      : { ...answers, [step.key]: value };
+    advance(updated);
+  };
+
+  const handleConfirm = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await onStart(answers);
+      onClose();
+    } catch (e) {
+      setError(e?.message || "Couldn't save — please try again.");
+      setBusy(false);
+    }
+  };
+
+  const finalTasks = useMemo(
+    () => (pos === 'confirm' ? def.tasksForIntake(answers) : []),
+    [pos, answers, def]
+  );
+
+  const current = typeof pos === 'number' ? steps[pos] : null;
+  const stepLabel = typeof pos === 'number' ? `Step ${pos + 1}` : `Step ${steps.length + 1}`;
+
+  return (
+    <Sheet title={def.label} onClose={onClose}>
+      {current?.type === 'date' && (
+        <StepDateGeneric key={pos} step={current} stepLabel={stepLabel} value={answers[current.key]} onNext={(v) => handleStepNext(current, v)} />
+      )}
+      {current?.type === 'choice' && (
+        <StepChoiceGeneric key={pos} step={current} stepLabel={stepLabel} onNext={(v) => handleStepNext(current, v)} />
+      )}
+      {current?.type === 'booleans' && (
+        <StepBooleansGeneric key={pos} step={current} stepLabel={stepLabel} onNext={(v) => handleStepNext(current, v)} />
+      )}
+
+      {pos === 'retro' && (
+        <StepRetroactive
+          candidates={retroCandidates(answers)}
+          grouped={new Set(retroCandidates(answers).map(t => t.phase)).size > 1}
+          phaseLabels={def.phaseLabels}
+          stepLabel={stepLabel}
+          question="Anything here already handled?"
+          onNext={(alreadyDone) => {
+            setAnswers(a => ({ ...a, alreadyDone }));
+            setPos('confirm');
+          }}
+        />
+      )}
+
+      {pos === 'confirm' && (
+        <StepConfirm
+          taskCount={finalTasks.length}
+          busy={busy}
+          error={error}
+          onConfirm={handleConfirm}
+          onCancel={() => {
+            setPos(retroCandidates(answers).length > 0 ? 'retro' : Math.max(0, steps.length - 1));
           }}
         />
       )}

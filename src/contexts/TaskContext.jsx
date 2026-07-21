@@ -125,7 +125,8 @@ export function TaskProvider({ user, children }) {
     const isOneTime = entry?.oneTime !== undefined ? entry.oneTime : t.oneTime;
     if (isOneTime) {
       if (entry?.lastDone) return null;
-      if (entry?.dueDate) return Math.ceil((new Date(entry.dueDate) - Date.now()) / 86400000);
+      const dueDate = entry?.dueDate ?? t.dueDate;
+      if (dueDate) return Math.ceil((new Date(dueDate) - Date.now()) / 86400000);
       return null;
     }
     if (!entry?.lastDone) return 0;

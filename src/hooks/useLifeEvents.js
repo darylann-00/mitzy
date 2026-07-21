@@ -2,13 +2,6 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "../lib/supabase";
 import { loadS, saveS, LIFE_EVENTS_KEY } from "../utils/storage";
 import { getEventDef } from "../data/lifeEvents";
-import { tasksForIntake as newBabyTasksForIntake } from "../data/lifeEvents/newBaby";
-
-// Per-event-type task generator. As we add more events, register their
-// intake → tasks function here.
-const TASK_GENERATORS = {
-  'new-baby': newBabyTasksForIntake,
-};
 
 // Convert a bundle template into a custom_task row. Each user's instance gets
 // a unique id (event-id-prefixed) so multiple instances of the same event
@@ -19,7 +12,8 @@ function bundleTaskToCustomTask(t, lifeEventId, eventType) {
     cat:                 t.cat,
     label:               t.label,
     intervalDays:        null,
-    windowDays:          null,
+    windowDays:          t.windowDays ?? null,
+    dueDate:             t.dueDate ?? null,
     stakes:              t.stakes ?? 'medium',
     activeMonths:        null,
     assistType:          t.assistType ?? null,
@@ -79,10 +73,11 @@ export function useLifeEvents({ user, customTasks, addCustomTasksBulk, removeCus
   );
 
   // Tasks for the active event, hydrated from the user's custom_tasks list.
-  // Sorted by phase order for predictable display (T1 → T2 → T3 → POST).
+  // Sorted by the event def's phase order for predictable display.
   const activeEventTasks = useMemo(() => {
     if (!activeEvent || !customTasks) return [];
-    const phaseOrder = { T1: 0, T2: 1, T3: 2, POST: 3 };
+    const phases = getEventDef(activeEvent.type)?.phases ?? [];
+    const phaseOrder = Object.fromEntries(phases.map((p, i) => [p, i]));
     return customTasks
       .filter(t => t.lifeEventId === activeEvent.id)
       .sort((a, b) => (phaseOrder[a.eventPhase] ?? 99) - (phaseOrder[b.eventPhase] ?? 99));
@@ -107,15 +102,49 @@ export function useLifeEvents({ user, customTasks, addCustomTasksBulk, removeCus
       return next;
     });
 
-    const generate = TASK_GENERATORS[type];
-    if (generate) {
-      const bundleTasks = generate(answers);
+    if (def.tasksForIntake) {
+      const bundleTasks = def.tasksForIntake(answers);
       const tasks = bundleTasks.map(t => bundleTaskToCustomTask(t, event.id, type));
       await addCustomTasksBulk(tasks);
     }
 
     return event;
   }, [user, addCustomTasksBulk]);
+
+  // Update one intake answer on an in-progress event — e.g. resolving a "not
+  // sure yet" decision once the user has actually decided — and add any
+  // tasks that answer newly unlocks. Tasks already created (including ones
+  // the user marked done or removed) are matched by eventBundleKey and never
+  // recreated.
+  const resolveEventAnswer = useCallback(async (eventId, key, value) => {
+    if (!user) return;
+    const event = events.find(e => e.id === eventId);
+    if (!event) return;
+    const nextAnswers = { ...event.intakeAnswers, [key]: value };
+
+    const { error } = await supabase
+      .from('life_events')
+      .update({ intake_answers: nextAnswers, updated_at: new Date().toISOString() })
+      .eq('id', eventId);
+    if (error) throw error;
+
+    setEvents(prev => {
+      const next = prev.map(e => e.id === eventId ? { ...e, intakeAnswers: nextAnswers } : e);
+      saveS(LIFE_EVENTS_KEY, next);
+      return next;
+    });
+
+    const def = getEventDef(event.type);
+    if (def?.tasksForIntake) {
+      const existingKeys = new Set(
+        (customTasks ?? []).filter(t => t.lifeEventId === eventId).map(t => t.eventBundleKey)
+      );
+      const newBundleTasks = def.tasksForIntake(nextAnswers).filter(t => !existingKeys.has(t.id));
+      if (newBundleTasks.length > 0) {
+        await addCustomTasksBulk(newBundleTasks.map(t => bundleTaskToCustomTask(t, eventId, event.type)));
+      }
+    }
+  }, [user, events, customTasks, addCustomTasksBulk]);
 
   const completeEvent = useCallback(async (id) => {
     if (!user) return;
@@ -150,7 +179,7 @@ export function useLifeEvents({ user, customTasks, addCustomTasksBulk, removeCus
 
   return {
     events, activeEvent, activeEventTasks,
-    startEvent, completeEvent, dismissEvent,
+    startEvent, completeEvent, dismissEvent, resolveEventAnswer,
     loading,
   };
 }
