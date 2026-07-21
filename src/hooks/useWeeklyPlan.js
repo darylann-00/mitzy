@@ -49,6 +49,7 @@ export { getCurrentWeekStart, getPlanningWeekStart, toLocalISO, weekRangeLabel }
 
 export function useWeeklyPlan(user, taskState, markScheduled, uiState, updateUiState) {
   const [activePlan, setActivePlan] = useState(null);
+  const [upcomingPlanExists, setUpcomingPlanExists] = useState(false);
   const [loading, setLoading] = useState(!!user);
 
   const currentWeekStart = getCurrentWeekStart();
@@ -67,11 +68,17 @@ export function useWeeklyPlan(user, taskState, markScheduled, uiState, updateUiS
 
       if (error) { setLoading(false); return; }
 
+      const rows = data || [];
+
       // The current week's plan governs Home through Sunday; a plan confirmed
       // early for the upcoming week (Fri–Sun check-in) takes over only when
       // there is no current-week plan.
-      const row = (data || []).find(r => r.week_start === currentWeekStart && r.confirmed_at)
-        ?? (data || []).find(r => r.confirmed_at);
+      const currentRow = rows.find(r => r.week_start === currentWeekStart && r.confirmed_at);
+      const upcomingRow = planningWeekStart !== currentWeekStart
+        ? rows.find(r => r.week_start === planningWeekStart && r.confirmed_at)
+        : null;
+
+      const row = currentRow ?? upcomingRow;
       if (row) {
         setActivePlan({
           id: row.id,
@@ -82,6 +89,8 @@ export function useWeeklyPlan(user, taskState, markScheduled, uiState, updateUiS
           confirmedAt: row.confirmed_at,
         });
       }
+
+      setUpcomingPlanExists(!!(upcomingRow && currentRow));
       setLoading(false);
     }
 
@@ -113,24 +122,28 @@ export function useWeeklyPlan(user, taskState, markScheduled, uiState, updateUiS
     return { done, total: activePlan.taskIds.length };
   }, [activePlan, planFloor, taskState]);
 
-  const confirmPlan = useCallback(async (taskIds, scheduledDates, userInput) => {
+  const confirmPlan = useCallback(async (taskIds, scheduledDates, userInput, targetWeekStart) => {
     if (!user) return { error: new Error("Not signed in") };
 
+    const target = targetWeekStart || weekStart;
+    const isUpcoming = target !== currentWeekStart && target === planningWeekStart;
     const now = new Date().toISOString();
     const dates = scheduledDates || {};
 
-    setActivePlan(prev => ({
-      ...prev,
-      weekStart,
-      taskIds,
-      scheduledDates: dates,
-      userInput: userInput || null,
-      confirmedAt: now,
-    }));
+    if (!isUpcoming) {
+      setActivePlan(prev => ({
+        ...prev,
+        weekStart: target,
+        taskIds,
+        scheduledDates: dates,
+        userInput: userInput || null,
+        confirmedAt: now,
+      }));
+    }
 
     const row = {
       user_id: user.id,
-      week_start: weekStart,
+      week_start: target,
       task_ids: taskIds,
       scheduled_dates: dates,
       user_input: userInput || null,
@@ -144,18 +157,22 @@ export function useWeeklyPlan(user, taskState, markScheduled, uiState, updateUiS
       .single();
 
     if (error) {
-      setActivePlan(null);
+      if (!isUpcoming) setActivePlan(null);
       return { error };
     }
 
-    setActivePlan({
-      id: data.id,
-      weekStart: data.week_start,
-      taskIds: data.task_ids || [],
-      scheduledDates: data.scheduled_dates || {},
-      userInput: data.user_input,
-      confirmedAt: data.confirmed_at,
-    });
+    if (isUpcoming) {
+      setUpcomingPlanExists(true);
+    } else {
+      setActivePlan({
+        id: data.id,
+        weekStart: data.week_start,
+        taskIds: data.task_ids || [],
+        scheduledDates: data.scheduled_dates || {},
+        userInput: data.user_input,
+        confirmedAt: data.confirmed_at,
+      });
+    }
 
     if (markScheduled) {
       for (const [taskId, date] of Object.entries(dates)) {
@@ -163,7 +180,7 @@ export function useWeeklyPlan(user, taskState, markScheduled, uiState, updateUiS
       }
     }
     return { error: null };
-  }, [user, weekStart, markScheduled]);
+  }, [user, weekStart, currentWeekStart, planningWeekStart, markScheduled]);
 
   const addToPlan = useCallback(async (taskId) => {
     if (!user || !activePlan) return;
@@ -209,6 +226,10 @@ export function useWeeklyPlan(user, taskState, markScheduled, uiState, updateUiS
     }
   }, [user, activePlan]);
 
+  // Fri-Sun with an active current-week plan and no upcoming plan yet: the
+  // user can plan next week without losing their current-week progress card.
+  const canPlanNextWeek = planningWeekStart !== currentWeekStart && isInPlanMode && !upcomingPlanExists;
+
   const dismissedWeek = uiState?.weeklyCheckinDismissedWeek ?? null;
   const showNudge = !loading && !isInPlanMode && dismissedWeek !== planningWeekStart;
 
@@ -222,8 +243,10 @@ export function useWeeklyPlan(user, taskState, markScheduled, uiState, updateUiS
     isInPlanMode,
     planProgress,
     weekStart,
+    planningWeekStart,
     planningNextWeek,
     planFloor,
+    canPlanNextWeek,
     confirmPlan,
     addToPlan,
     removeFromPlan,
