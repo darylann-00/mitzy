@@ -7,6 +7,7 @@ import { formatDueDate } from "./TaskCard";
 import { DateField } from "./DateField";
 import { CategoryTile } from "./CategoryIcons";
 import { supabase } from "../lib/supabase";
+import { toLocalISO, weekRangeLabel } from "../hooks/useWeeklyPlan";
 
 const LOADING_MESSAGES = [
   "Reading your week…",
@@ -79,7 +80,7 @@ function computeDueISO(task, taskState) {
   if (!entry?.lastDone) return null;
   const intervalDays = entry?.intervalDays ?? task.intervalDays;
   const due = new Date(new Date(entry.lastDone).getTime() + intervalDays * 86400000);
-  return due.toISOString().slice(0, 10);
+  return toLocalISO(due);
 }
 
 function EditableDueDate({ value, onChange }) {
@@ -253,14 +254,22 @@ function BrainDumpTaskCard({ task, onUpdate, dueDate, onDueDateChange }) {
 export function WeeklyCheckIn({ onClose }) {
   const {
     activeTasks, scoredDue, taskState, getStatus, getDays,
-    confirmPlan, weekStart,
+    confirmPlan, weekStart, activePlan, planningNextWeek, planFloor,
   } = useTaskContext();
-  const { customTasks, addCustomTask } = useProfileContext();
+  const { profile, customTasks, addCustomTasksBulk } = useProfileContext();
 
   const [step, setStep] = useState('input');
   const [userInput, setUserInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [errorKind, setErrorKind] = useState(null);
+
+  // When re-opened mid-week ("Adjust plan"), the already-confirmed plan seeds
+  // the review screen so adjusting never starts from a blank slate.
+  const [existingPlan] = useState(() => {
+    if (!activePlan?.confirmedAt) return { ids: [], dates: {} };
+    return { ids: activePlan.taskIds || [], dates: activePlan.scheduledDates || {} };
+  });
 
   // Custom tasks coming up this week
   const [customDueTasks] = useState(() => {
@@ -302,13 +311,14 @@ export function WeeklyCheckIn({ onClose }) {
 
   const taskMap = new Map(activeTasks.map(t => [t.id, t]));
 
-  const autoCreateBrainDumpTasks = async (suggestions) => {
-    const tasks = [];
-    for (const s of suggestions) {
-      const taskId = genTaskId();
+  // Brain-dump tasks are only built locally here — they're persisted in one
+  // batch on "Lock in my week", so backing out of the check-in (or unchecking
+  // one) never leaves stray tasks in the library.
+  const buildBrainDumpTasks = (suggestions) => {
+    return suggestions.map(s => {
       const intervalDays = s.intervalDays || null;
-      const task = {
-        id: taskId,
+      return {
+        id: genTaskId(),
         cat: 'home',
         label: s.label,
         oneTime: !intervalDays,
@@ -320,14 +330,19 @@ export function WeeklyCheckIn({ onClose }) {
         _reason: s.reason,
         _startDate: s.startDate || null,
       };
-      try {
-        await addCustomTask(task);
-        tasks.push(task);
-      } catch {
-        // skip this one
-      }
+    });
+  };
+
+  // Both entry points to the review screen seed the plan the same way: any
+  // already-confirmed plan for this week first, then this week's due custom tasks.
+  const buildBasePlan = () => {
+    const initialPlan = new Set(existingPlan.ids);
+    const dates = { ...existingPlan.dates };
+    for (const t of customDueTasks) {
+      initialPlan.add(t.id);
+      if (!dates[t.id] && taskState[t.id]?.scheduledDate) dates[t.id] = taskState[t.id].scheduledDate;
     }
-    return tasks;
+    return { initialPlan, dates };
   };
 
   const handleSubmit = async () => {
@@ -362,9 +377,9 @@ export function WeeklyCheckIn({ onClose }) {
           userInput: userInput.trim(),
           tasks: activeTasks.slice(0, 200).map(t => ({ id: t.id, label: t.label, category: t.cat })),
           autoDueTasks: customDueTasks.map(t => ({ id: t.id, label: t.label })),
-          capacity: 'normal',
+          capacity: profile?.capacity || 'normal',
           weekStart,
-          today: new Date().toISOString().slice(0, 10),
+          today: toLocalISO(new Date()),
           backlogTasks,
         }),
         signal: controller.signal,
@@ -385,21 +400,16 @@ export function WeeklyCheckIn({ onClose }) {
       setMatches(apiMatches);
       setGapFill(apiGapFill);
 
-      // Auto-create brain dump items as custom tasks immediately
-      const createdTasks = await autoCreateBrainDumpTasks(apiNewSuggestions);
-      setBrainDumpTasks(createdTasks);
+      const builtTasks = buildBrainDumpTasks(apiNewSuggestions);
+      setBrainDumpTasks(builtTasks);
 
-      // Build initial plan: custom tasks + matched tasks + auto-created brain dump tasks
-      const initialPlan = new Set(customDueTasks.map(t => t.id));
-      const dates = {};
-      for (const t of customDueTasks) {
-        if (taskState[t.id]?.scheduledDate) dates[t.id] = taskState[t.id].scheduledDate;
-      }
+      // Build initial plan: existing plan + custom tasks + matched tasks + brain dump tasks
+      const { initialPlan, dates } = buildBasePlan();
       for (const m of apiMatches) {
         initialPlan.add(m.taskId);
         if (m.scheduledDate) dates[m.taskId] = m.scheduledDate;
       }
-      for (const t of createdTasks) {
+      for (const t of builtTasks) {
         initialPlan.add(t.id);
         if (t._startDate) dates[t.id] = t._startDate;
       }
@@ -417,29 +427,28 @@ export function WeeklyCheckIn({ onClose }) {
   };
 
   const handleSkipToReview = () => {
-    const initialPlan = new Set(customDueTasks.map(t => t.id));
-    const dates = {};
-    for (const t of customDueTasks) {
-      if (taskState[t.id]?.scheduledDate) dates[t.id] = taskState[t.id].scheduledDate;
-    }
+    setErrorKind(null);
+    const { initialPlan, dates } = buildBasePlan();
     setPlanItems(initialPlan);
     setScheduledDates(dates);
     setStep('review');
   };
 
-  const dismissMatch = (matchTaskId, mentionText) => {
-    setDismissedMatches(prev => new Set(prev).add(matchTaskId));
+  const dismissMatch = (match) => {
+    setDismissedMatches(prev => new Set(prev).add(match.taskId));
     setPlanItems(prev => {
       const next = new Set(prev);
-      next.delete(matchTaskId);
+      next.delete(match.taskId);
       return next;
     });
-    // Auto-create a custom task for what they actually said
+    // Queue a custom task for what they actually said — persisted on lock-in.
+    // Reuse what the matching API already extracted: the cleaned-up task title
+    // and the parsed date, so the new task isn't the raw brain-dump snippet.
     const taskId = genTaskId();
     const task = {
       id: taskId,
       cat: 'home',
-      label: mentionText || 'Custom task',
+      label: match.mentionLabel || match.mentionText || 'Custom task',
       oneTime: true,
       intervalDays: null,
       windowDays: 14,
@@ -447,10 +456,11 @@ export function WeeklyCheckIn({ onClose }) {
       isAIGenerated: false,
       requires: [],
     };
-    addCustomTask(task).then(() => {
-      setBrainDumpTasks(prev => [...prev, task]);
-      setPlanItems(prev => new Set(prev).add(taskId));
-    }).catch(() => {});
+    setBrainDumpTasks(prev => [...prev, task]);
+    setPlanItems(prev => new Set(prev).add(taskId));
+    if (match.scheduledDate) {
+      setScheduledDates(prev => ({ ...prev, [taskId]: match.scheduledDate }));
+    }
   };
 
   const updateBrainDumpTask = (taskId, updates) => {
@@ -469,18 +479,29 @@ export function WeeklyCheckIn({ onClose }) {
   };
 
   const handleConfirm = async () => {
-    // Persist any brain dump task edits (category/frequency changes)
-    for (const t of brainDumpTasks) {
-      if (planItems.has(t.id)) {
-        try {
-          await addCustomTask(t);
-        } catch {
-          // already exists, ignore
-        }
-      }
+    setSaving(true);
+    setErrorKind(null);
+
+    // Persist the brain-dump tasks that made the cut, in one batch, with their
+    // final category/frequency edits. Internal underscore fields stay local.
+    const newTasks = brainDumpTasks
+      .filter(t => planItems.has(t.id))
+      .map(({ _reason, _startDate, ...t }) => t); // eslint-disable-line no-unused-vars
+
+    try {
+      if (newTasks.length > 0) await addCustomTasksBulk(newTasks);
+    } catch {
+      setErrorKind('save');
+      setSaving(false);
+      return;
     }
-    const taskIds = [...planItems];
-    await confirmPlan(taskIds, scheduledDates, userInput);
+
+    const { error } = await confirmPlan([...planItems], scheduledDates, userInput);
+    if (error) {
+      setErrorKind('save');
+      setSaving(false);
+      return;
+    }
     onClose();
   };
 
@@ -489,6 +510,7 @@ export function WeeklyCheckIn({ onClose }) {
     rate_limit: "Too many requests. Give it a few minutes.",
     auth: "Session expired. Close and try again.",
     general: "Something went wrong. Try again?",
+    save: "Couldn't save your plan — check your connection and try again.",
   };
 
   // ─── Screen 1: What's on your plate + brain dump ─────────────────────────
@@ -508,10 +530,12 @@ export function WeeklyCheckIn({ onClose }) {
               fontFamily: "'Righteous', cursive", fontSize: 22, color: C.brandLight,
               marginBottom: 4,
             }}>
-              Weekly check-in
+              {existingPlan.ids.length > 0 ? 'Adjust your week' : 'Weekly check-in'}
             </div>
             <div style={{ fontSize: 13, color: '#B8DCC8', fontFamily: 'DM Sans, sans-serif' }}>
-              Let's see what your week looks like
+              {existingPlan.ids.length > 0
+                ? "Change what's on your plate"
+                : planningNextWeek ? "Let's plan next week" : "Let's plan this week"} · {weekRangeLabel(weekStart)}
             </div>
           </div>
           <button onClick={onClose} style={{
@@ -629,8 +653,27 @@ export function WeeklyCheckIn({ onClose }) {
       }
     }
 
+    // Tasks carried over from an already-confirmed plan that no other section
+    // renders. Ones completed this week stay in planItems (so progress holds)
+    // but don't render as toggleable rows.
+    const coveredIds = new Set([
+      ...customDueTasks.map(t => t.id),
+      ...activeMatches.map(m => m.taskId),
+      ...brainDumpTasks.map(t => t.id),
+      ...mergedSuggestions.map(s => s.taskId),
+    ]);
+    const existingPlanTasks = existingPlan.ids
+      .filter(id => !coveredIds.has(id))
+      .map(id => taskMap.get(id))
+      .filter(Boolean)
+      .filter(t => {
+        const entry = taskState[t.id];
+        const floor = planFloor ?? weekStart;
+        return !(entry?.lastDone && entry.lastDone >= floor);
+      });
+
     const hasAddedSuggestions = mergedSuggestions.some(s => planItems.has(s.taskId));
-    const hasPlanItems = customDueTasks.length > 0 || activeMatches.length > 0 || brainDumpTasks.length > 0 || hasAddedSuggestions;
+    const hasPlanItems = customDueTasks.length > 0 || activeMatches.length > 0 || brainDumpTasks.length > 0 || existingPlanTasks.length > 0 || hasAddedSuggestions;
 
     return (
       <div style={{
@@ -650,10 +693,10 @@ export function WeeklyCheckIn({ onClose }) {
               Your week
             </div>
             <div style={{ fontSize: 13, color: '#B8DCC8', fontFamily: 'DM Sans, sans-serif' }}>
-              {planItems.size} task{planItems.size !== 1 ? 's' : ''} planned
+              {planItems.size} task{planItems.size !== 1 ? 's' : ''} planned · {weekRangeLabel(weekStart)}
             </div>
           </div>
-          <button onClick={() => setStep('input')} style={{
+          <button onClick={() => { setErrorKind(null); setStep('input'); }} style={{
             background: 'none', border: 'none', cursor: 'pointer',
             fontSize: 13, color: C.brandLight, fontFamily: 'DM Sans, sans-serif',
             textDecoration: 'underline',
@@ -673,6 +716,11 @@ export function WeeklyCheckIn({ onClose }) {
                 const rows = [];
 
                 for (const t of customDueTasks) {
+                  rows.push({ type: 'custom', key: t.id, date: scheduledDates[t.id] ?? computeDueISO(t, taskState), task: t });
+                }
+
+                // Carried-over plan tasks render like custom rows: toggleable, editable date
+                for (const t of existingPlanTasks) {
                   rows.push({ type: 'custom', key: t.id, date: scheduledDates[t.id] ?? computeDueISO(t, taskState), task: t });
                 }
 
@@ -761,7 +809,7 @@ export function WeeklyCheckIn({ onClose }) {
                         </ToggleCard>
                         {m.mentionText && (
                           <button
-                            onClick={() => dismissMatch(m.taskId, m.mentionText)}
+                            onClick={() => dismissMatch(m)}
                             style={{
                               background: 'none', border: 'none', cursor: 'pointer',
                               fontSize: 11, color: C.muted, fontFamily: 'DM Sans, sans-serif',
@@ -880,20 +928,30 @@ export function WeeklyCheckIn({ onClose }) {
             </div>
           )}
 
+          {errorKind && (
+            <div style={{
+              background: '#FEF0F0', border: '1px solid #F5C6C6', borderRadius: 10,
+              padding: '12px 16px', fontSize: 13, color: '#8B2020',
+              fontFamily: 'DM Sans, sans-serif', marginBottom: 16,
+            }}>
+              {ERROR_MESSAGES[errorKind]}
+            </div>
+          )}
+
           {/* Confirm button */}
           <button
             onClick={handleConfirm}
-            disabled={planItems.size === 0}
+            disabled={planItems.size === 0 || saving}
             style={{
               width: '100%', padding: '14px', fontSize: 15, fontWeight: 700,
-              background: planItems.size > 0 ? C.brand : C.surface,
-              color: planItems.size > 0 ? C.brandLight : C.muted,
+              background: planItems.size > 0 && !saving ? C.brand : C.surface,
+              color: planItems.size > 0 && !saving ? C.brandLight : C.muted,
               border: 'none', borderRadius: 12,
-              cursor: planItems.size > 0 ? 'pointer' : 'default',
+              cursor: planItems.size > 0 && !saving ? 'pointer' : 'default',
               fontFamily: 'DM Sans, sans-serif',
             }}
           >
-            Lock in my week
+            {saving ? 'Saving…' : 'Lock in my week'}
           </button>
         </div>
       </div>

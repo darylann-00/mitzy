@@ -39,6 +39,7 @@ export const CAT_META = {
   finance:   { label: "Finance",   color: C.orange },
   emergency: { label: "Emergency", color: C.red    },
   pet:       { label: "Pet",       color: C.yellow },
+  other:     { label: "Other",     color: C.muted  },
 };
 
 export const RAD_WORDS = [
