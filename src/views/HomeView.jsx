@@ -221,7 +221,7 @@ export function HomeView({
   onOpenWeeklyCheckIn,
 }) {
   const { profile, providerHistory, updateProfile } = useProfileContext();
-  const { homeTasks, doneThisWeek, getStatus, getDays, taskState, isInPlanMode, planTasks, planProgress, showWeeklyNudge, dismissWeeklyNudge, activePlan, scoredDue, planningNextWeek, planFloor } = useTaskContext();
+  const { homeTasks, doneThisWeek, getStatus, getDays, taskState, isInPlanMode, planTasks, planProgress, showWeeklyNudge, dismissWeeklyNudge, activePlan, scoredDue, planningNextWeek, planFloor, canPlanNextWeek } = useTaskContext();
   const todayTask = homeTasks[0] ?? null;
   const isDueThisWeek = (t) => {
     const s = getStatus(t);
@@ -429,18 +429,28 @@ export function HomeView({
                       </span>
                     )}
                   </span>
-                  {planProgress.done === planProgress.total && planProgress.total > 0 ? (
-                    <span style={{ fontSize:12, color:'#06A77D', fontWeight:600, fontFamily:'DM Sans, sans-serif' }}>
-                      All done!
-                    </span>
-                  ) : (
-                    <button
-                      onClick={onOpenWeeklyCheckIn}
-                      style={{ background:'none', border:'none', cursor:'pointer', fontSize:12, color:'#1A5C3A', fontWeight:600, fontFamily:'DM Sans, sans-serif', textDecoration:'underline', padding:0 }}
-                    >
-                      Adjust plan
-                    </button>
-                  )}
+                  <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                    {planProgress.done === planProgress.total && planProgress.total > 0 ? (
+                      <span style={{ fontSize:12, color:'#06A77D', fontWeight:600, fontFamily:'DM Sans, sans-serif' }}>
+                        All done!
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => onOpenWeeklyCheckIn('current')}
+                        style={{ background:'none', border:'none', cursor:'pointer', fontSize:12, color:'#1A5C3A', fontWeight:600, fontFamily:'DM Sans, sans-serif', textDecoration:'underline', padding:0 }}
+                      >
+                        Adjust plan
+                      </button>
+                    )}
+                    {canPlanNextWeek && (
+                      <button
+                        onClick={() => onOpenWeeklyCheckIn('next')}
+                        style={{ background:'none', border:'none', cursor:'pointer', fontSize:12, color:'#1A5C3A', fontWeight:600, fontFamily:'DM Sans, sans-serif', textDecoration:'underline', padding:0 }}
+                      >
+                        Plan next week
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div style={{ display:'flex', gap:3 }}>
                   {planTasks.map((t) => {
