@@ -4,9 +4,9 @@ import { loginWithDevCredentials } from './helpers/auth.js';
 test('new user completes onboarding and reaches home screen', async ({ page }) => {
   await page.goto('/');
 
-  // WelcomeGate
-  await expect(page.getByText('Welcome to Mitzy')).toBeVisible();
-  await page.getByRole('button', { name: "I'm new here" }).click();
+  // LandingPage
+  await expect(page.getByText('Stop carrying your household')).toBeVisible();
+  await page.getByRole('button', { name: 'Start my free trial' }).click();
 
   // SlimOnboarding — welcome screen
   await expect(page.getByText('Your household, handled.')).toBeVisible();
