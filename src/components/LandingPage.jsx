@@ -1,4 +1,5 @@
 import { useState } from "react";
+import "../styles/landing.css";
 
 const C = {
   brand: '#1A5C3A',
@@ -67,7 +68,7 @@ function Divider() {
 
 function PhoneMockup() {
   return (
-    <div style={{ background: C.ink, borderRadius: 32, padding: 10, maxWidth: 280, margin: '0 auto' }}>
+    <div className="lp-phone" style={{ background: C.ink, borderRadius: 32, padding: 10, maxWidth: 280, margin: '0 auto' }}>
       <div style={{ background: C.bg, borderRadius: 24, overflow: 'hidden' }}>
         {/* Header */}
         <div style={{ background: C.brand, padding: '20px 18px 14px', position: 'relative', overflow: 'hidden' }}>
@@ -118,15 +119,6 @@ function TaskCard({ dot, label, meta, pill, pillBg, pillColor }) {
 export function LandingPage({ onGetStarted, onSignIn }) {
   const [hoveredCta, setHoveredCta] = useState(false);
 
-  const wrap = {
-    background: C.bg, minHeight: '100vh',
-    fontFamily: "'DM Sans', sans-serif", color: C.ink,
-  };
-
-  const inner = {
-    maxWidth: 600, margin: '0 auto', padding: '0 24px',
-  };
-
   const ctaStyle = {
     display: 'inline-block', background: C.brand, color: C.brandLight,
     fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 16,
@@ -136,8 +128,8 @@ export function LandingPage({ onGetStarted, onSignIn }) {
   };
 
   return (
-    <div style={wrap}>
-      <div style={inner}>
+    <div className="lp-wrap" style={{ fontFamily: "'DM Sans', sans-serif", color: C.ink }}>
+      <div className="lp-inner">
         {/* Nav */}
         <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 0 56px' }}>
           <Logo size="small" />
@@ -153,45 +145,41 @@ export function LandingPage({ onGetStarted, onSignIn }) {
         </nav>
 
         {/* Hero */}
-        <div style={{ textAlign: 'center', marginBottom: 48 }}>
-          <h1 style={{
-            fontFamily: "'Righteous', cursive", fontSize: 34, lineHeight: 1.15,
-            color: C.ink, margin: '0 0 16px', maxWidth: 480, marginLeft: 'auto', marginRight: 'auto',
-          }}>
-            Stop carrying your household{' '}
-            <span style={{ color: C.brand }}>in your head</span>
-          </h1>
-          <p style={{
-            fontSize: 17, lineHeight: 1.6, color: C.muted,
-            margin: '0 auto 32px', maxWidth: 400,
-          }}>
-            Mitzy knows what needs doing — filters, checkups, renewals, deadlines — and nudges you before things slip.
-          </p>
-          <button
-            onClick={onGetStarted}
-            onMouseEnter={() => setHoveredCta(true)}
-            onMouseLeave={() => setHoveredCta(false)}
-            style={ctaStyle}
-          >
-            Start my free trial
-          </button>
-          <span style={{ display: 'block', fontSize: 13, color: C.muted, marginTop: 12 }}>
-            No credit card required
-          </span>
+        <div className="lp-hero">
+          <div className="lp-hero-copy">
+            <h1 className="lp-h1">
+              Stop carrying your household{' '}
+              <span style={{ color: C.brand }}>in your head</span>
+            </h1>
+            <p className="lp-hero-sub">
+              Mitzy knows what needs doing — filters, checkups, renewals, deadlines — and nudges you before things slip.
+            </p>
+            <button
+              onClick={onGetStarted}
+              onMouseEnter={() => setHoveredCta(true)}
+              onMouseLeave={() => setHoveredCta(false)}
+              style={ctaStyle}
+            >
+              Start my free trial
+            </button>
+            <span style={{ display: 'block', fontSize: 13, color: C.muted, marginTop: 12 }}>
+              No credit card required
+            </span>
+          </div>
+
+          {/* Phone mockup */}
+          <PhoneMockup />
         </div>
 
-        {/* Phone mockup */}
-        <PhoneMockup />
-
         {/* Benefits */}
-        <div style={{ background: C.brandTint, borderRadius: 20, padding: '40px 28px', margin: '56px 0' }}>
+        <div className="lp-benefits" style={{ background: C.brandTint, borderRadius: 20, padding: '40px 28px', margin: '56px 0' }}>
           <p style={{
             fontFamily: "'Righteous', cursive", fontSize: 12, textAlign: 'center',
             color: C.brand, letterSpacing: 1.5, textTransform: 'uppercase', margin: '0 0 32px', opacity: 0.7,
           }}>
             Why Mitzy
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, textAlign: 'center' }}>
+          <div className="lp-benefits-grid">
             <Benefit icon="🧠" title="Already knows" desc="60+ tasks built in, personalized to your home, cars, kids, and pets." />
             <Benefit icon="📋" title="Plans your week" desc="Optional weekly check-in. Brain dump what's on your mind and go." />
             <Benefit icon="💚" title="No guilt trips" desc="Snooze anything. Mitzy doesn't shame you — she gets it." />
@@ -208,7 +196,7 @@ export function LandingPage({ onGetStarted, onSignIn }) {
           <p style={{ fontSize: 15, color: C.muted, margin: '0 0 28px' }}>
             Start free. Upgrade when you want the magic.
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, maxWidth: 460, margin: '0 auto' }}>
+          <div className="lp-pricing-grid">
             {/* Free tier */}
             <div style={{ border: `1px solid ${C.cardBorder}`, borderRadius: 14, padding: '24px 20px', textAlign: 'left', background: C.card }}>
               <h3 style={{ fontFamily: "'Righteous', cursive", fontSize: 18, color: C.ink, margin: '0 0 4px', fontWeight: 400 }}>Free</h3>
@@ -242,7 +230,7 @@ export function LandingPage({ onGetStarted, onSignIn }) {
         </div>
 
         {/* Bottom CTA */}
-        <div style={{
+        <div className="lp-bottom-cta" style={{
           background: C.brand, borderRadius: 20, padding: '48px 32px',
           textAlign: 'center', margin: '48px 0 32px', position: 'relative', overflow: 'hidden',
         }}>
