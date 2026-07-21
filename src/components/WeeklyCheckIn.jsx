@@ -251,12 +251,15 @@ function BrainDumpTaskCard({ task, onUpdate, dueDate, onDueDateChange }) {
   );
 }
 
-export function WeeklyCheckIn({ onClose }) {
+export function WeeklyCheckIn({ onClose, targetWeek }) {
   const {
     activeTasks, scoredDue, taskState, getStatus, getDays,
-    confirmPlan, weekStart, activePlan, planningNextWeek, planFloor,
+    confirmPlan, weekStart, planningWeekStart, activePlan, planningNextWeek, planFloor,
   } = useTaskContext();
   const { profile, customTasks, addCustomTasksBulk } = useProfileContext();
+
+  const isNextWeek = targetWeek === 'next';
+  const effectiveWeekStart = isNextWeek ? planningWeekStart : weekStart;
 
   const [step, setStep] = useState('input');
   const [userInput, setUserInput] = useState('');
@@ -265,8 +268,10 @@ export function WeeklyCheckIn({ onClose }) {
   const [errorKind, setErrorKind] = useState(null);
 
   // When re-opened mid-week ("Adjust plan"), the already-confirmed plan seeds
-  // the review screen so adjusting never starts from a blank slate.
+  // the review screen so adjusting never starts from a blank slate. Planning
+  // next week always starts fresh — the current week's plan is a different week.
   const [existingPlan] = useState(() => {
+    if (isNextWeek) return { ids: [], dates: {} };
     if (!activePlan?.confirmedAt) return { ids: [], dates: {} };
     return { ids: activePlan.taskIds || [], dates: activePlan.scheduledDates || {} };
   });
@@ -378,7 +383,7 @@ export function WeeklyCheckIn({ onClose }) {
           tasks: activeTasks.slice(0, 200).map(t => ({ id: t.id, label: t.label, category: t.cat })),
           autoDueTasks: customDueTasks.map(t => ({ id: t.id, label: t.label })),
           capacity: profile?.capacity || 'normal',
-          weekStart,
+          weekStart: effectiveWeekStart,
           today: toLocalISO(new Date()),
           backlogTasks,
         }),
@@ -496,7 +501,7 @@ export function WeeklyCheckIn({ onClose }) {
       return;
     }
 
-    const { error } = await confirmPlan([...planItems], scheduledDates, userInput);
+    const { error } = await confirmPlan([...planItems], scheduledDates, userInput, effectiveWeekStart);
     if (error) {
       setErrorKind('save');
       setSaving(false);
@@ -530,12 +535,12 @@ export function WeeklyCheckIn({ onClose }) {
               fontFamily: "'Righteous', cursive", fontSize: 22, color: C.brandLight,
               marginBottom: 4,
             }}>
-              {existingPlan.ids.length > 0 ? 'Adjust your week' : 'Weekly check-in'}
+              {existingPlan.ids.length > 0 ? 'Adjust your week' : isNextWeek ? 'Plan next week' : 'Weekly check-in'}
             </div>
             <div style={{ fontSize: 13, color: '#B8DCC8', fontFamily: 'DM Sans, sans-serif' }}>
               {existingPlan.ids.length > 0
                 ? "Change what's on your plate"
-                : planningNextWeek ? "Let's plan next week" : "Let's plan this week"} · {weekRangeLabel(weekStart)}
+                : isNextWeek || planningNextWeek ? "Let's plan next week" : "Let's plan this week"} · {weekRangeLabel(effectiveWeekStart)}
             </div>
           </div>
           <button onClick={onClose} style={{
@@ -693,7 +698,7 @@ export function WeeklyCheckIn({ onClose }) {
               Your week
             </div>
             <div style={{ fontSize: 13, color: '#B8DCC8', fontFamily: 'DM Sans, sans-serif' }}>
-              {planItems.size} task{planItems.size !== 1 ? 's' : ''} planned · {weekRangeLabel(weekStart)}
+              {planItems.size} task{planItems.size !== 1 ? 's' : ''} planned · {weekRangeLabel(effectiveWeekStart)}
             </div>
           </div>
           <button onClick={() => { setErrorKind(null); setStep('input'); }} style={{

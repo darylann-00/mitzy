@@ -61,20 +61,29 @@ async function mockWeeklyCheckInData(page, { dueDate }) {
   });
 }
 
+// Mirrors the app's getCurrentWeekStart (local Monday).
+function testGetCurrentWeekStart() {
+  const now = new Date();
+  const day = now.getDay();
+  const diff = day === 0 ? 6 : day - 1;
+  return localISO(-diff);
+}
+
 // Fully mocks the weekly_plans table (no existing plan on GET, echoes the
 // upserted row back on POST) so confirming a plan never writes to the real
 // prod/preview Supabase project.
-async function mockWeeklyPlansEndpoint(page) {
+async function mockWeeklyPlansEndpoint(page, { existingPlans } = {}) {
+  const plans = existingPlans || [];
   await page.route('**/rest/v1/weekly_plans**', route => {
     const method = route.request().method();
     if (method === 'GET') {
-      return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(plans) });
     }
     if (method === 'POST') {
       let parsed = {};
       try { parsed = JSON.parse(route.request().postData() || '{}'); } catch {}
       const row = {
-        id: 1,
+        id: plans.length + 1,
         user_id: parsed.user_id ?? null,
         week_start: parsed.week_start ?? null,
         task_ids: parsed.task_ids ?? [],
@@ -382,4 +391,61 @@ test('adjust plan reopens the check-in seeded with the locked plan', async ({ pa
   const body = JSON.parse((await reUpsert).postData());
   expect(body.task_ids).toContain('custom-test-1');
   expect(body.confirmed_at).toBeTruthy();
+});
+
+// On Fri-Sun, when a confirmed plan for the current week is already active,
+// "Plan next week" appears on the progress card. Clicking it opens a fresh
+// check-in targeting the upcoming Monday — not adjust mode for the current week.
+test('plan next week opens a fresh check-in for the upcoming week (Fri-Sun only)', async ({ page }) => {
+  const day = new Date().getDay();
+  test.skip(day >= 1 && day <= 4, 'Only applies Fri-Sun when planning targets the upcoming week');
+
+  const currentWeekStart = testGetCurrentWeekStart();
+  const confirmedPlan = {
+    id: 1,
+    user_id: 'test-user',
+    week_start: currentWeekStart,
+    task_ids: ['hm-smoke'],
+    scheduled_dates: {},
+    user_input: null,
+    confirmed_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+  };
+
+  await mockWeeklyCheckInData(page, { dueDate: localISO(2) });
+  await mockWeeklyPlansEndpoint(page, { existingPlans: [confirmedPlan] });
+  await seedReturnUser(page);
+
+  await page.goto('/');
+  await loginWithDevCredentials(page);
+
+  // Home should be in plan mode (from the pre-existing confirmed plan).
+  await expect(page.getByText(/of \d+ done/)).toBeVisible({ timeout: 15000 });
+
+  // The "Plan next week" link should be visible on the progress card.
+  const planNextBtn = page.getByRole('button', { name: 'Plan next week' });
+  await expect(planNextBtn).toBeVisible({ timeout: 5000 });
+  await planNextBtn.click();
+
+  // The check-in opens in fresh mode — NOT "Adjust your week".
+  await expect(page.getByText('Plan next week')).toBeVisible({ timeout: 10000 });
+  await expect(page.getByText('Adjust your week')).toHaveCount(0);
+
+  // The week range label should show next week's dates, not the current week.
+  const nextMonday = localISO(day === 0 ? 1 : 8 - day);
+  const nextSunday = localISO(day === 0 ? 7 : 14 - day);
+  const startLabel = new Date(nextMonday + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  await expect(page.getByText(startLabel).first()).toBeVisible();
+
+  // Skip to review and lock in — the upsert should target the upcoming week.
+  await page.getByRole('button', { name: /Next|Skip/ }).click();
+  await expect(page.getByText("This week's plan")).toBeVisible({ timeout: 10000 });
+
+  const upsert = page.waitForRequest(req =>
+    req.url().includes('/rest/v1/weekly_plans') && req.method() === 'POST'
+  );
+  await page.getByRole('button', { name: 'Lock in my week' }).click();
+  const upsertBody = JSON.parse((await upsert).postData());
+  expect(upsertBody.week_start).toBe(nextMonday);
+  expect(upsertBody.confirmed_at).toBeTruthy();
 });
