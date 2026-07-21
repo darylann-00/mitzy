@@ -255,7 +255,7 @@ export function WeeklyCheckIn({ onClose }) {
     activeTasks, scoredDue, taskState, getStatus, getDays,
     confirmPlan, weekStart,
   } = useTaskContext();
-  const { customTasks, addCustomTask } = useProfileContext();
+  const { customTasks, addCustomTask, profile } = useProfileContext();
 
   const [step, setStep] = useState('input');
   const [userInput, setUserInput] = useState('');
@@ -362,7 +362,7 @@ export function WeeklyCheckIn({ onClose }) {
           userInput: userInput.trim(),
           tasks: activeTasks.slice(0, 200).map(t => ({ id: t.id, label: t.label, category: t.cat })),
           autoDueTasks: customDueTasks.map(t => ({ id: t.id, label: t.label })),
-          capacity: 'normal',
+          capacity: profile?.capacity || 'normal',
           weekStart,
           today: new Date().toISOString().slice(0, 10),
           backlogTasks,
