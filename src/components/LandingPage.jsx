@@ -36,19 +36,23 @@ function Logo({ size = 'default' }) {
   );
 }
 
-function MemphisShapes({ style }) {
+function MemphisShapes() {
+  // Corner-anchored shapes (not a scaled SVG) so nothing gets cropped or
+  // squashed at different container widths — same technique as GreenScreen
+  // in SlimOnboarding.
   return (
-    <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', ...style }} viewBox="0 0 600 300" fill="none" preserveAspectRatio="xMidYMid slice">
-      <circle cx="520" cy="50" r="28" fill={C.brandLight} />
-      <circle cx="560" cy="160" r="12" stroke={C.brandLight} strokeWidth="2" fill="none" />
-      <rect x="440" cy="200" width="16" height="16" rx="2" transform="rotate(30 440 200)" fill={C.brandLight} />
-      <circle cx="380" cy="35" r="7" fill={C.brandLight} />
-      <rect x="320" y="240" width="11" height="11" transform="rotate(45 325 245)" fill={C.brandLight} />
-      <circle cx="580" cy="250" r="18" stroke={C.brandLight} strokeWidth="2" fill="none" />
-      <circle cx="80" cy="260" r="9" stroke={C.brandLight} strokeWidth="2" fill="none" />
-      <rect x="40" y="35" width="12" height="12" rx="2" transform="rotate(20 46 41)" fill={C.brandLight} />
-      <circle cx="160" cy="270" r="5" fill={C.brandLight} />
-    </svg>
+    <>
+      <div style={{ position: 'absolute', width: 110, height: 110, borderRadius: '50%', background: C.brandDark, top: -30, right: -30 }} />
+      <div style={{ position: 'absolute', width: 50, height: 50, borderRadius: '50%', background: C.green, top: 16, right: 70, opacity: 0.6 }} />
+      <div style={{ position: 'absolute', width: 18, height: 18, background: C.orange, transform: 'rotate(45deg)', bottom: 44, right: 36 }} />
+      <div style={{ position: 'absolute', width: 14, height: 14, borderRadius: '50%', background: C.yellow, top: 36, right: 150 }} />
+      <div style={{ position: 'absolute', width: 10, height: 10, borderRadius: '50%', background: C.red, bottom: 80, right: 90 }} />
+      <div style={{ position: 'absolute', width: 36, height: 36, borderRadius: '50%', border: `3px solid ${C.green}`, opacity: 0.35, bottom: 20, right: 150 }} />
+      <div style={{ position: 'absolute', width: 84, height: 84, borderRadius: '50%', background: C.brandDark, bottom: -26, left: -18 }} />
+      <div style={{ position: 'absolute', width: 24, height: 24, borderRadius: '50%', border: `2px solid ${C.orange}`, opacity: 0.3, top: 20, left: '28%' }} />
+      <div style={{ position: 'absolute', width: 13, height: 13, background: C.yellow, transform: 'rotate(45deg)', top: 56, left: 28, opacity: 0.7 }} />
+      <div style={{ position: 'absolute', width: 8, height: 8, borderRadius: '50%', background: C.red, top: '50%', left: '46%', opacity: 0.5 }} />
+    </>
   );
 }
 
@@ -173,12 +177,12 @@ export function LandingPage({ onGetStarted, onSignIn }) {
 
         {/* Benefits */}
         <div className="lp-benefits" style={{ background: C.brandTint, borderRadius: 20, padding: '40px 28px', margin: '56px 0' }}>
-          <p style={{
-            fontFamily: "'Righteous', cursive", fontSize: 12, textAlign: 'center',
-            color: C.brand, letterSpacing: 1.5, textTransform: 'uppercase', margin: '0 0 32px', opacity: 0.7,
+          <h2 style={{
+            fontFamily: "'Righteous', cursive", fontSize: 22, textAlign: 'center',
+            color: C.ink, margin: '0 0 32px', fontWeight: 400,
           }}>
             Why Mitzy
-          </p>
+          </h2>
           <div className="lp-benefits-grid">
             <Benefit icon="🧠" title="Already knows" desc="60+ tasks built in, personalized to your home, cars, kids, and pets." />
             <Benefit icon="📋" title="Plans your week" desc="Optional weekly check-in. Brain dump what's on your mind and go." />
@@ -234,7 +238,7 @@ export function LandingPage({ onGetStarted, onSignIn }) {
           background: C.brand, borderRadius: 20, padding: '48px 32px',
           textAlign: 'center', margin: '48px 0 32px', position: 'relative', overflow: 'hidden',
         }}>
-          <MemphisShapes style={{ opacity: 0.1 }} />
+          <MemphisShapes />
           <h3 style={{ fontFamily: "'Righteous', cursive", fontSize: 24, color: '#fff', margin: '0 0 12px', fontWeight: 400, position: 'relative' }}>
             Your household, handled.
           </h3>
