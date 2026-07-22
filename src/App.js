@@ -164,7 +164,7 @@ function Overlays({
         <GenericEventIntake
           def={genericEventDef}
           // Seed answers Mitzy already knows so the intake never re-asks.
-          initialAnswers={{ hasKids: profile?.hasKids === true }}
+          initialAnswers={{ hasKids: profile?.hasKids === true, hasPets: profile?.hasPets === true, hasCar: profile?.hasCar === true }}
           onClose={onLifeEventIntakeClose}
           onStart={(answers) => onStartLifeEventConfirm(lifeEventIntake, answers)}
         />

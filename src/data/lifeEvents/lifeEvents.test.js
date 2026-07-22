@@ -4,6 +4,7 @@ import { DIVORCE, tasksForIntake as divorceTasks, retroactiveCandidates as divor
 import { LOSS_OF_LOVED_ONE, tasksForIntake as lossTasks, retroactiveCandidates as lossRetro, retroactivePhases as lossRetroPhases } from "./lossOfLovedOne";
 import { MARRIAGE, tasksForIntake as marriageTasks, retroactiveCandidates as marriageRetro } from "./marriage";
 import { NAME_CHANGE, tasksForIntake as nameChangeTasks, retroactiveCandidates as nameChangeRetro } from "./nameChange";
+import { MOVING, tasksForIntake as movingTasks, retroactiveCandidates as movingRetro } from "./moving";
 import { LIFE_EVENT_DEFS } from "./index";
 import { computeDueDate, MIN_LEAD_DAYS } from "./eventDates";
 
@@ -211,5 +212,114 @@ describe("loss of a loved one", () => {
     expect(ssa.dueDate).toBe(daysFromNow(43)); // passing + 45 days
     const old = lossTasks({ date: daysAgo(400), handlingEstate: true });
     old.forEach(t => expect(t.dueDate >= daysFromNow(MIN_LEAD_DAYS)).toBe(true));
+  });
+});
+
+describe("moving", () => {
+  const base = { stage: 'found', date: daysFromNow(30), ownsHome: false, outOfState: true, needNewProviders: true, hasKids: true, hasPets: true, hasCar: true };
+
+  it("includes all task categories for a full-featured move", () => {
+    const tasks = movingTasks(base);
+    expect(tasks.length).toBeGreaterThan(15);
+    expect(tasks.every(t => t.dueDate)).toBe(true);
+  });
+
+  it("gates kid tasks on hasKids", () => {
+    const withKids = movingTasks(base).map(t => t.id);
+    expect(withKids).toContain('school-records');
+    expect(withKids).toContain('enroll-school');
+    expect(withKids).toContain('find-pediatrician');
+    const noKids = movingTasks({ ...base, hasKids: false }).map(t => t.id);
+    expect(noKids).not.toContain('school-records');
+    expect(noKids).not.toContain('enroll-school');
+    expect(noKids).not.toContain('find-pediatrician');
+  });
+
+  it("gates pet tasks on hasPets", () => {
+    const withPets = movingTasks(base).map(t => t.id);
+    expect(withPets).toContain('vet-records');
+    expect(withPets).toContain('find-vet');
+    expect(withPets).toContain('register-pets');
+    const noPets = movingTasks({ ...base, hasPets: false }).map(t => t.id);
+    expect(noPets).not.toContain('vet-records');
+    expect(noPets).not.toContain('find-vet');
+    expect(noPets).not.toContain('register-pets');
+  });
+
+  it("gates out-of-state tasks on outOfState", () => {
+    const oos = movingTasks(base).map(t => t.id);
+    expect(oos).toContain('register-car');
+    expect(oos).toContain('voter-registration');
+    expect(oos).toContain('file-both-state-taxes');
+    const inState = movingTasks({ ...base, outOfState: false }).map(t => t.id);
+    expect(inState).not.toContain('register-car');
+    expect(inState).not.toContain('voter-registration');
+    expect(inState).not.toContain('file-both-state-taxes');
+  });
+
+  it("gates provider-finding tasks on needNewProviders", () => {
+    const need = movingTasks(base).map(t => t.id);
+    expect(need).toContain('find-pcp');
+    expect(need).toContain('find-dentist');
+    const noNeed = movingTasks({ ...base, needNewProviders: false }).map(t => t.id);
+    expect(noNeed).not.toContain('find-pcp');
+    expect(noNeed).not.toContain('find-dentist');
+    expect(noNeed).not.toContain('find-pediatrician');
+    expect(noNeed).not.toContain('find-vet');
+  });
+
+  it("shows give-notice for renters and list-home for owners", () => {
+    const renter = movingTasks({ ...base, ownsHome: false }).map(t => t.id);
+    expect(renter).toContain('give-notice');
+    expect(renter).not.toContain('list-home');
+    const owner = movingTasks({ ...base, ownsHome: true }).map(t => t.id);
+    expect(owner).toContain('list-home');
+    expect(owner).not.toContain('give-notice');
+  });
+
+  it("always shows driver's license regardless of state, with different label for out-of-state", () => {
+    const inState = movingTasks({ ...base, outOfState: false });
+    const license = inState.find(t => t.id === 'update-license');
+    expect(license).toBeTruthy();
+    expect(license.label).toContain('Update');
+
+    const outOfState = movingTasks(base);
+    const oosLicense = outOfState.find(t => t.id === 'update-license');
+    expect(oosLicense.label).toContain('new state');
+  });
+
+  it("requires hasCar for car registration (out-of-state alone isn't enough)", () => {
+    const noCar = movingTasks({ ...base, hasCar: false }).map(t => t.id);
+    expect(noCar).not.toContain('register-car');
+  });
+
+  it("offers BEFORE-phase retro checklist only for already-moved users", () => {
+    expect(movingRetro({ ...base, stage: 'looking' })).toHaveLength(0);
+    expect(movingRetro({ ...base, stage: 'found' })).toHaveLength(0);
+    const moved = movingRetro({ ...base, stage: 'moved' });
+    expect(moved.length).toBeGreaterThan(0);
+    expect(moved.every(t => t.phase === 'BEFORE')).toBe(true);
+  });
+
+  it("respects gates inside the retro checklist", () => {
+    const noKidsRetro = movingRetro({ ...base, stage: 'moved', hasKids: false });
+    expect(noKidsRetro.map(t => t.id)).not.toContain('school-records');
+  });
+
+  it("drops tasks the user marked already done", () => {
+    const ids = movingTasks({ ...base, alreadyDone: ['mail-forwarding', 'utilities'] }).map(t => t.id);
+    expect(ids).not.toContain('mail-forwarding');
+    expect(ids).not.toContain('utilities');
+  });
+
+  it("schedules before-tasks before the move date and after-tasks after", () => {
+    const tasks = movingTasks({ ...base, date: daysFromNow(120) });
+    const mailFwd = tasks.find(t => t.id === 'mail-forwarding');
+    const updateAddr = tasks.find(t => t.id === 'update-addresses');
+    expect(mailFwd.dueDate < updateAddr.dueDate).toBe(true);
+  });
+
+  it("does not suppress celebration — moving is good news", () => {
+    expect(MOVING.suppressCelebration).toBeFalsy();
   });
 });
