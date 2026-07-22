@@ -122,6 +122,7 @@ function TaskCard({ dot, label, meta, pill, pillBg, pillColor }) {
 
 export function LandingPage({ onGetStarted, onSignIn }) {
   const [hoveredCta, setHoveredCta] = useState(false);
+  const [hoveredSignIn, setHoveredSignIn] = useState(false);
 
   const ctaStyle = {
     display: 'inline-block', background: C.brand, color: C.brandLight,
@@ -129,6 +130,13 @@ export function LandingPage({ onGetStarted, onSignIn }) {
     padding: '14px 36px', borderRadius: 50, border: 'none', cursor: 'pointer',
     transition: 'background 0.15s',
     ...(hoveredCta ? { background: C.brandDark } : {}),
+  };
+
+  const signInStyle = {
+    fontSize: 14, color: C.brand, background: hoveredSignIn ? C.brandTint : 'transparent',
+    border: `1.5px solid ${C.brand}`, borderRadius: 50, padding: '8px 20px',
+    cursor: 'pointer', fontWeight: 600, fontFamily: "'DM Sans', sans-serif",
+    transition: 'background 0.15s',
   };
 
   return (
@@ -149,10 +157,9 @@ export function LandingPage({ onGetStarted, onSignIn }) {
             </a>
             <button
               onClick={onSignIn}
-              style={{
-                fontSize: 14, color: C.brand, background: 'none', border: 'none',
-                cursor: 'pointer', fontWeight: 500, fontFamily: "'DM Sans', sans-serif",
-              }}
+              onMouseEnter={() => setHoveredSignIn(true)}
+              onMouseLeave={() => setHoveredSignIn(false)}
+              style={signInStyle}
             >
               Sign in
             </button>
