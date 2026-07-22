@@ -131,6 +131,7 @@ Return shape (success):
     "dueDate": "<YYYY-MM-DD string if the user mentioned a specific date/day, else null>",
     "riskTier": 1 | 2 | 3 | 3.5,
     "suppressCelebration": <boolean — true ONLY for sensitive/somber tasks where confetti on completion would feel inappropriate>,
+    "lifeEventRelevant": <boolean — true if this task is directly relevant to the user's active life event (if specified in the prompt), false otherwise; default false>,
     "assumptions": [
       { "key": "<short_snake_case>", "label": "<current chosen value>", "options": ["<option1>", "<option2>", ...] }
     ],
@@ -172,6 +173,9 @@ Set suppressCelebration: true ONLY when the task is somber and a "completed!" co
 
 Default is false. Routine home/car/health/finance maintenance is celebratable.
 
+# lifeEventRelevant rules
+If the user message specifies an active life event, set lifeEventRelevant: true on any task that would logically belong to that event's to-do list. Example: active event "New baby" + prompt "buy a crib" → true. Active event "New baby" + prompt "change HVAC filter" → false. If no active life event is mentioned, always set false.
+
 Personalize using profile context (vehicles, kids, pets, climate region, age) only when directly relevant to the task. Do not mention profile context in the task otherwise. IMPORTANT: If the prompt mentions a specific age that does not match any profile child's age, the task is for someone outside the household — do not reference, tag, or link to the user's children in any field.
 
 For seasonal tasks, set activeMonths matching the user's climate region. For one-time tasks, set intervalDays: null and oneTime: true.
@@ -202,7 +206,7 @@ IMPORTANT: "tier" at the top level MUST be the string "multi" (not a number). Ea
 
 Apply the safety scan (Step 1) and risk tier (Step 2) independently to each task. If any single task is tier 4, include it in the array with its refusal object instead of a task object. The client will filter these out.
 
-Omit the "steps" array from each task to keep the response compact. Include all other fields (label, cat, intervalDays, windowDays, stakes, activeMonths, assistType, searchQuery, why, guidance, oneTime, riskTier, suppressCelebration, assumptions).
+Omit the "steps" array from each task to keep the response compact. Include all other fields (label, cat, intervalDays, windowDays, stakes, activeMonths, assistType, searchQuery, why, guidance, oneTime, riskTier, suppressCelebration, lifeEventRelevant, assumptions).
 
 # Regenerate path
 If the request includes "regenerate": {key, value}, the user flipped one assumption. Re-derive the affected fields (frequency, season, guidance) and return the full updated task object. Keep label and cat consistent unless the flip changes them fundamentally.`;
@@ -242,7 +246,7 @@ export default async function handler(req) {
     return new Response("Invalid JSON", { status: 400, headers: corsHeaders(req) });
   }
 
-  const { prompt, profile, existingTaskLabels, regenerate } = body || {};
+  const { prompt, profile, existingTaskLabels, regenerate, activeEvent: activeEventInput } = body || {};
 
   if (!prompt || typeof prompt !== 'string') {
     return new Response("Missing prompt", { status: 400, headers: corsHeaders(req) });
@@ -265,6 +269,11 @@ export default async function handler(req) {
       return new Response("Invalid regenerate", { status: 400, headers: corsHeaders(req) });
     }
   }
+  if (activeEventInput != null && (typeof activeEventInput !== 'object'
+    || (activeEventInput.type && typeof activeEventInput.type !== 'string')
+    || (activeEventInput.label && typeof activeEventInput.label !== 'string'))) {
+    return new Response("Invalid activeEvent", { status: 400, headers: corsHeaders(req) });
+  }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -284,13 +293,17 @@ export default async function handler(req) {
     ? `\n\nThe user flipped an assumption. Regenerate the task with: ${sanitize(regenerate.key)} = ${sanitize(regenerate.value)}. Re-derive frequency, season, and guidance accordingly.`
     : '';
 
+  const eventLine = activeEventInput?.label
+    ? `\nActive life event: "${sanitize(activeEventInput.label)}". If any generated task is directly relevant to this life event, set "lifeEventRelevant": true on that task.`
+    : '';
+
   const today = new Date().toISOString().slice(0, 10);
   const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
 
   const userMessage = `User prompt: "${cleanPrompt}"
 Today is ${dayName}, ${today}.
 Profile context: ${profileCtx}
-${labelsLine}${regenLine}`;
+${labelsLine}${eventLine}${regenLine}`;
 
   const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
