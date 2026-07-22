@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import "./styles/app.css";
 
 import { loadS, saveS, ONBOARDED_KEY, PROFILE_DONE_KEY, VISIT_COUNT_KEY, WELCOME_CHOICE_KEY } from "./utils/storage";
@@ -208,6 +209,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
   // ─── Onboarding state ──────────────────────────────────────────────────────
   const [profileDone, setProfileDone] = useState(() => loadS(PROFILE_DONE_KEY, false));
   const [onboarded,   setOnboarded]   = useState(() => loadS(ONBOARDED_KEY, false));
+  const serverConfirmsOnboarded = !!(user && serverProfileChecked && serverProfileExists);
 
   // ─── UI state ──────────────────────────────────────────────────────────────
   const [view,            setView]            = useState("home");
@@ -233,6 +235,35 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
       setWelcomeChoice('new');
     }
   }, [welcomeChoice, user, serverProfileChecked, serverProfileExists, setWelcomeChoice]);
+
+  // ─── Authenticated session with no local welcome choice → skip the landing
+  // page (a signed-in user hitting "/" is returning, not new; this covers
+  // cleared localStorage while a Supabase session is still valid) ───────────
+  useEffect(() => {
+    if (user && !welcomeChoice) {
+      saveS(WELCOME_CHOICE_KEY, 'returning');
+      setWelcomeChoice('returning');
+    }
+  }, [user, welcomeChoice, setWelcomeChoice]);
+
+  // ─── URL sync — the app's screen is still driven entirely by state (not
+  // routes); this just reflects that state in the address bar so the landing
+  // page, onboarding, login, and the main app are distinguishable, linkable,
+  // and back/forward-navigable. Reaching an app URL directly with the "wrong"
+  // state redirects to the URL that matches the actual stage. ───────────────
+  const location = useLocation();
+  const navigate = useNavigate();
+  useEffect(() => {
+    let stage;
+    if (!welcomeChoice) stage = '/';
+    else if (welcomeChoice === 'returning' && !user) stage = '/login';
+    else if (!profileDone && !serverConfirmsOnboarded) stage = '/onboarding';
+    else if (!onboarded && !serverConfirmsOnboarded) stage = '/onboarding';
+    else if (!user) stage = '/login';
+    else stage = '/app';
+
+    if (location.pathname !== stage) navigate(stage, { replace: true });
+  }, [welcomeChoice, user, profileDone, onboarded, serverConfirmsOnboarded, location.pathname, navigate]);
 
   // ─── Heal stale localStorage if server confirms user is already set up ──────
   useEffect(() => {
@@ -384,8 +415,6 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
   };
 
   // ─── Onboarding gates ──────────────────────────────────────────────────────
-  const serverConfirmsOnboarded = !!(user && serverProfileChecked && serverProfileExists);
-
   // Hold on splash until the server profile check resolves — prevents flashing
   // onboarding screens for returning users whose localStorage is empty/stale.
   if (user && !serverProfileChecked) return <BrandSplash />;
