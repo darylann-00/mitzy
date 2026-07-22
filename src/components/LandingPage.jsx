@@ -122,6 +122,7 @@ function TaskCard({ dot, label, meta, pill, pillBg, pillColor }) {
 
 export function LandingPage({ onGetStarted, onSignIn }) {
   const [hoveredCta, setHoveredCta] = useState(false);
+  const [hoveredSignIn, setHoveredSignIn] = useState(false);
 
   const ctaStyle = {
     display: 'inline-block', background: C.brand, color: C.brandLight,
@@ -131,21 +132,38 @@ export function LandingPage({ onGetStarted, onSignIn }) {
     ...(hoveredCta ? { background: C.brandDark } : {}),
   };
 
+  const signInStyle = {
+    fontSize: 14, color: C.brand, background: hoveredSignIn ? C.brandTint : 'transparent',
+    border: `1.5px solid ${C.brand}`, borderRadius: 50, padding: '8px 20px',
+    cursor: 'pointer', fontWeight: 600, fontFamily: "'DM Sans', sans-serif",
+    transition: 'background 0.15s',
+  };
+
   return (
     <div className="lp-wrap" style={{ fontFamily: "'DM Sans', sans-serif", color: C.ink }}>
       <div className="lp-inner">
         {/* Nav */}
         <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 0 56px' }}>
           <Logo size="small" />
-          <button
-            onClick={onSignIn}
-            style={{
-              fontSize: 14, color: C.brand, background: 'none', border: 'none',
-              cursor: 'pointer', fontWeight: 500, fontFamily: "'DM Sans', sans-serif",
-            }}
-          >
-            Sign in
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <a
+              href="/privacy.html"
+              style={{
+                fontSize: 14, color: C.muted, fontWeight: 500,
+                fontFamily: "'DM Sans', sans-serif", textDecoration: 'none',
+              }}
+            >
+              Privacy
+            </a>
+            <button
+              onClick={onSignIn}
+              onMouseEnter={() => setHoveredSignIn(true)}
+              onMouseLeave={() => setHoveredSignIn(false)}
+              style={signInStyle}
+            >
+              Sign in
+            </button>
+          </div>
         </nav>
 
         {/* Hero */}
