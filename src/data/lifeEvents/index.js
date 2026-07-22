@@ -7,6 +7,7 @@ import { MARRIAGE } from './marriage';
 import { NAME_CHANGE } from './nameChange';
 import { DIVORCE } from './divorce';
 import { LOSS_OF_LOVED_ONE } from './lossOfLovedOne';
+import { MOVING } from './moving';
 
 export const LIFE_EVENT_DEFS = {
   'new-baby':          NEW_BABY,
@@ -14,6 +15,7 @@ export const LIFE_EVENT_DEFS = {
   'name-change':       NAME_CHANGE,
   'divorce':           DIVORCE,
   'loss-of-loved-one': LOSS_OF_LOVED_ONE,
+  'moving':            MOVING,
 };
 
 export const LIFE_EVENT_TYPES = Object.keys(LIFE_EVENT_DEFS);

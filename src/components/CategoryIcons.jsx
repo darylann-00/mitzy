@@ -258,12 +258,27 @@ export function TulipIcon({ color = '#6B8DD6', bg = '#EEF2FB', size = 18 }) {
   );
 }
 
+// A moving box with an upward arrow — relocation.
+export function MovingBoxIcon({ color = '#F77F00', bg = '#FFF3E0', size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="8" fill={bg} />
+      <rect x="3.5" y="7" width="11" height="7.5" rx="1" stroke={color} strokeWidth="1.5" fill="none" />
+      <path d="M3.5 10 L14.5 10" stroke={color} strokeWidth="1.2" />
+      <path d="M8 7 L8 14.5 M10 7 L10 14.5" stroke={color} strokeWidth="1.2" />
+      <path d="M9 2.5 L9 7" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M7 4.5 L9 2.5 L11 4.5" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </svg>
+  );
+}
+
 export const LIFE_EVENT_ICON_CONFIG = {
   'new-baby':          BabyIcon,
   'marriage':          WeddingRingsIcon,
   'name-change':       NameTagIcon,
   'divorce':           RingsIcon,
   'loss-of-loved-one': TulipIcon,
+  'moving':            MovingBoxIcon,
 };
 
 // Map category key → icon component + colors
