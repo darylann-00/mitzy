@@ -2,7 +2,8 @@
   "devCommand": "vite --host",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" }
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/((?!api/|data/|.*\\..*).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
