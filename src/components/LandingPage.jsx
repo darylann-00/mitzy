@@ -137,15 +137,26 @@ export function LandingPage({ onGetStarted, onSignIn }) {
         {/* Nav */}
         <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 0 56px' }}>
           <Logo size="small" />
-          <button
-            onClick={onSignIn}
-            style={{
-              fontSize: 14, color: C.brand, background: 'none', border: 'none',
-              cursor: 'pointer', fontWeight: 500, fontFamily: "'DM Sans', sans-serif",
-            }}
-          >
-            Sign in
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <a
+              href="/privacy.html"
+              style={{
+                fontSize: 14, color: C.muted, fontWeight: 500,
+                fontFamily: "'DM Sans', sans-serif", textDecoration: 'none',
+              }}
+            >
+              Privacy
+            </a>
+            <button
+              onClick={onSignIn}
+              style={{
+                fontSize: 14, color: C.brand, background: 'none', border: 'none',
+                cursor: 'pointer', fontWeight: 500, fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              Sign in
+            </button>
+          </div>
         </nav>
 
         {/* Hero */}
