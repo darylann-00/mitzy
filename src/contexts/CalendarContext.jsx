@@ -25,13 +25,13 @@ export function CalendarProvider({ user, children }) {
   };
 
   // Explicit connect -- called from Profile, ScheduleSurface, and Onboarding.
-  // Tries silent first (succeeds if user already granted), then falls back to
-  // the consent popup. Returns true on success so callers can react.
+  // Only shown when calGranted is false, so a silent pre-check almost never
+  // succeeds -- and awaiting it before falling back to the consent popup
+  // burns the click's user-gesture window, causing the popup to be blocked
+  // or silently closed by the browser. Go straight to the consent prompt.
   const connectCalendar = async () => {
     try {
-      let token;
-      try { token = await getCalendarToken({ silent: true }); }
-      catch { token = await getCalendarToken({ silent: false }); }
+      const token = await getCalendarToken({ silent: false });
       markGranted(token);
       return true;
     } catch (err) {
