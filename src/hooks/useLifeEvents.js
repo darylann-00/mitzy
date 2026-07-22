@@ -177,9 +177,22 @@ export function useLifeEvents({ user, customTasks, addCustomTasksBulk, removeCus
     });
   }, [user, removeCustomTasksByLifeEvent]);
 
+  const addTaskToEvent = useCallback(async (task) => {
+    if (!activeEvent) return;
+    const def = getEventDef(activeEvent.type);
+    const augmented = {
+      ...task,
+      lifeEventId: activeEvent.id,
+      oneTime: true,
+      suppressCelebration: !!def?.suppressCelebration,
+    };
+    await addCustomTasksBulk([augmented]);
+  }, [activeEvent, addCustomTasksBulk]);
+
   return {
     events, activeEvent, activeEventTasks,
     startEvent, completeEvent, dismissEvent, resolveEventAnswer,
+    addTaskToEvent,
     loading,
   };
 }

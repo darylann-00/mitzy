@@ -150,7 +150,7 @@ function Overlays({
       {celebration   && <Celebration onDone={onCelebrationDone} />}
       {markDoneModal && <MarkDoneModal task={markDoneModal} onDone={onMarkDone} onClose={onMarkDoneClose} />}
       {assistTask    && <AssistPanel task={assistTask} onClose={onAssistClose} />}
-      {creatorOpen   && <TaskCreator onClose={onCreatorClose} />}
+      {creatorOpen   && <TaskCreator onClose={onCreatorClose} lifeEventId={typeof creatorOpen === 'string' ? creatorOpen : undefined} />}
       {weeklyCheckInOpen && <WeeklyCheckIn onClose={onWeeklyCheckInClose} targetWeek={weeklyCheckInOpen} />}
       {pendingConflict && <ProfileConflictModal onResolve={resolveConflict} />}
       {lifeEventIntake === 'new-baby' && (
@@ -217,7 +217,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
   const [celebration,     setCelebration]     = useState(false);
   const [assistTask,      setAssistTask]      = useState(null);
   const [markDoneModal,   setMarkDoneModal]   = useState(null);
-  const [creatorOpen,     setCreatorOpen]     = useState(false);
+  const [creatorOpen,     setCreatorOpen]     = useState(null);
   const [weeklyCheckInOpen, setWeeklyCheckInOpen] = useState(null);
   const [activeCategory,  setActiveCategory]  = useState('all');
   const [dueOnly,         setDueOnly]         = useState(false);
@@ -407,7 +407,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
     celebration, onCelebrationDone: () => setCelebration(false),
     markDoneModal, onMarkDone: handleMarkDone, onMarkDoneClose: handleMarkDoneClose,
     assistTask, onAssistClose: () => setAssistTask(null),
-    creatorOpen, onCreatorClose: () => setCreatorOpen(false),
+    creatorOpen, onCreatorClose: () => setCreatorOpen(null),
     weeklyCheckInOpen, onWeeklyCheckInClose: () => setWeeklyCheckInOpen(null),
     lifeEventIntake,
     onLifeEventIntakeClose: () => setLifeEventIntake(null),
@@ -514,6 +514,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
           onMatchConfirm={handleMatchConfirm}
           onMatchDismiss={handleMatchDismiss}
           onSnooze={setSnoozePickerTask}
+          onAddEventTask={(eventId) => setCreatorOpen(eventId)}
         />
       )}
 

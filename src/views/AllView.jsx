@@ -183,7 +183,7 @@ function ExploreSection({ tasks, markDone, markNeeded, markNotApplicable }) {
 }
 
 // ─── Life event group ──────────────────────────────────────────────────────────
-function LifeEventGroup({ event, tasks, taskState, getStatus, getDays, providerHistory, pendingCalendarMatches, onSelectTask, onDoneTask, onMatchConfirm, onMatchDismiss }) {
+function LifeEventGroup({ event, tasks, taskState, getStatus, getDays, providerHistory, pendingCalendarMatches, onSelectTask, onDoneTask, onMatchConfirm, onMatchDismiss, onAddTask }) {
   const [open, setOpen] = useState(true);
   const def = LIFE_EVENT_DEFS[event.type];
   if (!def || tasks.length === 0) return null;
@@ -210,6 +210,23 @@ function LifeEventGroup({ event, tasks, taskState, getStatus, getDays, providerH
             {doneCount} of {tasks.length} done
           </div>
         </div>
+        {onAddTask && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onAddTask(); }}
+            aria-label="Add task to event"
+            style={{
+              width: 28, height: 28, borderRadius: 8,
+              background: '#F4C430', border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <line x1="7" y1="2" x2="7" y2="12" stroke="#1C2B22" strokeWidth="2" strokeLinecap="round" />
+              <line x1="2" y1="7" x2="12" y2="7" stroke="#1C2B22" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+        )}
         <svg
           width="14" height="14" viewBox="0 0 14 14" fill="none"
           style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition:'transform 0.15s', flexShrink:0 }}
@@ -293,7 +310,7 @@ function SnoozedSection({ tasks, taskState, onSelectTask, onUnsnooze }) {
 }
 
 // ─── AllView ───────────────────────────────────────────────────────────────────
-export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCategory, dueOnly, setDueOnly, onMatchConfirm, onMatchDismiss, onSnooze }) {
+export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCategory, dueOnly, setDueOnly, onMatchConfirm, onMatchDismiss, onSnooze, onAddEventTask }) {
   const { providerHistory, region, lifeEvents } = useProfileContext();
   const { activeTasks: allActiveTasks, getStatus, getDays, markDone, markNeeded, markNotApplicable, taskState, snoozedTasks, unsnoozeTask } = useTaskContext();
   const { pendingCalendarMatches } = useCalendarContext();
@@ -417,6 +434,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
             onDoneTask={onDoneTask}
             onMatchConfirm={onMatchConfirm}
             onMatchDismiss={onMatchDismiss}
+            onAddTask={() => onAddEventTask(activeEvent.id)}
           />
         )}
 

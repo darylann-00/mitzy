@@ -62,8 +62,12 @@ function genTaskId() {
   return `custom-${Date.now()}-${rand}`;
 }
 
-export function TaskCreator({ onClose }) {
-  const { profile, taskLibrary, addCustomTask, addCustomTasksBulk } = useProfileContext();
+export function TaskCreator({ onClose, lifeEventId }) {
+  const { profile, taskLibrary, addCustomTask, addCustomTasksBulk, lifeEvents } = useProfileContext();
+  const addTaskFn = lifeEventId ? lifeEvents.addTaskToEvent : addCustomTask;
+  const addTasksBulkFn = lifeEventId
+    ? (tasks) => Promise.all(tasks.map(t => lifeEvents.addTaskToEvent(t)))
+    : addCustomTasksBulk;
   const { markNeeded, setDueDate } = useTaskContext();
 
   const [mode, setMode] = useState('ai');
@@ -85,7 +89,7 @@ export function TaskCreator({ onClose }) {
   const [manualCat, setManualCat] = useState('home');
   const [manualFreqNum, setManualFreqNum] = useState('3');
   const [manualFreqUnit, setManualFreqUnit] = useState('months');
-  const [manualOneTime, setManualOneTime] = useState(false);
+  const [manualOneTime, setManualOneTime] = useState(!!lifeEventId);
   const [manualStakes, setManualStakes] = useState('medium');
   const [manualErr, setManualErr] = useState('');
   const [inputFocused, setInputFocused] = useState(false);
@@ -246,7 +250,7 @@ export function TaskCreator({ onClose }) {
     setSaveError(null);
     try {
       const { includeInFocus: _ignored, dueDate, ...task } = taskToSave;
-      await addCustomTask(task);
+      await addTaskFn(task);
       try { await markNeeded(task.id); } catch {}
       if (dueDate) { try { await setDueDate(task.id, dueDate); } catch {} }
       onClose();
@@ -261,7 +265,7 @@ export function TaskCreator({ onClose }) {
     setSaveError(null);
     try {
       const tasksWithoutDates = selectedTasks.map(({ dueDate, ...rest }) => rest);
-      await addCustomTasksBulk(tasksWithoutDates);
+      await addTasksBulkFn(tasksWithoutDates);
       for (const task of selectedTasks) {
         try { await markNeeded(task.id); } catch {}
         if (task.dueDate) { try { await setDueDate(task.id, task.dueDate); } catch {} }
@@ -292,7 +296,7 @@ export function TaskCreator({ onClose }) {
         isAIGenerated: false,
         promptText: prompt,
       };
-      await addCustomTask(task);
+      await addTaskFn(task);
       try { await markNeeded(task.id); } catch {}
       onClose();
     } catch {
@@ -315,7 +319,7 @@ export function TaskCreator({ onClose }) {
         label: manualLabel.trim(),
         intervalDays: manualOneTime ? null : manualFreq,
         windowDays: manualOneTime ? 14 : Math.max(3, Math.round(manualFreq * 0.2)),
-        oneTime: manualOneTime,
+        oneTime: lifeEventId ? true : manualOneTime,
         stakes: manualStakes,
         activeMonths: null,
         requires: [],
@@ -324,7 +328,7 @@ export function TaskCreator({ onClose }) {
         isCustom: true,
         isAIGenerated: false,
       };
-      await addCustomTask(task);
+      await addTaskFn(task);
       try { await markNeeded(task.id); } catch {}
       onClose();
     } catch {
@@ -357,7 +361,9 @@ export function TaskCreator({ onClose }) {
 
   const headerTitle = stage === 'multi-review' && multiTasks
     ? `${multiTasks.length} tasks found`
-    : 'add a task';
+    : lifeEventId
+      ? 'add to event'
+      : 'add a task';
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,30,20,0.75)', zIndex: 500, display: 'flex', flexDirection: 'column' }}>
