@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { C, CAT_META } from "../data/constants";
-import { CategoryTile } from "./CategoryIcons";
+import { CategoryTile, LIFE_EVENT_ICON_CONFIG } from "./CategoryIcons";
 import { FrequencyPicker, formatIntervalDays } from "./FrequencyPicker";
 import { parseGuidanceBlocks, renderGuidanceBlocks } from "../utils/renderMarkdown";
+import { useProfileContext } from "../contexts/ProfileContext";
+import { LIFE_EVENT_DEFS } from "../data/lifeEvents";
 
 export function TaskConfirmCard({ task, onChange, onSave, onCancel, regenerating, regenError, saveLabel, cancelLabel }) {
   const [editingLabel, setEditingLabel] = useState(false);
@@ -11,6 +13,12 @@ export function TaskConfirmCard({ task, onChange, onSave, onCancel, regenerating
   const [editingFreq, setEditingFreq] = useState(false);
   const [showWhy, setShowWhy] = useState(false);
   const [showHow, setShowHow] = useState(false);
+
+  const { lifeEvents } = useProfileContext();
+  const activeEvent = lifeEvents?.activeEvent;
+  const activeEventDef = activeEvent ? LIFE_EVENT_DEFS[activeEvent.type] : null;
+  const ActiveEventIcon = activeEvent ? LIFE_EVENT_ICON_CONFIG[activeEvent.type] : null;
+  const isEventLinked = !!task.lifeEventRelevant && !!activeEvent;
 
   const meta = CAT_META[task.cat] || CAT_META.home;
   const isLocked = task.riskTier === 3;
@@ -31,7 +39,12 @@ export function TaskConfirmCard({ task, onChange, onSave, onCancel, regenerating
   };
 
   const setCat = (newCat) => {
-    onChange({ patch: { cat: newCat } });
+    onChange({ patch: { cat: newCat, lifeEventRelevant: false } });
+    setEditingCat(false);
+  };
+
+  const setEventLinked = () => {
+    onChange({ patch: { lifeEventRelevant: true } });
     setEditingCat(false);
   };
 
@@ -99,8 +112,19 @@ export function TaskConfirmCard({ task, onChange, onSave, onCancel, regenerating
             fontFamily:'DM Sans, sans-serif', fontSize:14, fontWeight:600, color:C.ink,
           }}
         >
-          <CategoryTile cat={task.cat} size={26} />
-          <span>{meta.label}</span>
+          {isEventLinked ? (
+            <>
+              <div style={{ width:26, height:26, borderRadius:6, background:'#FFFBEE', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                {ActiveEventIcon && <ActiveEventIcon size={18} />}
+              </div>
+              <span>{activeEventDef?.label}</span>
+            </>
+          ) : (
+            <>
+              <CategoryTile cat={task.cat} size={26} />
+              <span>{meta.label}</span>
+            </>
+          )}
           <span style={{ color:C.muted, marginLeft:6 }}>▾</span>
         </button>
         {editingCat && (
@@ -108,20 +132,37 @@ export function TaskConfirmCard({ task, onChange, onSave, onCancel, regenerating
             position:'absolute', top:'calc(100% - 8px)', left:14, right:14, zIndex:10,
             background:'#fff', borderRadius:12, boxShadow:'0 4px 20px rgba(0,0,0,0.12)', overflow:'hidden',
           }}>
+            {activeEvent && activeEventDef && (
+              <button
+                onClick={setEventLinked}
+                style={{
+                  width:'100%', display:'flex', alignItems:'center', gap:10, padding:'10px 12px',
+                  background: isEventLinked ? '#FFFBEE' : 'transparent', border:'none', cursor:'pointer',
+                  fontSize:14, fontWeight:600, color:C.ink, textAlign:'left',
+                  fontFamily:'DM Sans, sans-serif',
+                }}
+              >
+                <div style={{ width:26, height:26, borderRadius:6, background:'#FFFBEE', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  {ActiveEventIcon && <ActiveEventIcon size={18} />}
+                </div>
+                <span>{activeEventDef.label}</span>
+                {isEventLinked && <span style={{ marginLeft:'auto', color:C.mint }}>✓</span>}
+              </button>
+            )}
             {Object.entries(CAT_META).map(([k, v]) => (
               <button
                 key={k}
                 onClick={() => setCat(k)}
                 style={{
                   width:'100%', display:'flex', alignItems:'center', gap:10, padding:'10px 12px',
-                  background: k === task.cat ? C.light : 'transparent', border:'none', cursor:'pointer',
+                  background: (!isEventLinked && k === task.cat) ? C.light : 'transparent', border:'none', cursor:'pointer',
                   fontSize:14, fontWeight:600, color:C.ink, textAlign:'left',
                   fontFamily:'DM Sans, sans-serif',
                 }}
               >
                 <CategoryTile cat={k} size={26} />
                 <span>{v.label}</span>
-                {k === task.cat && <span style={{ marginLeft:'auto', color:C.mint }}>✓</span>}
+                {!isEventLinked && k === task.cat && <span style={{ marginLeft:'auto', color:C.mint }}>✓</span>}
               </button>
             ))}
           </div>
@@ -275,7 +316,7 @@ export function TaskConfirmCard({ task, onChange, onSave, onCancel, regenerating
             fontFamily:'DM Sans, sans-serif',
           }}
         >
-          {saveLabel || 'Add to my tasks'}
+          {saveLabel || (isEventLinked ? `Add to ${activeEventDef?.label}` : 'Add to my tasks')}
         </button>
       </div>
     </div>
