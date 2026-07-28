@@ -1,3 +1,5 @@
+import { resolveLocation } from './geo.js';
+
 const THIS_YEAR = new Date().getFullYear();
 const getAge = (birthYear) => birthYear ? THIS_YEAR - parseInt(birthYear, 10) : null;
 
@@ -7,9 +9,21 @@ const sanitize = (str) =>
 const sanitizeZip = (zip) =>
   zip ? String(zip).replace(/\D/g, '').slice(0, 10) : zip;
 
-export function buildAssistPrompt(task, profile) {
+export async function buildAssistPrompt(task, profile) {
   const zip  = sanitizeZip(profile.zip);
-  const loc  = zip                   ? `near zip code ${zip}` : "in my area";
+
+  // Resolve location with geo.js, fallback to zip code or generic area
+  let loc;
+  if (zip) {
+    const resolved = await resolveLocation(zip);
+    if (resolved) {
+      loc = `in ${resolved.county}, ${resolved.state} (zip ${zip})`;
+    } else {
+      loc = `near zip code ${zip}`;
+    }
+  } else {
+    loc = "in my area";
+  }
   const insuranceProvider = task.insurance || profile.insurance;
   const ins  = insuranceProvider      ? `Insurance: ${sanitize(insuranceProvider)}. ` : "";
   const carStr = task.vehicle
@@ -28,6 +42,8 @@ export function buildAssistPrompt(task, profile) {
   // Guidance tasks with static steps: the steps already render in TaskDetailView's
   // "What to expect" card, so ask only for the user-specific delta — never a
   // paraphrase of what's on screen.
+  // Jurisdiction tasks fall through to their own case below, even though most of
+  // them also carry static guidance steps.
   if ((task.assistType === "guidance" || !task.assistType) && task.guidance) {
     return `Task: "${task.label}".
 
@@ -41,7 +57,9 @@ Add ONLY what is specific to this user's situation. Do not repeat, rephrase, or 
 Under 150 words. Markdown bullets, each starting with a **bold** lead-in.`;
   }
 
-  const noteOrGuidance = task.guidance || task.note || '';
+  // For jurisdiction tasks, use only task.note (not guidance, which has static steps).
+  // For all other tasks, include guidance if present.
+  const noteOrGuidance = (task.assistType === "jurisdiction" ? task.note : (task.guidance || task.note)) || '';
   const base = `Task: "${task.label}".${noteOrGuidance ? ` Context: ${noteOrGuidance}.` : ''} ${ctx} Only reference the above context if it's directly relevant to this task — do not mention it otherwise.`;
 
   switch (task.assistType) {
@@ -57,6 +75,17 @@ Under 150 words. Markdown bullets, each starting with a **bold** lead-in.`;
 2. "companies": array of exactly 3 actual companies or services for this task — not comparison sites, aggregators, or brokers. Pick well-known, reputable names the user would recognize. For each: {"name":"","blurb":"1–2 sentences with **bold** key phrases on why it stands out","website":"https://..."}.
 
 Return ONLY valid JSON. No text outside the JSON object.`;
+
+    case "jurisdiction":
+      return `${base}
+
+This task is governed by state and local law, and the user is ${loc}.
+
+Explain how this works in their state: which specific office handles it, what the state-level rules are, any residency or waiting-period requirements, and what they need to bring or prepare.
+
+Do NOT state a specific filing fee, dollar amount, phone number, or web address, and do NOT state a local deadline as fact — these are set locally and you cannot verify them. Instead, name the exact office they should contact to confirm those details. If you are not confident about this particular state's rule, say so plainly rather than guessing.
+
+Under 200 words. Markdown with **bold** lead-ins.`;
 
     default:
       return `${base}\n\nGive practical guidance: what to look for, what to ask, red flags, the single most important thing to know. Under 200 words.`;
