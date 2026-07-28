@@ -5,7 +5,8 @@ import { useTaskContext } from "../contexts/TaskContext";
 import { supabase } from "../lib/supabase";
 import { TaskConfirmCard } from "./TaskConfirmCard";
 import { BrainDumpReview } from "./BrainDumpReview";
-import { CategoryTile } from "./CategoryIcons";
+import { CategoryTile, LIFE_EVENT_ICON_CONFIG } from "./CategoryIcons";
+import { LIFE_EVENT_DEFS } from "../data/lifeEvents";
 
 const PLACEHOLDERS = [
   "e.g. fix iPad screen",
@@ -62,9 +63,12 @@ function genTaskId() {
   return `custom-${Date.now()}-${rand}`;
 }
 
-export function TaskCreator({ onClose }) {
-  const { profile, taskLibrary, addCustomTask, addCustomTasksBulk } = useProfileContext();
+export function TaskCreator({ onClose, lifeEventId }) {
+  const { profile, taskLibrary, addCustomTask, addCustomTasksBulk, lifeEvents } = useProfileContext();
   const { markNeeded, setDueDate } = useTaskContext();
+  const activeEvent = lifeEvents?.activeEvent;
+  const activeEventDef = activeEvent ? LIFE_EVENT_DEFS[activeEvent.type] : null;
+  const ActiveEventIcon = activeEvent ? LIFE_EVENT_ICON_CONFIG[activeEvent.type] : null;
 
   const [mode, setMode] = useState('ai');
   const [stage, setStage] = useState('input');
@@ -82,10 +86,10 @@ export function TaskCreator({ onClose }) {
 
   // Manual mode state
   const [manualLabel, setManualLabel] = useState('');
-  const [manualCat, setManualCat] = useState('home');
+  const [manualCat, setManualCat] = useState(lifeEventId ? 'life-event' : 'home');
   const [manualFreqNum, setManualFreqNum] = useState('3');
   const [manualFreqUnit, setManualFreqUnit] = useState('months');
-  const [manualOneTime, setManualOneTime] = useState(false);
+  const [manualOneTime, setManualOneTime] = useState(!!lifeEventId);
   const [manualStakes, setManualStakes] = useState('medium');
   const [manualErr, setManualErr] = useState('');
   const [inputFocused, setInputFocused] = useState(false);
@@ -126,7 +130,10 @@ export function TaskCreator({ onClose }) {
       method: 'POST',
       signal: controller.signal,
       headers: { 'content-type': 'application/json', 'authorization': `Bearer ${token}` },
-      body: JSON.stringify({ prompt: promptText, profile: profileForServer, existingTaskLabels, regenerate: regenerate || null }),
+      body: JSON.stringify({
+        prompt: promptText, profile: profileForServer, existingTaskLabels, regenerate: regenerate || null,
+        activeEvent: activeEvent ? { type: activeEvent.type, label: activeEventDef?.label } : null,
+      }),
     });
     if (!res.ok) throw new Error(String(res.status));
     return res.json();
@@ -245,8 +252,12 @@ export function TaskCreator({ onClose }) {
     setSaving(true);
     setSaveError(null);
     try {
-      const { includeInFocus: _ignored, dueDate, ...task } = taskToSave;
-      await addCustomTask(task);
+      const { includeInFocus: _ignored, dueDate, lifeEventRelevant, ...task } = taskToSave;
+      if (lifeEventId || (lifeEventRelevant && activeEvent)) {
+        await lifeEvents.addTaskToEvent(task);
+      } else {
+        await addCustomTask(task);
+      }
       try { await markNeeded(task.id); } catch {}
       if (dueDate) { try { await setDueDate(task.id, dueDate); } catch {} }
       onClose();
@@ -260,8 +271,14 @@ export function TaskCreator({ onClose }) {
     setSaving(true);
     setSaveError(null);
     try {
-      const tasksWithoutDates = selectedTasks.map(({ dueDate, ...rest }) => rest);
-      await addCustomTasksBulk(tasksWithoutDates);
+      const regular = [];
+      const eventLinked = [];
+      for (const { dueDate, lifeEventRelevant, ...rest } of selectedTasks) {
+        if (lifeEventId || (lifeEventRelevant && activeEvent)) eventLinked.push(rest);
+        else regular.push(rest);
+      }
+      if (regular.length) await addCustomTasksBulk(regular);
+      for (const t of eventLinked) await lifeEvents.addTaskToEvent(t);
       for (const task of selectedTasks) {
         try { await markNeeded(task.id); } catch {}
         if (task.dueDate) { try { await setDueDate(task.id, task.dueDate); } catch {} }
@@ -303,28 +320,32 @@ export function TaskCreator({ onClose }) {
 
   const handleManualAdd = async () => {
     if (!manualLabel.trim()) { setManualErr("Give it a name first"); return; }
+    const isEventTask = manualCat === 'life-event';
     const freqN = parseInt(manualFreqNum, 10);
-    if (!manualOneTime && (!freqN || freqN < 1)) { setManualErr("Pick how often it repeats"); return; }
+    if (!isEventTask && !manualOneTime && (!freqN || freqN < 1)) { setManualErr("Pick how often it repeats"); return; }
     const manualFreq = freqN * FREQ_UNIT_DAYS[manualFreqUnit];
     setSaving(true);
     setSaveError(null);
     try {
       const task = {
         id: genTaskId(),
-        cat: manualCat,
+        cat: isEventTask ? 'other' : manualCat,
         label: manualLabel.trim(),
-        intervalDays: manualOneTime ? null : manualFreq,
-        windowDays: manualOneTime ? 14 : Math.max(3, Math.round(manualFreq * 0.2)),
-        oneTime: manualOneTime,
+        intervalDays: (isEventTask || manualOneTime) ? null : manualFreq,
+        windowDays: (isEventTask || manualOneTime) ? 14 : Math.max(3, Math.round(manualFreq * 0.2)),
+        oneTime: isEventTask || manualOneTime,
         stakes: manualStakes,
         activeMonths: null,
         requires: [],
         assistType: 'guidance',
-        note: 'Custom task.',
         isCustom: true,
         isAIGenerated: false,
       };
-      await addCustomTask(task);
+      if (isEventTask && activeEvent) {
+        await lifeEvents.addTaskToEvent(task);
+      } else {
+        await addCustomTask(task);
+      }
       try { await markNeeded(task.id); } catch {}
       onClose();
     } catch {
@@ -357,7 +378,9 @@ export function TaskCreator({ onClose }) {
 
   const headerTitle = stage === 'multi-review' && multiTasks
     ? `${multiTasks.length} tasks found`
-    : 'add a task';
+    : lifeEventId
+      ? 'add to event'
+      : 'add a task';
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,30,20,0.75)', zIndex: 500, display: 'flex', flexDirection: 'column' }}>
@@ -522,6 +545,27 @@ export function TaskCreator({ onClose }) {
               <div style={CARD}>
                 <div style={{ ...MICRO_LABEL, marginBottom: 8 }}>Category</div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {activeEvent && activeEventDef && (() => {
+                    const active = manualCat === 'life-event';
+                    return (
+                      <button
+                        key="life-event"
+                        onClick={() => setManualCat('life-event')}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 7,
+                          padding: '6px 12px 6px 7px', borderRadius: 10, cursor: 'pointer',
+                          border: `1.5px solid ${active ? '#F4C430' : '#EAE4DA'}`,
+                          background: active ? '#FFFBEE' : '#fff',
+                          fontFamily: 'DM Sans, sans-serif', fontSize: 13, fontWeight: 600, color: C.ink,
+                        }}
+                      >
+                        <div style={{ width: 24, height: 24, borderRadius: 6, background: '#FFFBEE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {ActiveEventIcon && <ActiveEventIcon size={16} />}
+                        </div>
+                        {activeEventDef.label}
+                      </button>
+                    );
+                  })()}
                   {Object.entries(CAT_META).map(([k, v]) => {
                     const active = manualCat === k;
                     return (
@@ -543,7 +587,7 @@ export function TaskCreator({ onClose }) {
                   })}
                 </div>
               </div>
-              <div style={CARD}>
+              {manualCat !== 'life-event' && <div style={CARD}>
                 <div style={{ ...MICRO_LABEL, marginBottom: 8 }}>How often</div>
                 <div style={{ display: 'flex', gap: 6, marginBottom: manualOneTime ? 0 : 12 }}>
                   {[
@@ -598,7 +642,7 @@ export function TaskCreator({ onClose }) {
                     </select>
                   </div>
                 )}
-              </div>
+              </div>}
               <div style={CARD}>
                 <div style={{ ...MICRO_LABEL, marginBottom: 8 }}>How important</div>
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -637,7 +681,7 @@ export function TaskCreator({ onClose }) {
                   fontFamily: 'DM Sans, sans-serif',
                 }}
               >
-                {saving ? 'Saving…' : 'Add to my tasks'}
+                {saving ? 'Saving…' : (manualCat === 'life-event' && activeEventDef) ? `Add to ${activeEventDef.label}` : 'Add to my tasks'}
               </button>
             </div>
           )}
