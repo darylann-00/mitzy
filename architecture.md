@@ -78,7 +78,7 @@ Read this when touching state, data, or non-trivial component wiring.
 - `effectiveInterval = entry?.intervalDays ?? task.intervalDays` drives all display and scheduling.
 - `taskStatus()` in `taskLogic.js` computes the `coming-up` threshold as `task.reminderLeadDays ?? task.windowDays` (one-time tasks: `?? 7`). `reminderLeadDays` is the per-task field for tasks that need extra lead time to actually book (vet, pediatrician, dentist, specialist trades) — set higher than `windowDays` on those; otherwise falls back to `windowDays` so behavior is unchanged for quick/walk-in services.
 - Profile stores `birthYear` (4-digit year) for user, kids, and pets. `getAge(birthYear) = currentYear - birthYear` in `taskFactory.js` and `assistPrompt.js`. `PROFILE_KEY = "mitzy-pro-v7"`.
-- Trickle rotation queue key: `TRICKLE_QUEUE_KEY = "mitzy-tq-v6"`. 5-day cadence.
+- Trickle rotation queue key: `TRICKLE_QUEUE_KEY = "mitzy-tq-v6"`. 5-day cadence. `useSession` must be given `visibleTasks` (not the unfiltered `activeTasks`) as its task list, so candidates are already `isWindowActive`-filtered — otherwise a task outside its seasonal window (e.g. winterizing outdoor faucets in July) can get surfaced as a trickle question. Regression-tested in `taskLogic.test.js`.
 - `activeCategory` and `dueOnly` filter state lives in App.js (survives tab switches).
 - CORS: `/api/assist` and `/api/providers` origin-allowlisted via `ALLOWED_ORIGIN` env var.
 - `/api/providers` accepts optional `maxResults` in request body (clamped 1–10, defaults to 6).
