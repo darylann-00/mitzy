@@ -126,7 +126,14 @@ export function useWeeklyPlan(user, taskState, markScheduled, uiState, updateUiS
     if (!user) return { error: new Error("Not signed in") };
 
     const target = targetWeekStart || weekStart;
-    const isUpcoming = target !== currentWeekStart && target === planningWeekStart;
+    // "Upcoming" means: a current-week plan is already active and governing
+    // Home, and this confirm targets a *different*, later week — so the
+    // local activePlan (and Home's plan-mode display) must stay untouched
+    // until the current week ends. If there's no current-week plan yet (the
+    // common Fri-Sun case — a fresh check-in targeting next Monday), this
+    // confirm should become the active plan immediately, exactly like a
+    // page reload would resolve it (see the load() effect above).
+    const isUpcoming = target !== currentWeekStart && activePlan?.weekStart === currentWeekStart;
     const now = new Date().toISOString();
     const dates = scheduledDates || {};
 
@@ -180,7 +187,7 @@ export function useWeeklyPlan(user, taskState, markScheduled, uiState, updateUiS
       }
     }
     return { error: null };
-  }, [user, weekStart, currentWeekStart, planningWeekStart, markScheduled]);
+  }, [user, weekStart, currentWeekStart, markScheduled, activePlan]);
 
   const addToPlan = useCallback(async (taskId) => {
     if (!user || !activePlan) return;
