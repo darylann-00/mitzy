@@ -203,7 +203,7 @@ export default function Mitzy() {
 // ─── Inner app — consumes contexts ─────────────────────────────────────────────
 function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, signInWithPassword, welcomeChoice, setWelcomeChoice }) {
   const { profile, taskLibrary, updateProfile, updateUiState, removeCustomTask, region, loading: profileLoading, syncError: profileSyncError, serverProfileChecked, serverProfileExists, lifeEvents } = useProfileContext();
-  const { activeTasks, taskState, setTaskState, setDisabledTasks, markDone, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, setDueDate, setStepProgress, markScheduled, snoozeTask, unsnoozeTask, nextUpcomingTask, loading: tasksLoading, syncError: tasksSyncError } = useTaskContext();
+  const { visibleTasks, taskState, setTaskState, setDisabledTasks, markDone, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, setDueDate, setStepProgress, markScheduled, snoozeTask, unsnoozeTask, nextUpcomingTask, loading: tasksLoading, syncError: tasksSyncError } = useTaskContext();
   const { pendingCalendarMatches, dismissMatch } = useCalendarContext();
 
   // ─── Onboarding state ──────────────────────────────────────────────────────
@@ -226,7 +226,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
   const nudgeState = profile.uiState?.lifeEventNudge ?? { discoveryDismissed: false, wrapupDismissed: {} };
 
   // ─── Session (trickle + hazards) ───────────────────────────────────────────
-  const { trickleTask, dismissTrickle, answerTrickle, pendingHazards, setPendingHazards } = useSession({ onboarded, profile, activeTasks, taskState, tasksLoading, updateUiState });
+  const { trickleTask, dismissTrickle, answerTrickle, pendingHazards, setPendingHazards } = useSession({ onboarded, profile, activeTasks: visibleTasks, taskState, tasksLoading, updateUiState });
 
   // ─── Returning user with no server profile → drop into new-user onboarding ─
   useEffect(() => {

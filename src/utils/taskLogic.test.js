@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { taskStatus, becameDueAfterPlan } from "./taskLogic";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { taskStatus, becameDueAfterPlan, isWindowActive } from "./taskLogic";
 
 const daysFromNow = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
 const daysAgo = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
@@ -75,6 +75,36 @@ describe("taskStatus — one-time tasks", () => {
     const task = { ...baseTask, dueDate: daysAgo(2) };
     const entry = { dueDate: daysFromNow(90) };
     expect(taskStatus(task, { t2: entry })).toBe("unknown");
+  });
+});
+
+describe("isWindowActive — seasonal gating", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  // Regression test: the "Quick Check" trickle nudge (src/hooks/useSession.js)
+  // used to pull from the unfiltered task list, so a task like "Winterize
+  // outdoor faucets" (activeMonths: Sept-Feb) could get asked about in July.
+  it("hides a task outside its activeMonths window", () => {
+    vi.setSystemTime(new Date("2026-07-15T12:00:00"));
+    const task = { id: "hm-faucets", activeMonths: [9, 10, 11, 12, 1, 2] };
+    expect(isWindowActive(task, null)).toBe(false);
+  });
+
+  it("shows a task inside its activeMonths window", () => {
+    vi.setSystemTime(new Date("2026-11-15T12:00:00"));
+    const task = { id: "hm-faucets", activeMonths: [9, 10, 11, 12, 1, 2] };
+    expect(isWindowActive(task, null)).toBe(true);
+  });
+
+  it("treats a null/undefined activeMonths as always active", () => {
+    vi.setSystemTime(new Date("2026-07-15T12:00:00"));
+    expect(isWindowActive({ id: "t", activeMonths: null }, null)).toBe(true);
+  });
+
+  it("treats an empty activeMonths as never active", () => {
+    vi.setSystemTime(new Date("2026-07-15T12:00:00"));
+    expect(isWindowActive({ id: "t", activeMonths: [] }, null)).toBe(false);
   });
 });
 

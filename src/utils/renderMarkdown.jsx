@@ -16,7 +16,9 @@ function renderInline(text) {
 // Parses guidance markdown (## headers, - bullets, numbered lists) into blocks
 export function parseGuidanceBlocks(guidance) {
   if (!guidance) return null;
-  return guidance.split('\n').reduce((acc, line) => {
+  // Split inline numbered steps ("1. foo. 2. bar.") onto separate lines
+  const normalized = guidance.replace(/(?<=[.!?)])\s+(?=\d+\.\s)/g, '\n');
+  return normalized.split('\n').reduce((acc, line) => {
     const trimmed = line.trim();
     if (!trimmed) return acc;
     if (trimmed.startsWith('## ')) {
