@@ -427,8 +427,11 @@ test('plan next week opens a fresh check-in for the upcoming week (Fri-Sun only)
   await expect(planNextBtn).toBeVisible({ timeout: 5000 });
   await planNextBtn.click();
 
-  // The check-in opens in fresh mode — NOT "Adjust your week".
-  await expect(page.getByText('Plan next week')).toBeVisible({ timeout: 10000 });
+  // The check-in opens in fresh mode — NOT "Adjust your week". Scoped to a
+  // <div> with the exact header text: a loose text match also catches the
+  // "Plan next week" button still in the DOM behind the overlay and the
+  // "Let's plan next week · ..." subheader (which contains the same phrase).
+  await expect(page.locator('div').filter({ hasText: /^Plan next week$/ })).toBeVisible({ timeout: 10000 });
   await expect(page.getByText('Adjust your week')).toHaveCount(0);
 
   // The week range label should show next week's dates, not the current week.
