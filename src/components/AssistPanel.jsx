@@ -350,7 +350,7 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
         if (!res.ok) throw new Error(`${res.status}`);
         ({ text } = await res.json());
       } else {
-        const prompt = buildAssistPrompt(task, profile);
+        const prompt = await buildAssistPrompt(task, profile);
         const res = await fetch('/api/assist', {
           method: 'POST',
           headers: { 'content-type': 'application/json', ...authHeader },
@@ -400,6 +400,7 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
     if (task.assistType === 'deadline')           return ['Looking up key dates...', 'Checking current rules...', 'Almost done...'];
     if (task.assistType === 'guidance')           return ['Pulling together the best approach...', 'Reviewing what matters most...', 'Almost done...'];
     if (task.assistType === 'guidance_companies') return ['Finding the right companies for this...', 'Checking coverage and ratings...', 'Almost there...'];
+    if (task.assistType === 'jurisdiction')       return ['Checking the rules where you live...', 'Finding the right office...', 'Almost there...'];
     return ['Mitzy is looking this up...', 'Digging into the details...', 'Almost done...'];
   };
 
@@ -520,8 +521,8 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
             </>
           )}
 
-          {/* Done — deadline or guidance */}
-          {status === 'done' && (task.assistType === 'deadline' || task.assistType === 'guidance' || !task.assistType) && (
+          {/* Done — deadline, guidance, or jurisdiction */}
+          {status === 'done' && (task.assistType === 'deadline' || task.assistType === 'guidance' || task.assistType === 'jurisdiction' || !task.assistType) && (
             <MarkdownBlock text={result} />
           )}
 

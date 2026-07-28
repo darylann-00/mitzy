@@ -26,14 +26,16 @@ Read this when touching state, data, or non-trivial component wiring.
                       useLifeEvents, useCapacityNudge, useWeeklyPlan
   /lib              — supabase.js, googleCalendar.js
   /utils            — storage.js, taskLogic.js, assistPrompt.js, hazards.js,
-                      climateRegion.js, renderMarkdown.jsx, resolveStepVars.js
+                      geo.js, climateRegion.js, renderMarkdown.jsx, resolveStepVars.js
   /onboarding       — SlimOnboarding, PrioritySetup
   /styles/app.css   — Full design system
 /public/data        — Static lookup datasets fetched same-origin at runtime:
                       zip-to-fips.json, nri-county-risk.json (FEMA hazard data,
-                      see Key Implementation Notes)
-/scripts            — build-hazard-data.mjs (manual maintenance script, not in
-                      build/CI pipeline; re-run when FEMA publishes a new NRI vintage)
+                      see Key Implementation Notes), fips-to-county.json
+                      (county FIPS → county name, used by geo.js)
+/scripts            — build-hazard-data.mjs and build-county-names.mjs (manual
+                      maintenance scripts, not in build/CI pipeline; re-run when
+                      FEMA or Census publishes a new vintage)
 /api
   assist.js         — Vercel Function → Anthropic API proxy
   providers.js      — Vercel Function → Google Places + Claude synthesis
@@ -89,4 +91,5 @@ Read this when touching state, data, or non-trivial component wiring.
 - Life event defs are self-describing: `phases` drives sort order in `useLifeEvents`, `intake.steps` drives `GenericEventIntake`, `tasksForIntake(answers)` generates the bundle, `suppressCelebration` kills confetti event-wide. Registering a def in `src/data/lifeEvents/index.js` + an icon in `LIFE_EVENT_ICON_CONFIG` is all a new event needs (plus a bespoke intake component only if its branching outgrows the generic step types).
 - Intake `booleans` step fields support `allowUnsure: true`, rendering a third "Not sure yet" chip that stores the string `'unsure'` as the answer. Gating functions in defs that use it must check `=== true`, not truthiness — `'unsure'` is a non-empty string and would otherwise pass a `!answers?.x` gate. `useLifeEvents.resolveEventAnswer(eventId, key, value)` lets the user come back later (surfaced in ProfileView's Life events card) and settle an unresolved decision; it patches `life_events.intake_answers` and adds any newly-unlocked tasks via `def.tasksForIntake`, filtered against existing `customTasks` by `eventBundleKey` so nothing is created twice.
 - `detectHazards(zip)` in `hazards.js` looks up `/data/zip-to-fips.json` → `/data/nri-county-risk.json` (both fetched same-origin, memoized in a module-level promise so repeat calls from `App.js` and `useSession.js` don't refetch). FEMA's current NRI schema uses `IFLD` (Inland Flooding) not the older `RFLD` code, and rating strings are `"Relatively Low/Moderate/High"` + `"Very Low/High"` — not `"Medium"`/`"High"`.
+- `resolveLocation(zip)` in `geo.js` maps a zip to `{ county, state, stateCode }` via `/data/zip-to-fips.json` → `/data/fips-to-county.json`, with the state derived from the first two digits of the county FIPS against a `STATE_FIPS` table (50 states + DC + territories). It never throws and returns `null` on a bad zip, an unknown zip, or a fetch failure — callers must treat `null` as "no location" rather than an error. It fetches `zip-to-fips.json` independently of `hazards.js`; the duplicate request is served from the browser HTTP cache, which is deliberate to keep the two modules uncoupled. Unlike `hazards.js`, it clears its memoized promise if the fetch rejects, so a transient network failure doesn't disable location resolution for the rest of the session.
 - `task.guidance` strings are written as a single line with inline numbered steps (`"1. Do X. 2. Do Y."`), not one step per line. `parseGuidanceBlocks` in `renderMarkdown.jsx` normalizes this by inserting a newline before each `N. ` marker (lookbehind on sentence-ending punctuation) before splitting — write new guidance strings in the same inline format, the parser expects it.

@@ -51,8 +51,25 @@ async function mockLifeEventEndpoints(page) {
   });
 }
 
-test('user starts a divorce life event through the generic intake', async ({ page }) => {
+// Marker text the stubbed /api/assist returns, so the assertion can't pass on
+// anything the app renders on its own.
+const ASSIST_MARKER = 'Travis County District Clerk';
+
+async function mockAssistEndpoint(page) {
+  await page.route('**/api/assist', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        text: `**Where you file:** Petitions go to the ${ASSIST_MARKER}.`,
+      }),
+    }),
+  );
+}
+
+test('user starts a divorce life event and opens assist on a jurisdiction task', async ({ page }) => {
   await mockLifeEventEndpoints(page);
+  await mockAssistEndpoint(page);
   await seedReturnUser(page);
   await page.goto('/');
 
@@ -88,4 +105,15 @@ test('user starts a divorce life event through the generic intake', async ({ pag
   // All tab — event group at the top
   await page.getByText('All', { exact: true }).click();
   await expect(page.getByText('Divorce or separation').first()).toBeVisible({ timeout: 5000 });
+
+  // Open the divorce-petition task. It carries assistType 'jurisdiction', so this
+  // also guards the AssistPanel render gate: if 'jurisdiction' is ever dropped from
+  // that gate, the request still succeeds but the panel renders empty.
+  await page.getByText('File or respond to the divorce petition').first().click();
+
+  const assistBtn = page.getByRole('button', { name: /Want Mitzy to help/ });
+  await expect(assistBtn).toBeVisible({ timeout: 5000 });
+  await assistBtn.click();
+
+  await expect(page.getByText(new RegExp(ASSIST_MARKER))).toBeVisible({ timeout: 15000 });
 });
