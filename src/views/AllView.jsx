@@ -264,14 +264,27 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
       ? activeTasks
       : activeTasks.filter(t => t.cat === activeCategory);
 
-  // Separate unknown (no lastDone) from known; hide completed one-time tasks
-  const knownFiltered   = filtered.filter(t => getStatus(t) !== 'unknown' && !(t.oneTime && getStatus(t) === 'ok'));
-  const unknownFiltered = filtered.filter(t => getStatus(t) === 'unknown');
+  // A one-time task (life event bundle tasks especially) can carry a computed
+  // due date that's further out than its lead window. taskStatus reports that
+  // as "unknown" so HomeView excludes it from focus scoring — but here in
+  // AllView the date is known, so it belongs in "All good" with a real date,
+  // not the Explore pile which is for tasks we have no date for at all.
+  const hasKnownDueDate = (t) => {
+    if (!t.oneTime) return false;
+    const entry = taskState[t.id];
+    return !entry?.lastDone && !!(entry?.dueDate ?? t.dueDate);
+  };
+  const isExplorable = (t) => getStatus(t) === 'unknown' && !hasKnownDueDate(t);
+  const effectiveStatus = (t) => (getStatus(t) === 'unknown' && hasKnownDueDate(t)) ? 'ok' : getStatus(t);
+
+  // Separate unknown (no lastDone, no due date) from known; hide completed one-time tasks
+  const knownFiltered   = filtered.filter(t => !isExplorable(t) && !(t.oneTime && getStatus(t) === 'ok'));
+  const unknownFiltered = filtered.filter(t => isExplorable(t));
 
   // Sort known tasks by score (due first), treating out-of-season as "ok"
   const sortScore = (t) => {
     if (!isWindowActive(t, region)) return 1;
-    const s = getStatus(t);
+    const s = effectiveStatus(t);
     if (s === 'due' || s === 'confirm') return 3;
     if (s === 'coming-up' || s === 'scheduled') return 2;
     return 1;
@@ -288,9 +301,9 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
   });
 
   // Three groups — out-of-season tasks always land in allGood
-  const needsAttention = sorted.filter(t => isWindowActive(t, region) && ['due', 'needed', 'confirm'].includes(getStatus(t)));
-  const comingUp       = sorted.filter(t => isWindowActive(t, region) && ['coming-up', 'scheduled'].includes(getStatus(t)));
-  const allGood        = sorted.filter(t => !isWindowActive(t, region) || getStatus(t) === 'ok');
+  const needsAttention = sorted.filter(t => isWindowActive(t, region) && ['due', 'needed', 'confirm'].includes(effectiveStatus(t)));
+  const comingUp       = sorted.filter(t => isWindowActive(t, region) && ['coming-up', 'scheduled'].includes(effectiveStatus(t)));
+  const allGood        = sorted.filter(t => !isWindowActive(t, region) || effectiveStatus(t) === 'ok');
 
   const seasonSubtitle = (t) => {
     if (isWindowActive(t, region)) return undefined;
@@ -366,7 +379,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
                 <SwipeableTaskCard
                   key={task.id}
                   task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate, lastDone: taskState[task.id]?.lastDone }}
-                  status={getStatus(task)}
+                  status={effectiveStatus(task)}
                   days={getDays(task)}
                   hasSavedProvider={!!providerHistory[task.id]}
                   onSelect={onSelectTask}
@@ -394,7 +407,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
                 <SwipeableTaskCard
                   key={task.id}
                   task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate, lastDone: taskState[task.id]?.lastDone }}
-                  status={getStatus(task)}
+                  status={effectiveStatus(task)}
                   days={getDays(task)}
                   hasSavedProvider={!!providerHistory[task.id]}
                   onSelect={onSelectTask}
@@ -421,7 +434,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
                 <SwipeableTaskCard
                   key={task.id}
                   task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate, lastDone: taskState[task.id]?.lastDone }}
-                  status={getStatus(task)}
+                  status={effectiveStatus(task)}
                   days={getDays(task)}
                   hasSavedProvider={!!providerHistory[task.id]}
                   onSelect={onSelectTask}

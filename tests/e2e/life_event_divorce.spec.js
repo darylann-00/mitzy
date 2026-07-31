@@ -117,6 +117,11 @@ test('user starts a divorce life event self-represented and opens assist on a ju
   await expect(page.getByText('Serve the papers and file proof of service').first()).toBeVisible();
   await expect(page.getByText('Consult a family law attorney')).toHaveCount(0);
 
+  // Later-phase tasks (final hearing, decree, etc.) have a computed due date
+  // further out than their lead window — they're known tasks, not ones
+  // needing the "have you done this?" Explore treatment.
+  await expect(page.getByText(/tasks to explore/)).toHaveCount(0);
+
   // Open the divorce-petition task. It carries assistType 'jurisdiction', so this
   // also guards the AssistPanel render gate: if 'jurisdiction' is ever dropped from
   // that gate, the request still succeeds but the panel renders empty.
