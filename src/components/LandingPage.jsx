@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { CalendarIcon, LightningIcon, HeartIcon, MovingBoxIcon } from "./CategoryIcons";
 import "../styles/landing.css";
 
 const C = {
@@ -16,6 +17,21 @@ const C = {
   card: '#FFFFFF',
   cardBorder: '#EAE4DA',
 };
+
+// A sample of the real task library, dot-colored by category. Showing actual
+// task names lands faster than any sentence describing the library.
+const TRACKED = [
+  ['HVAC filter', C.orange],
+  ['Car registration', C.red],
+  ['Kids’ checkup', C.green],
+  ['Smoke detector batteries', C.red],
+  ['Pet vaccines', C.green],
+  ['Tax deadline', C.yellow],
+  ['Oil change', C.orange],
+  ['Gutter cleaning', C.orange],
+  ['Dentist', C.green],
+  ['Passport renewal', C.yellow],
+];
 
 function Logo({ size = 'default' }) {
   const dotSize = size === 'small' ? 9 : 12;
@@ -169,44 +185,98 @@ export function LandingPage({ onGetStarted, onSignIn }) {
         {/* Hero */}
         <div className="lp-hero">
           <div className="lp-hero-copy">
+            {/* Names the category above the fold — the first thing a new visitor
+                (or a Google branding reviewer) needs to know. */}
+            <span className="lp-eyebrow">Household task manager</span>
             <h1 className="lp-h1">
               Stop carrying your household{' '}
               <span style={{ color: C.brand }}>in your head</span>
             </h1>
             <p className="lp-hero-sub">
-              Mitzy knows what needs doing — filters, checkups, renewals, deadlines — and nudges you before things slip.
+              Mitzy already knows what your home, car, kids, and pets need — and tells
+              you what's due before anything slips.
             </p>
-            <button
-              onClick={onGetStarted}
-              onMouseEnter={() => setHoveredCta(true)}
-              onMouseLeave={() => setHoveredCta(false)}
-              style={ctaStyle}
-            >
-              Start my free trial
-            </button>
-            <span style={{ display: 'block', fontSize: 13, color: C.muted, marginTop: 12 }}>
-              No credit card required
-            </span>
+            {/* Grouped so the helper line centres under the button rather than
+                sitting flush with its left edge on the desktop layout. */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <button
+                onClick={onGetStarted}
+                onMouseEnter={() => setHoveredCta(true)}
+                onMouseLeave={() => setHoveredCta(false)}
+                style={ctaStyle}
+              >
+                Start my free trial
+              </button>
+              <span style={{ fontSize: 13, color: C.muted, marginTop: 12 }}>
+                No credit card required
+              </span>
+            </div>
           </div>
 
           {/* Phone mockup */}
           <PhoneMockup />
         </div>
 
-        {/* Benefits */}
-        <div className="lp-benefits" style={{ background: C.brandTint, borderRadius: 20, padding: '40px 28px', margin: '56px 0' }}>
-          <h2 style={{
-            fontFamily: "'Righteous', cursive", fontSize: 22, textAlign: 'center',
-            color: C.ink, margin: '0 0 32px', fontWeight: 400,
-          }}>
-            Why Mitzy
-          </h2>
-          <div className="lp-benefits-grid">
-            <Benefit icon="🧠" title="Already knows" desc="60+ tasks built in, personalized to your home, cars, kids, and pets." />
-            <Benefit icon="📋" title="Plans your week" desc="Optional weekly check-in. Brain dump what's on your mind and go." />
-            <Benefit icon="💚" title="No guilt trips" desc="Snooze anything. Mitzy doesn't shame you — she gets it." />
+        {/* Shows the task library instead of describing it — reads in two
+            seconds and proves the product better than a paragraph. */}
+        <div style={{ margin: '64px 0' }}>
+          <h2 className="lp-h2">The stuff you're supposed to remember</h2>
+          <p className="lp-sub">
+            Mitzy is a household task manager. It knows hundreds of tasks, and helps
+            you with the ones that matter to you.
+          </p>
+          <div className="lp-chips">
+            {TRACKED.map(([label, color]) => (
+              <span key={label} className="lp-chip">
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                {label}
+              </span>
+            ))}
+            <span className="lp-chip lp-chip-more">+ 190 more</span>
           </div>
         </div>
+
+        {/* How it works */}
+        <div className="lp-steps-wrap" style={{ background: C.brandTint, borderRadius: 20, padding: '44px 28px', margin: '64px 0' }}>
+          <h2 className="lp-h2">How it works</h2>
+          <div className="lp-steps">
+            <Step n="1" title="Answer a few questions" desc="Your home, cars, kids, pets, zip. Three minutes, once." />
+            <Step n="2" title="Get a custom list specific to you" desc="Sorted so the top of it is what actually matters today." />
+            <Step n="3" title="Mitzy helps you close it" desc="The local rules, the deadline, who to call, what to say." />
+          </div>
+        </div>
+
+        {/* Benefits */}
+        <div style={{ margin: '64px 0' }}>
+          <h2 className="lp-h2">Why people stick with it</h2>
+          <div className="lp-benefits-grid">
+            <Benefit
+              icon={<CalendarIcon size={20} />}
+              tint="#FFF3E0"
+              title="Works with your calendar"
+              desc="Already booked the vet? Mitzy spots it and stops asking. Need to book one? It puts the appointment on your calendar."
+            />
+            <Benefit
+              icon={<LightningIcon size={20} />}
+              tint="#FFFBEE"
+              title="Plans your week"
+              desc="Brain dump what's on your mind. Mitzy turns it into a doable week."
+            />
+            <Benefit
+              icon={<HeartIcon size={20} />}
+              tint={C.brandLight}
+              title="Never guilt-trips you"
+              desc="Snooze anything to a date that actually works. Mitzy waits quietly instead of nagging."
+            />
+            <Benefit
+              icon={<MovingBoxIcon size={20} color={C.brand} bg={C.brandTint} />}
+              tint={C.brandTint}
+              title="Handles the big stuff"
+              desc="Moving, a new baby, a marriage, a name change. Mitzy knows the paperwork."
+            />
+          </div>
+        </div>
+
 
         <Divider />
 
@@ -292,10 +362,33 @@ export function LandingPage({ onGetStarted, onSignIn }) {
   );
 }
 
-function Benefit({ icon, title, desc }) {
+function Step({ n, title, desc }) {
   return (
-    <div>
-      <div style={{ fontSize: 28, marginBottom: 12 }}>{icon}</div>
+    <div style={{ textAlign: 'center' }}>
+      <span style={{
+        fontFamily: "'Righteous', cursive", fontSize: 28, color: C.brand,
+        opacity: 0.45, display: 'block', lineHeight: 1, marginBottom: 10,
+      }}>
+        {n}
+      </span>
+      <h3 style={{ fontFamily: "'Righteous', cursive", fontSize: 16, color: C.ink, margin: '0 0 6px', fontWeight: 400 }}>{title}</h3>
+      <p style={{ fontSize: 13, lineHeight: 1.6, color: C.muted, margin: 0 }}>{desc}</p>
+    </div>
+  );
+}
+
+function Benefit({ icon, tint, title, desc }) {
+  return (
+    <div style={{
+      background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 14,
+      padding: '20px 20px 22px',
+    }}>
+      <div style={{
+        width: 38, height: 38, borderRadius: 11, background: tint,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12,
+      }}>
+        {icon}
+      </div>
       <h3 style={{ fontFamily: "'Righteous', cursive", fontSize: 15, color: C.ink, margin: '0 0 6px', fontWeight: 400 }}>{title}</h3>
       <p style={{ fontSize: 13, lineHeight: 1.6, color: C.muted, margin: 0 }}>{desc}</p>
     </div>

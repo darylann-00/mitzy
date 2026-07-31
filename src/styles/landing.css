@@ -21,6 +21,19 @@
   align-items: center;
 }
 
+.lp-eyebrow {
+  display: inline-block;
+  background: #E8F0EC;
+  color: #1A5C3A;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border-radius: 50px;
+  margin-bottom: 20px;
+}
+
 .lp-h1 {
   font-family: 'Righteous', cursive;
   font-size: 34px;
@@ -38,11 +51,69 @@
   max-width: 400px;
 }
 
+/* Shared section heading + subhead */
+.lp-h2 {
+  font-family: 'Righteous', cursive;
+  font-size: 24px;
+  line-height: 1.25;
+  color: #1C2B22;
+  text-align: center;
+  font-weight: 400;
+  margin: 0 0 10px;
+}
+
+.lp-sub {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #4A6256;
+  text-align: center;
+  max-width: 420px;
+  margin: 0 auto 28px;
+}
+
+.lp-steps-wrap .lp-h2 {
+  margin-bottom: 32px;
+}
+
+/* Task chips */
+.lp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+.lp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #FFFFFF;
+  border: 1px solid #EAE4DA;
+  border-radius: 50px;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: #1C2B22;
+  white-space: nowrap;
+}
+
+.lp-chip-more {
+  background: transparent;
+  border-style: dashed;
+  color: #4A6256;
+}
+
+.lp-steps {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 28px;
+}
+
 .lp-benefits-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  text-align: center;
+  grid-template-columns: 1fr;
+  gap: 12px;
 }
 
 .lp-pricing-grid {
@@ -88,14 +159,31 @@
     margin: 0 !important;
   }
 
-  .lp-benefits {
+  .lp-h2 {
+    font-size: 30px;
+  }
+
+  .lp-sub {
+    font-size: 16px;
+    max-width: 520px;
+  }
+
+  .lp-steps-wrap {
     padding: 56px 64px !important;
   }
 
-  .lp-benefits-grid {
-    max-width: 900px;
-    margin: 0 auto;
+  .lp-steps {
+    grid-template-columns: repeat(3, 1fr);
     gap: 40px;
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  .lp-benefits-grid {
+    grid-template-columns: 1fr 1fr;
+    max-width: 780px;
+    margin: 0 auto;
+    gap: 16px;
   }
 
   .lp-pricing-grid {
