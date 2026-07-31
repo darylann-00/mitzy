@@ -174,7 +174,9 @@ export function LandingPage({ onGetStarted, onSignIn }) {
               <span style={{ color: C.brand }}>in your head</span>
             </h1>
             <p className="lp-hero-sub">
-              Mitzy knows what needs doing — filters, checkups, renewals, deadlines — and nudges you before things slip.
+              <strong style={{ color: C.ink, fontWeight: 600 }}>Mitzy is a household task manager.</strong>{' '}
+              It keeps track of the recurring things a home needs — HVAC filters, car registration,
+              kids' checkups, pet vaccines, tax deadlines — and tells you what's due before it slips.
             </p>
             <button
               onClick={onGetStarted}
@@ -191,6 +193,83 @@ export function LandingPage({ onGetStarted, onSignIn }) {
 
           {/* Phone mockup */}
           <PhoneMockup />
+        </div>
+
+        {/* What the app actually does — plain language, no metaphors. */}
+        <div style={{ margin: '56px 0' }}>
+          <h2 style={{
+            fontFamily: "'Righteous', cursive", fontSize: 22, textAlign: 'center',
+            color: C.ink, margin: '0 0 8px', fontWeight: 400,
+          }}>
+            What Mitzy does
+          </h2>
+          <p style={{ fontSize: 15, color: C.muted, textAlign: 'center', margin: '0 auto 32px', maxWidth: 480, lineHeight: 1.6 }}>
+            Mitzy is a personal to-do list for running a household. You don't build the list —
+            Mitzy already knows what a home like yours needs and surfaces each task at the right time.
+          </p>
+          <div className="lp-does-grid">
+            <DoesCard
+              n="1"
+              title="Builds your task list for you"
+              desc="Answer a few questions about your home, cars, kids, and pets. Mitzy pulls from a library of 60+ household tasks and keeps only the ones that apply to you."
+            />
+            <DoesCard
+              n="2"
+              title="Tells you what's due now"
+              desc="Every task has its own schedule — every 3 months, once a year, once ever. Mitzy sorts them by what matters most today so you're not staring at a wall of 60 things."
+            />
+            <DoesCard
+              n="3"
+              title="Plans your week with you"
+              desc="An optional weekly check-in. Type out whatever's on your mind, and Mitzy turns it into a short, realistic plan for the week — sized to how much you can actually take on."
+            />
+            <DoesCard
+              n="4"
+              title="Matches tasks to your calendar"
+              desc="Connect Google Calendar and Mitzy spots appointments you've already booked — a vet visit, a dentist appointment — and marks those tasks as scheduled instead of reminding you again."
+            />
+            <DoesCard
+              n="5"
+              title="Helps you finish, not just track"
+              desc="Open any task for why it matters and how to do it. Ask Mitzy for the local rules, the deadline, what to say on the phone, or nearby providers who can do it for you."
+            />
+            <DoesCard
+              n="6"
+              title="Handles the big stuff too"
+              desc="Moving, a new baby, a marriage, a divorce, a death in the family — pick the life event and Mitzy lays out the paperwork and deadlines in the order they need doing."
+            />
+          </div>
+        </div>
+
+        {/* Google account + calendar — what data is used and why. */}
+        <div style={{
+          background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 20,
+          padding: '32px 28px', margin: '56px 0',
+        }}>
+          <h2 style={{
+            fontFamily: "'Righteous', cursive", fontSize: 20, color: C.ink,
+            margin: '0 0 16px', fontWeight: 400,
+          }}>
+            Mitzy and your Google account
+          </h2>
+          <p style={{ fontSize: 14, lineHeight: 1.7, color: C.muted, margin: '0 0 12px' }}>
+            You can sign in to Mitzy with your Google account. Mitzy uses your name and email
+            address to create and load your account — nothing else.
+          </p>
+          <p style={{ fontSize: 14, lineHeight: 1.7, color: C.muted, margin: '0 0 12px' }}>
+            You can also connect Google Calendar. Mitzy reads your upcoming events and compares
+            them against your task list, so an appointment you've already booked shows up as
+            scheduled instead of as something still hanging over you.
+          </p>
+          <p style={{ fontSize: 14, lineHeight: 1.7, color: C.muted, margin: '0 0 12px' }}>
+            <strong style={{ color: C.ink, fontWeight: 600 }}>Mitzy only reads your calendar.</strong>{' '}
+            It never creates, edits, or deletes events, and it never sells or shares your data.
+            Calendar access is optional — everything else in Mitzy works without it.
+          </p>
+          <p style={{ fontSize: 14, lineHeight: 1.7, color: C.muted, margin: 0 }}>
+            Full details in the{' '}
+            <a href="/privacy.html" style={{ color: C.brand, fontWeight: 500 }}>Privacy Policy</a>.
+          </p>
         </div>
 
         {/* Benefits */}
@@ -287,6 +366,27 @@ export function LandingPage({ onGetStarted, onSignIn }) {
             <a href="/terms.html" style={{ color: C.muted, textDecoration: 'none' }}>Terms</a>
           </p>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function DoesCard({ n, title, desc }) {
+  return (
+    <div style={{
+      background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 14,
+      padding: '20px 18px', display: 'flex', gap: 14, alignItems: 'flex-start',
+    }}>
+      <span style={{
+        flexShrink: 0, width: 26, height: 26, borderRadius: '50%', background: C.brandTint,
+        color: C.brand, fontFamily: "'Righteous', cursive", fontSize: 13,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        {n}
+      </span>
+      <div>
+        <h3 style={{ fontFamily: "'Righteous', cursive", fontSize: 15, color: C.ink, margin: '2px 0 6px', fontWeight: 400 }}>{title}</h3>
+        <p style={{ fontSize: 13, lineHeight: 1.65, color: C.muted, margin: 0 }}>{desc}</p>
       </div>
     </div>
   );

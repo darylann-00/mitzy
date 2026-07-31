@@ -38,6 +38,12 @@
   max-width: 400px;
 }
 
+.lp-does-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
 .lp-benefits-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -86,6 +92,13 @@
   .lp-phone {
     max-width: 320px !important;
     margin: 0 !important;
+  }
+
+  .lp-does-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    max-width: 900px;
+    margin: 0 auto;
   }
 
   .lp-benefits {

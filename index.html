@@ -20,24 +20,49 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Righteous&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+      /* The #boot-fallback block below is a plain-HTML summary of the app for
+         crawlers and no-JS visitors. React clears #root when it mounts, but the
+         block is painted before the bundle loads, so it flashed on every visit.
+         Hide it the moment we know scripts run; the timer below puts it back if
+         the app never actually mounted. */
+      html.js-boot #boot-fallback { display: none; }
+    </style>
+    <script>
+      document.documentElement.classList.add('js-boot');
+      setTimeout(function () {
+        // Still present means React never rendered — show the fallback for real.
+        if (document.getElementById('boot-fallback')) {
+          document.documentElement.classList.remove('js-boot');
+        }
+      }, 4000);
+    </script>
   </head>
   <body>
     <div id="root">
-      <main style="max-width: 640px; margin: 0 auto; padding: 48px 24px; font-family: 'DM Sans', system-ui, sans-serif; color: #1C2B22;">
+      <main id="boot-fallback" style="max-width: 640px; margin: 0 auto; padding: 48px 24px; font-family: 'DM Sans', system-ui, sans-serif; color: #1C2B22;">
         <h1 style="font-family: 'Righteous', cursive; color: #1A5C3A; font-size: 28px; margin: 0 0 16px;">mitzy</h1>
         <h2 style="font-size: 20px; margin: 0 0 12px; font-weight: 600;">Stop carrying your household in your head</h2>
         <p style="line-height: 1.6; color: #4A6256;">
-          Mitzy is a household management app. It keeps track of recurring tasks — HVAC filter
-          replacements, car registration renewals, kids' health checkups, pet vaccines, tax
-          deadlines, and more — and reminds you before they're due. You don't build the list
+          Mitzy is a household task manager. It keeps track of the recurring things a home needs —
+          HVAC filter replacements, car registration renewals, kids' health checkups, pet vaccines,
+          tax deadlines — and tells you what's due before it slips. You don't build the list
           yourself; Mitzy already knows what a household like yours typically needs and surfaces
-          it at the right time.
+          each task at the right time.
         </p>
         <p style="line-height: 1.6; color: #4A6256;">
-          Mitzy asks for account (email, name) and household details (home, cars, kids, pets, zip
-          code) so it can personalize which tasks apply to you. If you connect Google Calendar,
-          Mitzy reads upcoming events to match them against your task list — it never creates,
-          edits, or deletes calendar events.
+          Mitzy builds your list from a library of 60+ household tasks, sorts them by what matters
+          most today, plans your week with you, guides you through big life events (moving, a new
+          baby, a marriage, a divorce, a death in the family), and helps you actually finish a task
+          — local rules, deadlines, what to say on the phone, and nearby providers.
+        </p>
+        <p style="line-height: 1.6; color: #4A6256;">
+          Mitzy asks for account details (email, name) and household details (home, cars, kids,
+          pets, zip code) so it can personalize which tasks apply to you. If you sign in with
+          Google, Mitzy uses your name and email address to create and load your account. If you
+          connect Google Calendar, Mitzy reads your upcoming events to match them against your task
+          list, so appointments you've already booked show as scheduled — it never creates, edits,
+          or deletes calendar events, and calendar access is optional.
         </p>
         <p style="line-height: 1.6;">
           <a href="/privacy.html" style="color: #1A5C3A;">Privacy Policy</a>
