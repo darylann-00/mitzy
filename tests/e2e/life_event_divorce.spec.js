@@ -105,17 +105,27 @@ test('user starts a divorce life event self-represented and opens assist on a ju
 
   // Sheet closes; Profile shows the active event with progress
   await expect(page.getByText(/of \d+ done/)).toBeVisible({ timeout: 5000 });
-  await expect(page.getByText('Find your event tasks at the top of the All tab.')).toBeVisible();
+  await expect(page.getByText('Find your event tasks under the "Divorce or separation" filter on the All tab.')).toBeVisible();
 
-  // All tab — event group at the top
+  // All tab — event tasks show under the default "All" filter, same as every
+  // other task, and also behind their own "Divorce or separation" category chip.
   await page.getByText('All', { exact: true }).click();
-  await expect(page.getByText('Divorce or separation').first()).toBeVisible({ timeout: 5000 });
 
   // The self-filing path is present and the attorney consult is not.
   await expect(page.getByText("Find your court's divorce forms and self-help resources").first())
     .toBeVisible({ timeout: 5000 });
   await expect(page.getByText('Serve the papers and file proof of service').first()).toBeVisible();
   await expect(page.getByText('Consult a family law attorney')).toHaveCount(0);
+
+  // Later-phase tasks (final hearing, decree, etc.) have a computed due date
+  // further out than their lead window — they're known tasks, not ones
+  // needing the "have you done this?" Explore treatment.
+  await expect(page.getByText(/tasks to explore/)).toHaveCount(0);
+
+  // The "Divorce or separation" chip narrows the list down to just event tasks.
+  await page.getByRole('button', { name: 'Divorce or separation' }).click();
+  await expect(page.getByText("Find your court's divorce forms and self-help resources").first())
+    .toBeVisible({ timeout: 5000 });
 
   // Open the divorce-petition task. It carries assistType 'jurisdiction', so this
   // also guards the AssistPanel render gate: if 'jurisdiction' is ever dropped from
