@@ -363,7 +363,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
 
   const seasonSubtitle = (t) => {
     if (isWindowActive(t, region)) return undefined;
-    return t.seasonalLabel ? `Coming up in ${t.seasonalLabel}` : 'Out of season';
+    return t.seasonalLabel ? `coming up in ${t.seasonalLabel}` : 'out of season';
   };
 
   // Due-only mode collapses to just needsAttention

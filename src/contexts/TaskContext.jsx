@@ -129,7 +129,7 @@ export function TaskProvider({ user, children }) {
       if (dueDate) return Math.ceil((new Date(dueDate) - Date.now()) / 86400000);
       return null;
     }
-    if (!entry?.lastDone) return 0;
+    if (!entry?.lastDone) return null;
     const intervalDays = entry?.intervalDays ?? t.intervalDays;
     return intervalDays - Math.floor((Date.now() - new Date(entry.lastDone)) / 86400000);
   }, [taskState]);

@@ -132,7 +132,7 @@ Four-dot 2×2 grid (red/orange/green/yellow) + "mitzy" in Righteous. App icon: f
 | Don't say | Say instead |
 |-----------|-------------|
 | Urgent | (omit) |
-| Overdue | due X days ago |
+| Overdue | due yesterday / due Monday / due last Monday |
 | Skip | maybe later |
 | Help me | Let's do it |
 | You / You view | Profile |

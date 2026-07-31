@@ -66,8 +66,8 @@ Read this when touching state, data, or non-trivial component wiring.
 ## Key Implementation Notes
 
 - `task.label` is the display name field (not `task.name`).
-- `getDays(task)` returns positive = days until due, negative = days overdue. Returns `0` for unknown tasks.
-- `formatDueDate(days)` in TaskCard.jsx: `days < -14` → "Hasn't been done in a while"; `-14 ≤ days < 0` → "due X days ago". `subtitle` prop overrides this if provided.
+- `getDays(task)` returns positive = days until due, negative = days overdue. Returns `null` for recurring tasks with no `lastDone` (including ones marked `needed` via the "Never / not sure" chip) — there's no known due date to compute, so the UI shows no date text rather than a false one.
+- `formatDueDate(days)` in TaskCard.jsx: `days < -14` → "hasn't been done in a while"; `-14 ≤ days < 0` → calendar-relative phrasing ("due yesterday" / "due {weekday}" for 2–6 days ago / "due last {weekday}" for 7–14 days ago). `subtitle` prop overrides this if provided.
 - `markDone` and `markNeeded` are passed to `AllView` so the explore section can write state without going through `MarkDoneModal`. One-time tasks in the explore section show "Have you done this?" instead of time chips.
 - `TaskAnswerChips` (`src/components/TaskAnswerChips.jsx`) is a shared component used by TrickleCard, PrioritySetup, and AllView's ExploreSection. Handles recurring vs one-time branching, chip constants, and date conversion internally.
 - `handleMarkDone` in App.js calls `markDone`, fires `setCelebration(true)`, immediately calls `setMarkDoneModal(null)` — modal closes on done, confetti fires separately.
