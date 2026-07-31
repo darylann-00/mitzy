@@ -16,7 +16,11 @@ const SEARCH_ASSIST_TYPES = new Set(['jurisdiction', 'deadline']);
 const SEARCH_MODEL  = "claude-sonnet-5";
 const DEFAULT_MODEL = "claude-haiku-4-5-20251001";
 
-const MAX_SEARCHES      = 5;  // caps per-request search spend
+// Search count and effort are the two latency levers. A tap on "Want Mitzy to
+// help?" shouldn't sit on a loader for a minute, and vercel.json caps this
+// route at 60s — past that the platform kills the function and the fallback
+// below never gets to run.
+const MAX_SEARCHES      = 3;  // caps per-request search spend and latency
 const MAX_CONTINUATIONS = 3;  // pause_turn resumes before giving up
 const MAX_PROMPT_CHARS  = 8000;
 
@@ -76,7 +80,10 @@ async function runWithSearch(apiKey, prompt) {
       // to reach for tools with thinking off — which would defeat the point
       // here. Left on deliberately; `effort` is what bounds the spend.
       thinking: { type: "adaptive" },
-      output_config: { effort: "medium" },
+      // Low, not medium: this is a scoped "find the county page and summarise
+      // it" task, not one that needs deep reasoning, and effort is the main
+      // lever on how long the user waits.
+      output_config: { effort: "low" },
       tools: [{ type: "web_search_20260209", name: "web_search", max_uses: MAX_SEARCHES }],
       messages,
     });
