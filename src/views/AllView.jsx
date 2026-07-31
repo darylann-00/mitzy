@@ -182,82 +182,6 @@ function ExploreSection({ tasks, markDone, markNeeded, markNotApplicable }) {
   );
 }
 
-// ─── Life event group ──────────────────────────────────────────────────────────
-function LifeEventGroup({ event, tasks, taskState, getStatus, getDays, providerHistory, pendingCalendarMatches, onSelectTask, onDoneTask, onMatchConfirm, onMatchDismiss, onAddTask }) {
-  const [open, setOpen] = useState(true);
-  const def = LIFE_EVENT_DEFS[event.type];
-  if (!def || tasks.length === 0) return null;
-  const doneCount = tasks.filter(t => taskState[t.id]?.lastDone).length;
-  const EventIcon = LIFE_EVENT_ICON_CONFIG[def.id];
-
-  return (
-    <div style={{ marginTop: 16, marginBottom: 4 }}>
-      <div
-        onClick={() => setOpen(o => !o)}
-        style={{
-          display:'flex', alignItems:'center', gap:10,
-          padding:'12px 14px', marginBottom: 10,
-          background:'#FFFBEE', border:'1.5px solid #F4C430', borderRadius:12,
-          cursor:'pointer',
-        }}
-      >
-        {EventIcon && <EventIcon size={22} />}
-        <div style={{ flex:1 }}>
-          <div style={{ fontSize:13, fontWeight:700, color:'#1C2B22', fontFamily:'DM Sans, sans-serif' }}>
-            {def.label}
-          </div>
-          <div style={{ fontSize:11, color:'#8A6A00', fontFamily:'DM Sans, sans-serif', marginTop: 2 }}>
-            {doneCount} of {tasks.length} done
-          </div>
-        </div>
-        {onAddTask && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onAddTask(); }}
-            aria-label="Add task to event"
-            style={{
-              width: 28, height: 28, borderRadius: 8,
-              background: '#F4C430', border: 'none', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <line x1="7" y1="2" x2="7" y2="12" stroke="#1C2B22" strokeWidth="2" strokeLinecap="round" />
-              <line x1="2" y1="7" x2="12" y2="7" stroke="#1C2B22" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-          </button>
-        )}
-        <svg
-          width="14" height="14" viewBox="0 0 14 14" fill="none"
-          style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition:'transform 0.15s', flexShrink:0 }}
-        >
-          <polyline points="2,4 7,10 12,4" stroke="#8A6A00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </div>
-
-      {open && tasks.map(task => {
-        const match = pendingCalendarMatches.find(m => m.taskId === task.id);
-        return (
-          <TaskCard
-            key={task.id}
-            task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate, lastDone: taskState[task.id]?.lastDone }}
-            status={getStatus(task)}
-            days={getDays(task)}
-            hasSavedProvider={!!providerHistory[task.id]}
-            onSelect={onSelectTask}
-            onDone={onDoneTask}
-            showCategoryIcon
-            pendingMatch={match}
-            onMatchConfirm={match ? () => onMatchConfirm(task.id, match.eventDate) : undefined}
-            onMatchDismiss={match ? () => onMatchDismiss(task.id) : undefined}
-            stepProgress={taskState[task.id]?.stepProgress}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
 // ─── Snoozed section ──────────────────────────────────────────────────────
 function SnoozedSection({ tasks, taskState, onSelectTask, onUnsnooze }) {
   const [open, setOpen] = useState(false);
@@ -310,14 +234,15 @@ function SnoozedSection({ tasks, taskState, onSelectTask, onUnsnooze }) {
 }
 
 // ─── AllView ───────────────────────────────────────────────────────────────────
-export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCategory, dueOnly, setDueOnly, onMatchConfirm, onMatchDismiss, onSnooze, onAddEventTask }) {
+export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCategory, dueOnly, setDueOnly, onMatchConfirm, onMatchDismiss, onSnooze }) {
   const { providerHistory, region, lifeEvents } = useProfileContext();
   const { activeTasks: allActiveTasks, getStatus, getDays, markDone, markNeeded, markNotApplicable, taskState, snoozedTasks, unsnoozeTask } = useTaskContext();
   const { pendingCalendarMatches } = useCalendarContext();
 
-  // Separate life-event tasks from the rest — they render in their own group at
-  // the top, not interleaved with HVAC filters and pet vaccines.
+  // Separate life-event tasks from the rest — they get their own filter chip
+  // ("Life event", like Home/Pet/etc.) instead of a special always-on-top group.
   const activeEvent = lifeEvents?.activeEvent;
+  const eventDef = activeEvent ? LIFE_EVENT_DEFS[activeEvent.type] : null;
   const eventTaskIds = new Set((lifeEvents?.activeEventTasks ?? []).map(t => t.id));
   const activeTasks = allActiveTasks.filter(t => !eventTaskIds.has(t.id));
   const eventTasks = activeEvent
@@ -327,20 +252,41 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
   // Which categories are actually present in tasks
   const presentCats = new Set(activeTasks.map(t => t.cat));
   const visibleCats = ALL_CATS.filter(c => c.key === 'all' || presentCats.has(c.key));
+  if (activeEvent && eventDef && eventTasks.length > 0) {
+    const EventIcon = LIFE_EVENT_ICON_CONFIG[eventDef.id];
+    visibleCats.splice(1, 0, { key: 'lifeEvent', label: eventDef.label, Icon: EventIcon, color:'#B08A10', bg:'#FFFBEE' });
+  }
 
-  // Filter by category
-  const filtered = activeCategory === 'all'
-    ? activeTasks
-    : activeTasks.filter(t => t.cat === activeCategory);
+  // Filter by category. "All" means all — event tasks show there too, same as
+  // every other category's tasks; they're only left out of the other category
+  // chips (Home/Health/etc.) so they stay grouped under their own chip instead.
+  const filtered = activeCategory === 'lifeEvent'
+    ? eventTasks
+    : activeCategory === 'all'
+      ? allActiveTasks
+      : activeTasks.filter(t => t.cat === activeCategory);
 
-  // Separate unknown (no lastDone) from known; hide completed one-time tasks
-  const knownFiltered   = filtered.filter(t => getStatus(t) !== 'unknown' && !(t.oneTime && getStatus(t) === 'ok'));
-  const unknownFiltered = filtered.filter(t => getStatus(t) === 'unknown');
+  // A one-time task (life event bundle tasks especially) can carry a computed
+  // due date that's further out than its lead window. taskStatus reports that
+  // as "unknown" so HomeView excludes it from focus scoring — but here in
+  // AllView the date is known, so it belongs in "All good" with a real date,
+  // not the Explore pile which is for tasks we have no date for at all.
+  const hasKnownDueDate = (t) => {
+    if (!t.oneTime) return false;
+    const entry = taskState[t.id];
+    return !entry?.lastDone && !!(entry?.dueDate ?? t.dueDate);
+  };
+  const isExplorable = (t) => getStatus(t) === 'unknown' && !hasKnownDueDate(t);
+  const effectiveStatus = (t) => (getStatus(t) === 'unknown' && hasKnownDueDate(t)) ? 'ok' : getStatus(t);
+
+  // Separate unknown (no lastDone, no due date) from known; hide completed one-time tasks
+  const knownFiltered   = filtered.filter(t => !isExplorable(t) && !(t.oneTime && getStatus(t) === 'ok'));
+  const unknownFiltered = filtered.filter(t => isExplorable(t));
 
   // Sort known tasks by score (due first), treating out-of-season as "ok"
   const sortScore = (t) => {
     if (!isWindowActive(t, region)) return 1;
-    const s = getStatus(t);
+    const s = effectiveStatus(t);
     if (s === 'due' || s === 'confirm') return 3;
     if (s === 'coming-up' || s === 'scheduled') return 2;
     return 1;
@@ -357,9 +303,9 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
   });
 
   // Three groups — out-of-season tasks always land in allGood
-  const needsAttention = sorted.filter(t => isWindowActive(t, region) && ['due', 'needed', 'confirm'].includes(getStatus(t)));
-  const comingUp       = sorted.filter(t => isWindowActive(t, region) && ['coming-up', 'scheduled'].includes(getStatus(t)));
-  const allGood        = sorted.filter(t => !isWindowActive(t, region) || getStatus(t) === 'ok');
+  const needsAttention = sorted.filter(t => isWindowActive(t, region) && ['due', 'needed', 'confirm'].includes(effectiveStatus(t)));
+  const comingUp       = sorted.filter(t => isWindowActive(t, region) && ['coming-up', 'scheduled'].includes(effectiveStatus(t)));
+  const allGood        = sorted.filter(t => !isWindowActive(t, region) || effectiveStatus(t) === 'ok');
 
   const seasonSubtitle = (t) => {
     if (isWindowActive(t, region)) return undefined;
@@ -419,25 +365,6 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
       {/* Task groups */}
       <div style={{ padding:'0 18px 160px', maxWidth:680, margin:'0 auto' }}>
 
-        {/* Life event group renders only on the All filter so category views
-            stay clean. Always at the top, always expanded by default. */}
-        {activeEvent && eventTasks.length > 0 && activeCategory === 'all' && (
-          <LifeEventGroup
-            event={activeEvent}
-            tasks={eventTasks}
-            taskState={taskState}
-            getStatus={getStatus}
-            getDays={getDays}
-            providerHistory={providerHistory}
-            pendingCalendarMatches={pendingCalendarMatches}
-            onSelectTask={onSelectTask}
-            onDoneTask={onDoneTask}
-            onMatchConfirm={onMatchConfirm}
-            onMatchDismiss={onMatchDismiss}
-            onAddTask={() => onAddEventTask(activeEvent.id)}
-          />
-        )}
-
         {!hasKnown && unknownFiltered.length === 0 && (
           <div style={{ background:'#FFFFFF', borderRadius:14, padding:'36px 20px', textAlign:'center', border:'1px solid #EAE4DA', marginTop:16 }}>
             <div style={{ fontFamily:"'Righteous', cursive", fontSize:16, color:'#06A77D', marginBottom:6 }}>Nothing here</div>
@@ -454,7 +381,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
                 <SwipeableTaskCard
                   key={task.id}
                   task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate, lastDone: taskState[task.id]?.lastDone }}
-                  status={getStatus(task)}
+                  status={effectiveStatus(task)}
                   days={getDays(task)}
                   hasSavedProvider={!!providerHistory[task.id]}
                   onSelect={onSelectTask}
@@ -482,7 +409,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
                 <SwipeableTaskCard
                   key={task.id}
                   task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate, lastDone: taskState[task.id]?.lastDone }}
-                  status={getStatus(task)}
+                  status={effectiveStatus(task)}
                   days={getDays(task)}
                   hasSavedProvider={!!providerHistory[task.id]}
                   onSelect={onSelectTask}
@@ -509,7 +436,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
                 <SwipeableTaskCard
                   key={task.id}
                   task={{ ...task, scheduledDate: taskState[task.id]?.scheduledDate, lastDone: taskState[task.id]?.lastDone }}
-                  status={getStatus(task)}
+                  status={effectiveStatus(task)}
                   days={getDays(task)}
                   hasSavedProvider={!!providerHistory[task.id]}
                   onSelect={onSelectTask}
@@ -527,7 +454,7 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
           </>
         )}
 
-        <SnoozedSection tasks={activeCategory === 'all' ? snoozedTasks : snoozedTasks.filter(t => t.cat === activeCategory)} taskState={taskState} onSelectTask={onSelectTask} onUnsnooze={unsnoozeTask} />
+        <SnoozedSection tasks={activeCategory === 'all' ? snoozedTasks : activeCategory === 'lifeEvent' ? snoozedTasks.filter(t => eventTaskIds.has(t.id)) : snoozedTasks.filter(t => t.cat === activeCategory)} taskState={taskState} onSelectTask={onSelectTask} onUnsnooze={unsnoozeTask} />
 
         <ExploreSection tasks={unknownFiltered} markDone={markDone} markNeeded={markNeeded} markNotApplicable={markNotApplicable} />
 

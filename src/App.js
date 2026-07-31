@@ -514,7 +514,6 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
           onMatchConfirm={handleMatchConfirm}
           onMatchDismiss={handleMatchDismiss}
           onSnooze={setSnoozePickerTask}
-          onAddEventTask={(eventId) => setCreatorOpen(eventId)}
         />
       )}
 

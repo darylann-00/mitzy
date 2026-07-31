@@ -54,22 +54,29 @@ async function mockLifeEventEndpoints(page) {
 // Marker text the stubbed /api/assist returns, so the assertion can't pass on
 // anything the app renders on its own.
 const ASSIST_MARKER = 'Travis County District Clerk';
+const ASSIST_FEE    = '$350 filing fee';
 
+// Captures what the client actually posted so the test can assert the request
+// shape, not just that a response rendered.
 async function mockAssistEndpoint(page) {
-  await page.route('**/api/assist', route =>
-    route.fulfill({
+  const captured = {};
+  await page.route('**/api/assist', route => {
+    Object.assign(captured, route.request().postDataJSON());
+    return route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        text: `**Where you file:** Petitions go to the ${ASSIST_MARKER}.`,
+        text: `**Where you file:** Petitions go to the ${ASSIST_MARKER}. `
+            + `The ${ASSIST_FEE} is listed on [their fee schedule](https://example.gov/fees).`,
       }),
-    }),
-  );
+    });
+  });
+  return captured;
 }
 
 test('user starts a divorce life event self-represented and opens assist on a jurisdiction task', async ({ page }) => {
   await mockLifeEventEndpoints(page);
-  await mockAssistEndpoint(page);
+  const assistRequest = await mockAssistEndpoint(page);
   await seedReturnUser(page);
   await page.goto('/');
 
@@ -105,17 +112,29 @@ test('user starts a divorce life event self-represented and opens assist on a ju
 
   // Sheet closes; Profile shows the active event with progress
   await expect(page.getByText(/of \d+ done/)).toBeVisible({ timeout: 5000 });
-  await expect(page.getByText('Find your event tasks at the top of the All tab.')).toBeVisible();
+  await expect(page.getByText('Find your event tasks under the "Divorce or separation" filter on the All tab.')).toBeVisible();
 
-  // All tab — event group at the top
+  // All tab — event tasks show under the default "All" filter, same as every
+  // other task, and also behind their own "Divorce or separation" category chip.
   await page.getByText('All', { exact: true }).click();
-  await expect(page.getByText('Divorce or separation').first()).toBeVisible({ timeout: 5000 });
 
   // The self-filing path is present and the attorney consult is not.
   await expect(page.getByText("Find your court's divorce forms and self-help resources").first())
     .toBeVisible({ timeout: 5000 });
   await expect(page.getByText('Serve the papers and file proof of service').first()).toBeVisible();
   await expect(page.getByText('Consult a family law attorney')).toHaveCount(0);
+
+  // The "Divorce or separation" chip narrows the list down to just event tasks.
+  await page.getByRole('button', { name: 'Divorce or separation' }).click();
+  await expect(page.getByText("Find your court's divorce forms and self-help resources").first())
+    .toBeVisible({ timeout: 5000 });
+
+  // Later-phase tasks (final hearing, decree, etc.) have a computed due date
+  // further out than their lead window — they're known tasks, not ones needing
+  // the "have you done this?" Explore treatment. Asserted behind the event
+  // chip, where Explore only ever holds event tasks: under "All" the account's
+  // untouched library tasks legitimately fill that pile.
+  await expect(page.getByText(/tasks to explore/)).toHaveCount(0);
 
   // Open the divorce-petition task. It carries assistType 'jurisdiction', so this
   // also guards the AssistPanel render gate: if 'jurisdiction' is ever dropped from
@@ -127,4 +146,28 @@ test('user starts a divorce life event self-represented and opens assist on a ju
   await assistBtn.click();
 
   await expect(page.getByText(new RegExp(ASSIST_MARKER))).toBeVisible({ timeout: 15000 });
+
+  // A real fee and a source link now render — the whole point of giving this
+  // assist type a live lookup.
+  await expect(page.getByText(new RegExp(ASSIST_FEE.replace('$', '\\$')))).toBeVisible();
+  await expect(page.getByRole('link', { name: 'their fee schedule' })).toHaveAttribute(
+    'href', 'https://example.gov/fees',
+  );
+
+  // The request shape is what switches web search on server-side. If the client
+  // stops sending assistType, search silently never runs — the panel still
+  // renders, the answers just quietly get vaguer. Assert it explicitly.
+  expect(assistRequest.assistType).toBe('jurisdiction');
+
+  // Search variant asks the model to cite what it looked up...
+  expect(assistRequest.prompt).toContain('Cite your source as a markdown link');
+  // ...and carries a real resolved place, not the "near zip code N" or "in my
+  // area" fallback. Matched by shape, not by name — the county follows whatever
+  // zip the test account has, so hard-coding one couples this to that profile.
+  expect(assistRequest.prompt).toMatch(/the user is in .+, .+ \(zip \d{5}\)\./);
+
+  // ...and the fallback the server uses when a search fails still forbids
+  // stating a fee it cannot verify.
+  expect(assistRequest.fallbackPrompt).toContain('Do NOT state a specific filing fee');
+  expect(assistRequest.fallbackPrompt).not.toContain('Cite your source as a markdown link');
 });

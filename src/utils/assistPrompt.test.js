@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { buildAssistPrompt } from './assistPrompt.js';
+import { buildAssistPrompt, isSearchAssistType } from './assistPrompt.js';
 import * as geoModule from './geo.js';
 
 vi.mock('./geo.js', () => ({
@@ -162,5 +162,90 @@ describe('buildAssistPrompt — jurisdiction tasks', () => {
     const prompt = await buildAssistPrompt(jurisdictionTask, profile);
     expect(prompt).toContain('Under 200 words');
     expect(prompt).toContain('Markdown with **bold** lead-ins');
+  });
+});
+
+describe('isSearchAssistType', () => {
+  it('flags only the types /api/assist runs with web search', () => {
+    expect(isSearchAssistType('jurisdiction')).toBe(true);
+    expect(isSearchAssistType('deadline')).toBe(true);
+  });
+
+  it('leaves every other assist type on the no-tools path', () => {
+    for (const t of ['guidance', 'script', 'providers', 'guidance_companies', undefined]) {
+      expect(isSearchAssistType(t)).toBe(false);
+    }
+  });
+});
+
+describe('buildAssistPrompt — search variants', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(geoModule.resolveLocation).mockResolvedValue({
+      county: 'Travis County',
+      state: 'Texas',
+      stateCode: 'TX',
+    });
+  });
+
+  const divorceTask = {
+    id: 'lf-divorce-1-file',
+    label: 'File the divorce petition',
+    assistType: 'jurisdiction',
+    note: 'Starts the legal process',
+  };
+
+  const deadlineTask = {
+    id: 'fin-taxes',
+    label: 'File income taxes',
+    assistType: 'deadline',
+  };
+
+  it('asks jurisdiction to search and cite, and drops the cannot-verify ban', async () => {
+    const prompt = await buildAssistPrompt(divorceTask, profile, { search: true });
+    expect(prompt).toContain('Search for the rules that actually apply to them');
+    expect(prompt).toContain('the current filing fee or cost');
+    expect(prompt).toContain('Cite your source as a markdown link');
+    // The whole point of the change: it may now state a fee.
+    expect(prompt).not.toContain('Do NOT state a specific filing fee');
+  });
+
+  it('keeps the fee-volatility caveat in the jurisdiction search variant', async () => {
+    const prompt = await buildAssistPrompt(divorceTask, profile, { search: true });
+    expect(prompt).toContain('fees and deadlines are set locally and change');
+    // Unverified details still must not be invented.
+    expect(prompt).toContain('do NOT guess it');
+  });
+
+  it('still names the real county in the search variant', async () => {
+    const prompt = await buildAssistPrompt(divorceTask, profile, { search: true });
+    expect(prompt).toContain('in Travis County, Texas (zip 78704)');
+  });
+
+  it('defaults jurisdiction to the no-search wording when search is not requested', async () => {
+    const prompt = await buildAssistPrompt(divorceTask, profile);
+    expect(prompt).toContain('Do NOT state a specific filing fee');
+    expect(prompt).not.toContain('Cite your source as a markdown link');
+  });
+
+  it('asks deadline to search and cite official sources', async () => {
+    const prompt = await buildAssistPrompt(deadlineTask, profile, { search: true });
+    expect(prompt).toContain('Search for the deadlines and key dates');
+    expect(prompt).toContain('Cite your source as a markdown link');
+    expect(prompt).toContain('these dates can change year to year');
+  });
+
+  it('forbids unverifiable dates and phone numbers in the deadline fallback', async () => {
+    const prompt = await buildAssistPrompt(deadlineTask, profile);
+    expect(prompt).toContain('Do NOT state a specific date, dollar amount, phone number');
+    expect(prompt).toContain('Name the exact office the user should contact');
+    expect(prompt).not.toContain('Cite your source as a markdown link');
+  });
+
+  it('ignores the search flag for assist types that never search', async () => {
+    const scriptTask = { id: 'x', label: 'Book a cleaning', assistType: 'script' };
+    const withFlag = await buildAssistPrompt(scriptTask, profile, { search: true });
+    const without  = await buildAssistPrompt(scriptTask, profile);
+    expect(withFlag).toBe(without);
   });
 });

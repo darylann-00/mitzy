@@ -379,8 +379,12 @@ test('adjust plan reopens the check-in seeded with the locked plan', async ({ pa
   await expect(page.getByText('Adjust your week')).toBeVisible({ timeout: 10000 });
 
   // The confirmed plan's task carries into the review screen, and re-locking
-  // upserts it again.
-  await page.getByRole('button', { name: 'Next' }).click();
+  // upserts it again. Must be exact: by this point a plan is confirmed, so
+  // plan mode's progress card is on screen behind the overlay — and on Fri–Sun
+  // that card also renders "Plan next week", which a substring match on "Next"
+  // picks up as a second element. The earlier "Next" clicks in this file run
+  // before lock-in, where no progress card exists.
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
   await expect(page.getByText("This week's plan")).toBeVisible({ timeout: 10000 });
   await expect(page.getByText('Submit claim for FSA').first()).toBeVisible();
 
