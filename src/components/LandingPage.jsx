@@ -196,17 +196,21 @@ export function LandingPage({ onGetStarted, onSignIn }) {
               Mitzy already knows what your home, car, kids, and pets need — and tells
               you what's due before anything slips.
             </p>
-            <button
-              onClick={onGetStarted}
-              onMouseEnter={() => setHoveredCta(true)}
-              onMouseLeave={() => setHoveredCta(false)}
-              style={ctaStyle}
-            >
-              Start my free trial
-            </button>
-            <span style={{ display: 'block', fontSize: 13, color: C.muted, marginTop: 12 }}>
-              No credit card required
-            </span>
+            {/* Grouped so the helper line centres under the button rather than
+                sitting flush with its left edge on the desktop layout. */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <button
+                onClick={onGetStarted}
+                onMouseEnter={() => setHoveredCta(true)}
+                onMouseLeave={() => setHoveredCta(false)}
+                style={ctaStyle}
+              >
+                Start my free trial
+              </button>
+              <span style={{ fontSize: 13, color: C.muted, marginTop: 12 }}>
+                No credit card required
+              </span>
+            </div>
           </div>
 
           {/* Phone mockup */}
@@ -218,8 +222,8 @@ export function LandingPage({ onGetStarted, onSignIn }) {
         <div style={{ margin: '64px 0' }}>
           <h2 className="lp-h2">The stuff you're supposed to remember</h2>
           <p className="lp-sub">
-            Mitzy is a household task manager. It knows 200+ of these and shows you
-            only the ones your household actually has.
+            Mitzy is a household task manager. It knows hundreds of tasks, and helps
+            you with the ones that matter to you.
           </p>
           <div className="lp-chips">
             {TRACKED.map(([label, color]) => (
@@ -262,7 +266,7 @@ export function LandingPage({ onGetStarted, onSignIn }) {
               icon={<HeartIcon size={20} />}
               tint={C.brandLight}
               title="Never guilt-trips you"
-              desc="Snooze anything to a date that works. No pile of red badges."
+              desc="Snooze anything to a date that actually works. Mitzy waits quietly instead of nagging."
             />
             <Benefit
               icon={<MovingBoxIcon size={20} color={C.brand} bg={C.brandTint} />}
