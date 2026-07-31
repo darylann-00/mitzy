@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { CalendarIcon, LightningIcon, HeartIcon, MovingBoxIcon } from "./CategoryIcons";
 import "../styles/landing.css";
 
 const C = {
@@ -16,6 +17,21 @@ const C = {
   card: '#FFFFFF',
   cardBorder: '#EAE4DA',
 };
+
+// A sample of the real task library, dot-colored by category. Showing actual
+// task names lands faster than any sentence describing the library.
+const TRACKED = [
+  ['HVAC filter', C.orange],
+  ['Car registration', C.red],
+  ['Kids’ checkup', C.green],
+  ['Smoke detector batteries', C.red],
+  ['Pet vaccines', C.green],
+  ['Tax deadline', C.yellow],
+  ['Oil change', C.orange],
+  ['Gutter cleaning', C.orange],
+  ['Dentist', C.green],
+  ['Passport renewal', C.yellow],
+];
 
 function Logo({ size = 'default' }) {
   const dotSize = size === 'small' ? 9 : 12;
@@ -169,14 +185,16 @@ export function LandingPage({ onGetStarted, onSignIn }) {
         {/* Hero */}
         <div className="lp-hero">
           <div className="lp-hero-copy">
+            {/* Names the category above the fold — the first thing a new visitor
+                (or a Google branding reviewer) needs to know. */}
+            <span className="lp-eyebrow">Household task manager</span>
             <h1 className="lp-h1">
               Stop carrying your household{' '}
               <span style={{ color: C.brand }}>in your head</span>
             </h1>
             <p className="lp-hero-sub">
-              <strong style={{ color: C.ink, fontWeight: 600 }}>Mitzy is a household task manager.</strong>{' '}
-              It keeps track of the recurring things a home needs — HVAC filters, car registration,
-              kids' checkups, pet vaccines, tax deadlines — and tells you what's due before it slips.
+              Mitzy already knows what your home, car, kids, and pets need — and tells
+              you what's due before anything slips.
             </p>
             <button
               onClick={onGetStarted}
@@ -195,96 +213,94 @@ export function LandingPage({ onGetStarted, onSignIn }) {
           <PhoneMockup />
         </div>
 
-        {/* What the app actually does — plain language, no metaphors. */}
-        <div style={{ margin: '56px 0' }}>
-          <h2 style={{
-            fontFamily: "'Righteous', cursive", fontSize: 22, textAlign: 'center',
-            color: C.ink, margin: '0 0 8px', fontWeight: 400,
-          }}>
-            What Mitzy does
-          </h2>
-          <p style={{ fontSize: 15, color: C.muted, textAlign: 'center', margin: '0 auto 32px', maxWidth: 480, lineHeight: 1.6 }}>
-            Mitzy is a personal to-do list for running a household. You don't build the list —
-            Mitzy already knows what a home like yours needs and surfaces each task at the right time.
+        {/* Shows the task library instead of describing it — reads in two
+            seconds and proves the product better than a paragraph. */}
+        <div style={{ margin: '64px 0' }}>
+          <h2 className="lp-h2">The stuff you're supposed to remember</h2>
+          <p className="lp-sub">
+            Mitzy is a household task manager. It knows 60+ of these and shows you
+            only the ones your household actually has.
           </p>
-          <div className="lp-does-grid">
-            <DoesCard
-              n="1"
-              title="Builds your task list for you"
-              desc="Answer a few questions about your home, cars, kids, and pets. Mitzy pulls from a library of 60+ household tasks and keeps only the ones that apply to you."
-            />
-            <DoesCard
-              n="2"
-              title="Tells you what's due now"
-              desc="Every task has its own schedule — every 3 months, once a year, once ever. Mitzy sorts them by what matters most today so you're not staring at a wall of 60 things."
-            />
-            <DoesCard
-              n="3"
-              title="Plans your week with you"
-              desc="An optional weekly check-in. Type out whatever's on your mind, and Mitzy turns it into a short, realistic plan for the week — sized to how much you can actually take on."
-            />
-            <DoesCard
-              n="4"
-              title="Matches tasks to your calendar"
-              desc="Connect Google Calendar and Mitzy spots appointments you've already booked — a vet visit, a dentist appointment — and marks those tasks as scheduled instead of reminding you again."
-            />
-            <DoesCard
-              n="5"
-              title="Helps you finish, not just track"
-              desc="Open any task for why it matters and how to do it. Ask Mitzy for the local rules, the deadline, what to say on the phone, or nearby providers who can do it for you."
-            />
-            <DoesCard
-              n="6"
-              title="Handles the big stuff too"
-              desc="Moving, a new baby, a marriage, a divorce, a death in the family — pick the life event and Mitzy lays out the paperwork and deadlines in the order they need doing."
-            />
+          <div className="lp-chips">
+            {TRACKED.map(([label, color]) => (
+              <span key={label} className="lp-chip">
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                {label}
+              </span>
+            ))}
+            <span className="lp-chip lp-chip-more">+ 50 more</span>
           </div>
         </div>
 
-        {/* Google account + calendar — what data is used and why. */}
-        <div style={{
-          background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 20,
-          padding: '32px 28px', margin: '56px 0',
-        }}>
-          <h2 style={{
-            fontFamily: "'Righteous', cursive", fontSize: 20, color: C.ink,
-            margin: '0 0 16px', fontWeight: 400,
-          }}>
-            Mitzy and your Google account
-          </h2>
-          <p style={{ fontSize: 14, lineHeight: 1.7, color: C.muted, margin: '0 0 12px' }}>
-            You can sign in to Mitzy with your Google account. Mitzy uses your name and email
-            address to create and load your account — nothing else.
-          </p>
-          <p style={{ fontSize: 14, lineHeight: 1.7, color: C.muted, margin: '0 0 12px' }}>
-            You can also connect Google Calendar. Mitzy reads your upcoming events and compares
-            them against your task list, so an appointment you've already booked shows up as
-            scheduled instead of as something still hanging over you.
-          </p>
-          <p style={{ fontSize: 14, lineHeight: 1.7, color: C.muted, margin: '0 0 12px' }}>
-            <strong style={{ color: C.ink, fontWeight: 600 }}>Mitzy only reads your calendar.</strong>{' '}
-            It never creates, edits, or deletes events, and it never sells or shares your data.
-            Calendar access is optional — everything else in Mitzy works without it.
-          </p>
-          <p style={{ fontSize: 14, lineHeight: 1.7, color: C.muted, margin: 0 }}>
-            Full details in the{' '}
-            <a href="/privacy.html" style={{ color: C.brand, fontWeight: 500 }}>Privacy Policy</a>.
-          </p>
+        {/* How it works */}
+        <div className="lp-steps-wrap" style={{ background: C.brandTint, borderRadius: 20, padding: '44px 28px', margin: '64px 0' }}>
+          <h2 className="lp-h2">How it works</h2>
+          <div className="lp-steps">
+            <Step n="1" title="Answer a few questions" desc="Your home, cars, kids, pets, zip. Three minutes, once." />
+            <Step n="2" title="Get a list you didn't write" desc="Sorted so the top of it is what actually matters today." />
+            <Step n="3" title="Mitzy helps you close it" desc="The local rules, the deadline, who to call, what to say." />
+          </div>
         </div>
 
         {/* Benefits */}
-        <div className="lp-benefits" style={{ background: C.brandTint, borderRadius: 20, padding: '40px 28px', margin: '56px 0' }}>
-          <h2 style={{
-            fontFamily: "'Righteous', cursive", fontSize: 22, textAlign: 'center',
-            color: C.ink, margin: '0 0 32px', fontWeight: 400,
-          }}>
-            Why Mitzy
-          </h2>
+        <div style={{ margin: '64px 0' }}>
+          <h2 className="lp-h2">Why people stick with it</h2>
           <div className="lp-benefits-grid">
-            <Benefit icon="🧠" title="Already knows" desc="60+ tasks built in, personalized to your home, cars, kids, and pets." />
-            <Benefit icon="📋" title="Plans your week" desc="Optional weekly check-in. Brain dump what's on your mind and go." />
-            <Benefit icon="💚" title="No guilt trips" desc="Snooze anything. Mitzy doesn't shame you — she gets it." />
+            <Benefit
+              icon={<CalendarIcon size={20} />}
+              tint="#FFF3E0"
+              title="Reads your calendar"
+              desc="Already booked the vet? Mitzy sees it and stops asking."
+            />
+            <Benefit
+              icon={<LightningIcon size={20} />}
+              tint="#FFFBEE"
+              title="Plans your week"
+              desc="Brain dump what's on your mind. Mitzy turns it into a doable week."
+            />
+            <Benefit
+              icon={<HeartIcon size={20} />}
+              tint={C.brandLight}
+              title="Never guilt-trips you"
+              desc="Snooze anything to a date that works. No pile of red badges."
+            />
+            <Benefit
+              icon={<MovingBoxIcon size={20} color={C.brand} bg={C.brandTint} />}
+              tint={C.brandTint}
+              title="Handles the big stuff"
+              desc="Moving, a new baby, a divorce, a death in the family. Mitzy knows the paperwork."
+            />
           </div>
+        </div>
+
+        {/* Google account + calendar — what data is used and why. Kept short and
+            quiet, but explicit: this is what OAuth branding review looks for. */}
+        <div style={{
+          background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 16,
+          padding: '24px 24px 20px', margin: '64px auto', maxWidth: 780,
+        }}>
+          <h2 style={{
+            fontFamily: "'Righteous', cursive", fontSize: 16, color: C.ink,
+            margin: '0 0 14px', fontWeight: 400,
+          }}>
+            Mitzy and your Google account
+          </h2>
+          <DataLine>
+            <strong style={{ color: C.ink, fontWeight: 600 }}>Sign in with Google</strong> — Mitzy uses
+            your name and email to load your account. Nothing else.
+          </DataLine>
+          <DataLine>
+            <strong style={{ color: C.ink, fontWeight: 600 }}>Google Calendar (optional)</strong> — Mitzy
+            reads your upcoming events to spot appointments you've already booked, so it stops
+            reminding you about them.
+          </DataLine>
+          <DataLine>
+            <strong style={{ color: C.ink, fontWeight: 600 }}>Read-only, always</strong> — Mitzy never
+            creates, edits, or deletes events, and never sells or shares your data.
+          </DataLine>
+          <p style={{ fontSize: 13, color: C.muted, margin: '14px 0 0' }}>
+            <a href="/privacy.html" style={{ color: C.brand, fontWeight: 500 }}>Read the Privacy Policy</a>
+          </p>
         </div>
 
         <Divider />
@@ -371,31 +387,42 @@ export function LandingPage({ onGetStarted, onSignIn }) {
   );
 }
 
-function DoesCard({ n, title, desc }) {
+function Step({ n, title, desc }) {
   return (
-    <div style={{
-      background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 14,
-      padding: '20px 18px', display: 'flex', gap: 14, alignItems: 'flex-start',
-    }}>
+    <div style={{ textAlign: 'center' }}>
       <span style={{
-        flexShrink: 0, width: 26, height: 26, borderRadius: '50%', background: C.brandTint,
-        color: C.brand, fontFamily: "'Righteous', cursive", fontSize: 13,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: "'Righteous', cursive", fontSize: 28, color: C.brand,
+        opacity: 0.45, display: 'block', lineHeight: 1, marginBottom: 10,
       }}>
         {n}
       </span>
-      <div>
-        <h3 style={{ fontFamily: "'Righteous', cursive", fontSize: 15, color: C.ink, margin: '2px 0 6px', fontWeight: 400 }}>{title}</h3>
-        <p style={{ fontSize: 13, lineHeight: 1.65, color: C.muted, margin: 0 }}>{desc}</p>
-      </div>
+      <h3 style={{ fontFamily: "'Righteous', cursive", fontSize: 16, color: C.ink, margin: '0 0 6px', fontWeight: 400 }}>{title}</h3>
+      <p style={{ fontSize: 13, lineHeight: 1.6, color: C.muted, margin: 0 }}>{desc}</p>
     </div>
   );
 }
 
-function Benefit({ icon, title, desc }) {
+function DataLine({ children }) {
   return (
-    <div>
-      <div style={{ fontSize: 28, marginBottom: 12 }}>{icon}</div>
+    <p style={{ fontSize: 13, lineHeight: 1.6, color: C.muted, margin: '0 0 10px', display: 'flex', gap: 10 }}>
+      <span style={{ width: 5, height: 5, borderRadius: '50%', background: C.green, flexShrink: 0, marginTop: 7 }} />
+      <span>{children}</span>
+    </p>
+  );
+}
+
+function Benefit({ icon, tint, title, desc }) {
+  return (
+    <div style={{
+      background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 14,
+      padding: '20px 20px 22px',
+    }}>
+      <div style={{
+        width: 38, height: 38, borderRadius: 11, background: tint,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12,
+      }}>
+        {icon}
+      </div>
       <h3 style={{ fontFamily: "'Righteous', cursive", fontSize: 15, color: C.ink, margin: '0 0 6px', fontWeight: 400 }}>{title}</h3>
       <p style={{ fontSize: 13, lineHeight: 1.6, color: C.muted, margin: 0 }}>{desc}</p>
     </div>

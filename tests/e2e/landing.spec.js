@@ -7,18 +7,25 @@ import { test, expect } from '@playwright/test';
 test('landing page states what the app is and how it uses Google data', async ({ page }) => {
   await page.goto('/');
 
-  // Plain-language descriptor in the hero, not just the tagline.
+  // Category label above the fold, plus the plain descriptor sentence.
+  await expect(page.getByText('Household task manager', { exact: true })).toBeVisible();
   await expect(page.getByText('Mitzy is a household task manager.')).toBeVisible();
 
-  // Concrete capability list.
-  await expect(page.getByRole('heading', { name: 'What Mitzy does' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Builds your task list for you' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: "Tells you what's due now" })).toBeVisible();
+  // Shows real tasks from the library rather than describing it.
+  await expect(page.getByText("The stuff you're supposed to remember")).toBeVisible();
+  await expect(page.getByText('HVAC filter', { exact: true })).toBeVisible();
+  await expect(page.getByText('Car registration', { exact: true })).toBeVisible();
+
+  // How it works.
+  await expect(page.getByRole('heading', { name: 'How it works' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Answer a few questions' })).toBeVisible();
 
   // Google account / calendar scope explanation.
   await expect(page.getByRole('heading', { name: 'Mitzy and your Google account' })).toBeVisible();
-  await expect(page.getByText('Mitzy only reads your calendar.')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Privacy Policy' })).toBeVisible();
+  await expect(page.getByText('Sign in with Google', { exact: true })).toBeVisible();
+  await expect(page.getByText('Google Calendar (optional)', { exact: true })).toBeVisible();
+  await expect(page.getByText('never creates, edits, or deletes events')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Read the Privacy Policy' })).toBeVisible();
 });
 
 test('static boot fallback never flashes once the app mounts', async ({ page }) => {
