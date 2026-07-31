@@ -257,11 +257,13 @@ export function AllView({ onSelectTask, onDoneTask, activeCategory, setActiveCat
     visibleCats.splice(1, 0, { key: 'lifeEvent', label: eventDef.label, Icon: EventIcon, color:'#B08A10', bg:'#FFFBEE' });
   }
 
-  // Filter by category
+  // Filter by category. "All" means all — event tasks show there too, same as
+  // every other category's tasks; they're only left out of the other category
+  // chips (Home/Health/etc.) so they stay grouped under their own chip instead.
   const filtered = activeCategory === 'lifeEvent'
     ? eventTasks
     : activeCategory === 'all'
-      ? activeTasks
+      ? allActiveTasks
       : activeTasks.filter(t => t.cat === activeCategory);
 
   // A one-time task (life event bundle tasks especially) can carry a computed
