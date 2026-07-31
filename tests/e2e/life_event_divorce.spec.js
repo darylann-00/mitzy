@@ -138,7 +138,10 @@ test('user starts a divorce life event and opens assist on a jurisdiction task',
 
   // Search variant asks the model to cite what it looked up...
   expect(assistRequest.prompt).toContain('Cite your source as a markdown link');
-  expect(assistRequest.prompt).toContain('Travis County');
+  // ...and carries a real resolved place, not the "near zip code N" or "in my
+  // area" fallback. Matched by shape, not by name — the county follows whatever
+  // zip the test account has, so hard-coding one couples this to that profile.
+  expect(assistRequest.prompt).toMatch(/the user is in .+, .+ \(zip \d{5}\)\./);
 
   // ...and the fallback the server uses when a search fails still forbids
   // stating a fee it cannot verify.
