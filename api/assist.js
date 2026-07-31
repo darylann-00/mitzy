@@ -21,7 +21,14 @@ const DEFAULT_MODEL = "claude-haiku-4-5-20251001";
 // route at 60s — past that the platform kills the function and the fallback
 // below never gets to run.
 const MAX_SEARCHES      = 3;  // caps per-request search spend and latency
-const MAX_CONTINUATIONS = 3;  // pause_turn resumes before giving up
+const MAX_CONTINUATIONS = 1;  // pause_turn resumes; each is a full extra round trip
+
+// Hard ceiling on the whole search attempt, resumes included. This must stay
+// comfortably below the route's maxDuration in vercel.json (60s), because a
+// platform timeout kills the function outright — the fallback below never runs
+// and the user gets a 504 instead of an answer. Owning the deadline ourselves is
+// what makes graceful degradation actually reachable.
+const SEARCH_BUDGET_MS = 35000;
 const MAX_PROMPT_CHARS  = 8000;
 
 // ALLOWED_ORIGIN: set to your production domain in Vercel env vars (e.g. "https://mitzy.app").
@@ -38,7 +45,7 @@ function corsHeaders(req) {
   };
 }
 
-function anthropic(apiKey, body) {
+function anthropic(apiKey, body, signal) {
   return fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -47,6 +54,7 @@ function anthropic(apiKey, body) {
       "content-type": "application/json",
     },
     body: JSON.stringify(body),
+    signal,
   });
 }
 
@@ -60,39 +68,54 @@ function extractText(content) {
     .trim();
 }
 
-// Runs the prompt with web search enabled. Throws on anything unexpected so the
-// caller can fall back to the no-tools path.
+// Runs the prompt with web search enabled. Throws on anything unexpected — an
+// abort, a bad status, a refusal — so the caller can fall back to the no-tools
+// path and the user still gets an answer.
 async function runWithSearch(apiKey, prompt) {
   const messages = [{ role: "user", content: prompt }];
   // Blocks produced so far across resumed turns. Kept as ONE assistant message
   // rather than appending a new one per resume, so the sequence stays a clean
   // user→assistant alternation however many times the tool loop pauses.
   const assistantBlocks = [];
+  const deadline = Date.now() + SEARCH_BUDGET_MS;
 
   for (let attempt = 0; attempt <= MAX_CONTINUATIONS; attempt++) {
-    const res = await anthropic(apiKey, {
-      model: SEARCH_MODEL,
-      // max_tokens caps thinking + prose together, so this is well above what a
-      // 250-word answer needs — a tight budget would truncate mid-sentence, and
-      // truncated text is non-empty, so it would never reach the fallback.
-      max_tokens: 8000,
-      // Sonnet 5 runs adaptive thinking by default and is markedly less willing
-      // to reach for tools with thinking off — which would defeat the point
-      // here. Left on deliberately; `effort` is what bounds the spend.
-      thinking: { type: "adaptive" },
-      // Low, not medium: this is a scoped "find the county page and summarise
-      // it" task, not one that needs deep reasoning, and effort is the main
-      // lever on how long the user waits.
-      output_config: { effort: "low" },
-      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: MAX_SEARCHES }],
-      messages,
-    });
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) throw new Error('search budget exhausted');
 
-    if (!res.ok) {
-      throw new Error(`${res.status} ${await res.text()}`);
+    // Abort instead of running into the platform's own timeout: that kills the
+    // whole function, so the fallback never runs and the user sees a 504.
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), remaining);
+
+    let data;
+    try {
+      const res = await anthropic(apiKey, {
+        model: SEARCH_MODEL,
+        // max_tokens caps thinking + prose together, so this is well above what
+        // a 250-word answer needs — a tight budget would truncate mid-sentence,
+        // and truncated text is non-empty, so it would never reach the fallback.
+        max_tokens: 8000,
+        // Sonnet 5 runs adaptive thinking by default and is markedly less
+        // willing to reach for tools with thinking off — which would defeat the
+        // point here. Left on deliberately; `effort` is what bounds the spend.
+        thinking: { type: "adaptive" },
+        // Low, not medium: this is a scoped "find the county page and summarise
+        // it" task, not one that needs deep reasoning, and effort is the main
+        // lever on how long the user waits.
+        output_config: { effort: "low" },
+        tools: [{ type: "web_search_20260209", name: "web_search", max_uses: MAX_SEARCHES }],
+        messages,
+      }, ac.signal);
+
+      if (!res.ok) {
+        throw new Error(`${res.status} ${await res.text()}`);
+      }
+
+      data = await res.json();
+    } finally {
+      clearTimeout(timer);
     }
-
-    const data = await res.json();
 
     // The server-side tool loop hit its iteration cap. Re-send the turn with
     // what it produced so far — the API resumes from the trailing
@@ -190,12 +213,18 @@ export default async function handler(req) {
 
   let text = '';
   if (useSearch) {
+    // Timed on both paths: this latency is the thing that decides whether the
+    // feature is usable, and it can only be measured in a real deployment.
+    const startedAt = Date.now();
     try {
       text = await runWithSearch(apiKey, prompt);
+      console.log(`Assist web search ok (${assistType}) in ${Date.now() - startedAt}ms`);
     } catch (err) {
       // Search is best-effort. A failure, a rate limit, or an empty answer
       // degrades to the no-tools path rather than surfacing an error.
-      console.error(`Assist web search failed (${assistType}), falling back: ${err}`);
+      console.error(
+        `Assist web search failed (${assistType}) after ${Date.now() - startedAt}ms, falling back: ${err}`
+      );
       text = '';
     }
   }
