@@ -8,6 +8,64 @@ import { useProfileContext } from "../contexts/ProfileContext";
 import { supabase } from "../lib/supabase";
 
 // ─── Pulsing dot loader ────────────────────────────────────────────────────────
+// Reads the line-delimited JSON stream that /api/assist returns for the
+// search-backed assist types. Resolves with the complete text; throws if the
+// server gave up or the connection ended without a `done` event, so a truncated
+// answer is never rendered as finished or written to the cache.
+//
+// Text is flushed to the caller on a ~80ms floor rather than per token —
+// re-parsing markdown on every delta janks the panel on a mid-range phone.
+async function readAssistStream(res, { onPhase, onText }) {
+  const reader  = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf  = '';
+  let text = '';
+  let complete = false;
+  let lastEmit = 0;
+
+  const pushText = (force) => {
+    const now = Date.now();
+    if (!force && now - lastEmit < 80) return;
+    lastEmit = now;
+    onText?.(text);
+  };
+
+  const handle = (ev) => {
+    switch (ev.type) {
+      case 'text':   text += ev.delta ?? ''; pushText(false); break;
+      // The search answer was abandoned mid-write; drop it so the fallback
+      // doesn't get appended to half a sentence.
+      case 'reset':  text = ''; pushText(true); break;
+      case 'status': onPhase?.(ev.phase); break;
+      case 'done':   complete = true; break;
+      case 'error':  throw new Error('assist stream failed');
+      default: break;
+    }
+  };
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+
+    let nl;
+    while ((nl = buf.indexOf('\n')) !== -1) {
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl + 1);
+      if (!line) continue;
+      let ev;
+      // A mangled line is skipped rather than thrown on — the `complete` check
+      // below is what actually decides whether the answer is trustworthy.
+      try { ev = JSON.parse(line); } catch { continue; }
+      handle(ev);
+    }
+  }
+
+  if (!complete) throw new Error('assist stream ended early');
+  pushText(true);
+  return text;
+}
+
 function PulseLoader({ messages }) {
   const [idx, setIdx] = useState(0);
   const dots = ['#D62828', '#F77F00', '#06A77D', '#F4C430'];
@@ -287,6 +345,9 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
   const [result,    setResult]    = useState(null);
   const [cached,    setCached]    = useState(null);
   const [errorKind, setErrorKind] = useState('general');
+  // What the server says it's doing right now, for the search-backed types.
+  // Null until the stream reports something.
+  const [phase,     setPhase]     = useState(null);
 
   const cacheKey = `${ASSIST_CACHE_PREFIX}-${task.id}`;
   // Web-search-backed answers are expensive and slow-moving, so they're held
@@ -332,6 +393,7 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
       if (hit) { setCached(hit); setResult(hit.data); setStatus('done'); return; }
     }
     setStatus('loading');
+    setPhase(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
@@ -365,7 +427,22 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
           body: JSON.stringify({ prompt, fallbackPrompt, assistType: task.assistType }),
         });
         if (!res.ok) throw new Error(`${res.status}`);
-        ({ text } = await res.json());
+        if (searchBacked) {
+          // These stream, because the lookup behind them is slow enough that a
+          // static loader was the whole complaint. Everything else still gets
+          // one JSON body.
+          text = await readAssistStream(res, {
+            onPhase: setPhase,
+            onText: (partial) => {
+              // First prose on the wire — swap the loader out for the answer
+              // and let it grow.
+              setResult(partial);
+              setStatus('streaming');
+            },
+          });
+        } else {
+          ({ text } = await res.json());
+        }
       }
       saveCache(text);
       setResult(text);
@@ -403,10 +480,16 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
 
   const getLoadingMessages = () => {
     const subject = task.searchQuery || task.label;
+    // Once the stream starts reporting, say what's actually happening instead
+    // of rotating through guesses on a timer.
+    if (phase === 'search')   return ['Looking up official sources...', 'Reading what it found...'];
+    if (phase === 'fallback') return ['Putting this together...'];
     if (task.assistType === 'providers')          return [`Finding ${subject} services near you...`, 'Checking reviews and hours...', 'Almost there...'];
     if (task.assistType === 'script')             return ['Drafting your script...', 'Choosing the right words...', 'Almost ready...'];
-    // deadline and jurisdiction run a live web lookup (~10s), so they get a
-    // fourth message — three would loop back around before the answer lands.
+    // deadline and jurisdiction run a live web lookup, so they get a fourth
+    // message — three would loop back around before the answer lands. These are
+    // only the pre-stream placeholders; once the stream reports a phase the
+    // block above takes over.
     if (task.assistType === 'deadline')           return ['Looking up key dates...', 'Checking official sources...', 'Confirming what still applies...', 'Almost done...'];
     if (task.assistType === 'guidance')           return ['Pulling together the best approach...', 'Reviewing what matters most...', 'Almost done...'];
     if (task.assistType === 'guidance_companies') return ['Finding the right companies for this...', 'Checking coverage and ratings...', 'Almost there...'];
@@ -531,8 +614,10 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
             </>
           )}
 
-          {/* Done — deadline, guidance, or jurisdiction */}
-          {status === 'done' && (task.assistType === 'deadline' || task.assistType === 'guidance' || task.assistType === 'jurisdiction' || !task.assistType) && (
+          {/* Done — deadline, guidance, or jurisdiction. deadline and
+              jurisdiction stream, so this also renders mid-answer while the
+              rest of the text is still arriving. */}
+          {(status === 'done' || status === 'streaming') && (task.assistType === 'deadline' || task.assistType === 'guidance' || task.assistType === 'jurisdiction' || !task.assistType) && (
             <MarkdownBlock text={result} />
           )}
 
