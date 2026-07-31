@@ -105,11 +105,11 @@ test('user starts a divorce life event self-represented and opens assist on a ju
 
   // Sheet closes; Profile shows the active event with progress
   await expect(page.getByText(/of \d+ done/)).toBeVisible({ timeout: 5000 });
-  await expect(page.getByText('Find your event tasks at the top of the All tab.')).toBeVisible();
+  await expect(page.getByText('Find your event tasks under the "Divorce or separation" filter on the All tab.')).toBeVisible();
 
-  // All tab — event group at the top
+  // All tab — event tasks live behind their own category filter chip
   await page.getByText('All', { exact: true }).click();
-  await expect(page.getByText('Divorce or separation').first()).toBeVisible({ timeout: 5000 });
+  await page.getByRole('button', { name: 'Divorce or separation' }).click();
 
   // The self-filing path is present and the attorney consult is not.
   await expect(page.getByText("Find your court's divorce forms and self-help resources").first())
