@@ -1064,7 +1064,7 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
                       </span>
                     </div>
                     <div style={{ fontSize:12, color:C.muted, fontFamily:'DM Sans, sans-serif' }}>
-                      Find your event tasks at the top of the All tab.
+                      Find your event tasks under the "{def.label}" filter on the All tab.
                     </div>
                   </div>
 

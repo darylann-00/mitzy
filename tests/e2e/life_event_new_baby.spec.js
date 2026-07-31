@@ -96,9 +96,19 @@ test('user starts a new-baby life event from Profile', async ({ page }) => {
 
   // Sheet closes; Profile shows the active event with progress
   await expect(page.getByText(/of \d+ done/)).toBeVisible({ timeout: 5000 });
-  await expect(page.getByText('Find your event tasks at the top of the All tab.')).toBeVisible();
+  await expect(page.getByText('Find your event tasks under the "New baby" filter on the All tab.')).toBeVisible();
 
-  // All tab — event group should be visible at the top
+  // All tab — event tasks show under the default "All" filter, same as every
+  // other task, and also behind their own "New baby" category chip.
   await page.getByText('All', { exact: true }).click();
-  await expect(page.getByText('New baby').first()).toBeVisible({ timeout: 5000 });
+  await expect(page.getByText('Choose an OB or midwife').first()).toBeVisible({ timeout: 5000 });
+
+  // These tasks have a computed due date (even though most aren't due for
+  // months, since the due date was set ~8 months out) — they're known tasks,
+  // not ones needing the "have you done this?" Explore treatment.
+  await expect(page.getByText(/tasks to explore/)).toHaveCount(0);
+
+  // The "New baby" chip narrows the list down to just event tasks.
+  await page.getByRole('button', { name: 'New baby' }).click();
+  await expect(page.getByText('Choose an OB or midwife').first()).toBeVisible({ timeout: 5000 });
 });
