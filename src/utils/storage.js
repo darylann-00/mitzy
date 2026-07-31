@@ -5,7 +5,7 @@ export const ONBOARDED_KEY          = "mitzy-ob-v6";
 export const PROFILE_DONE_KEY       = "mitzy-ob-v6-p";
 export const DISABLED_KEY           = "mitzy-dis-v6";
 export const PROFILE_KEY            = "mitzy-pro-v7";
-export const ASSIST_CACHE_PREFIX    = "mitzy-assist-v14";
+export const ASSIST_CACHE_PREFIX    = "mitzy-assist-v15";
 export const PROVIDER_HISTORY_KEY   = "mitzy-ph-v6";
 export const VISIT_COUNT_KEY        = "mitzy-visits-v6";
 export const HAZARD_DONE_KEY        = "mitzy-hz-v6";
@@ -18,6 +18,10 @@ export const CAL_GRANTED_KEY        = "mitzy-cal-v1";
 export const CAPACITY_STATS_KEY     = "mitzy-cs-v1";
 
 export const ASSIST_CACHE_TTL      = 7  * 24 * 60 * 60 * 1000; // 7 days
+// Assist types backed by a live web lookup (jurisdiction, deadline) cost real
+// money per answer, and what they report — filing fees, court deadlines — moves
+// on the order of a year, not a week. Cached far longer on purpose.
+export const ASSIST_CACHE_TTL_SEARCH = 30 * 24 * 60 * 60 * 1000; // 30 days
 export const KNOWLEDGE_REFRESH_TTL = 90 * 24 * 60 * 60 * 1000; // 90 days
 
 // ─── Old key cleanup ──────────────────────────────────────────────────────────

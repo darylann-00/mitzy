@@ -2,8 +2,8 @@ import { useState, useEffect, useMemo, memo } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
-import { saveS, ASSIST_CACHE_PREFIX, ASSIST_CACHE_TTL } from "../utils/storage";
-import { buildAssistPrompt } from "../utils/assistPrompt";
+import { saveS, ASSIST_CACHE_PREFIX, ASSIST_CACHE_TTL, ASSIST_CACHE_TTL_SEARCH } from "../utils/storage";
+import { buildAssistPrompt, isSearchAssistType } from "../utils/assistPrompt";
 import { useProfileContext } from "../contexts/ProfileContext";
 import { supabase } from "../lib/supabase";
 
@@ -289,6 +289,10 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
   const [errorKind, setErrorKind] = useState('general');
 
   const cacheKey = `${ASSIST_CACHE_PREFIX}-${task.id}`;
+  // Web-search-backed answers are expensive and slow-moving, so they're held
+  // much longer than the 7-day default.
+  const searchBacked = isSearchAssistType(task.assistType);
+  const cacheTtl = searchBacked ? ASSIST_CACHE_TTL_SEARCH : ASSIST_CACHE_TTL;
 
   const parsedProviders = useMemo(() => {
     if (task.assistType !== 'providers' || !result) return null;
@@ -312,7 +316,7 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
       const raw = localStorage.getItem(cacheKey);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Date.now() - parsed.ts < ASSIST_CACHE_TTL) return parsed;
+        if (Date.now() - parsed.ts < cacheTtl) return parsed;
       }
     } catch {}
     return null;
@@ -350,11 +354,15 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
         if (!res.ok) throw new Error(`${res.status}`);
         ({ text } = await res.json());
       } else {
-        const prompt = await buildAssistPrompt(task, profile);
+        // Search-backed types send both wordings: `prompt` asks the model to
+        // cite what it looked up, `fallbackPrompt` is the conservative version
+        // the server uses if the search doesn't land.
+        const prompt = await buildAssistPrompt(task, profile, { search: searchBacked });
+        const fallbackPrompt = searchBacked ? await buildAssistPrompt(task, profile) : undefined;
         const res = await fetch('/api/assist', {
           method: 'POST',
           headers: { 'content-type': 'application/json', ...authHeader },
-          body: JSON.stringify({ prompt }),
+          body: JSON.stringify({ prompt, fallbackPrompt, assistType: task.assistType }),
         });
         if (!res.ok) throw new Error(`${res.status}`);
         ({ text } = await res.json());
@@ -397,10 +405,12 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
     const subject = task.searchQuery || task.label;
     if (task.assistType === 'providers')          return [`Finding ${subject} services near you...`, 'Checking reviews and hours...', 'Almost there...'];
     if (task.assistType === 'script')             return ['Drafting your script...', 'Choosing the right words...', 'Almost ready...'];
-    if (task.assistType === 'deadline')           return ['Looking up key dates...', 'Checking current rules...', 'Almost done...'];
+    // deadline and jurisdiction run a live web lookup (~10s), so they get a
+    // fourth message — three would loop back around before the answer lands.
+    if (task.assistType === 'deadline')           return ['Looking up key dates...', 'Checking official sources...', 'Confirming what still applies...', 'Almost done...'];
     if (task.assistType === 'guidance')           return ['Pulling together the best approach...', 'Reviewing what matters most...', 'Almost done...'];
     if (task.assistType === 'guidance_companies') return ['Finding the right companies for this...', 'Checking coverage and ratings...', 'Almost there...'];
-    if (task.assistType === 'jurisdiction')       return ['Checking the rules where you live...', 'Finding the right office...', 'Almost there...'];
+    if (task.assistType === 'jurisdiction')       return ['Checking the rules where you live...', 'Looking up your county...', 'Finding the right office...', 'Almost there...'];
     return ['Mitzy is looking this up...', 'Digging into the details...', 'Almost done...'];
   };
 

@@ -9,7 +9,15 @@ const sanitize = (str) =>
 const sanitizeZip = (zip) =>
   zip ? String(zip).replace(/\D/g, '').slice(0, 10) : zip;
 
-export async function buildAssistPrompt(task, profile) {
+// Assist types that /api/assist runs with Anthropic's web search tool. Their
+// prompts have two variants: `search: true` requires the model to cite what it
+// looked up, and the default forbids stating anything it can't verify. The
+// server falls back to the default wording whenever a search doesn't land.
+const SEARCH_ASSIST_TYPES = new Set(['jurisdiction', 'deadline']);
+
+export const isSearchAssistType = (assistType) => SEARCH_ASSIST_TYPES.has(assistType);
+
+export async function buildAssistPrompt(task, profile, { search = false } = {}) {
   const zip  = sanitizeZip(profile.zip);
 
   // Resolve location with geo.js, fallback to zip code or generic area
@@ -67,7 +75,24 @@ Under 150 words. Markdown bullets, each starting with a **bold** lead-in.`;
       return `${base}\n\nWrite a short ready-to-send message to schedule this. ${ins ? `Mention ${insuranceProvider}.` : ""}Include subject line if email. Then 2-3 bullet points on what to ask. Under 150 words.`;
 
     case "deadline":
-      return `${base}\n\nFind specific deadlines, key dates, official links, and phone numbers ${loc}. Include direct links to official sources.`;
+      if (search) {
+        return `${base}
+
+Search for the deadlines and key dates that apply to the user ${loc}, and for the office or agency that administers them.
+
+Prefer the responsible agency's own site over blogs, aggregators, or marketing pages. Cite your source as a markdown link for every date, dollar amount, and phone number you state. If a date depends on their county or their individual circumstances, say so and name the office that confirms it rather than presenting one date as universal. If your search did not surface a reliable official source for something, say so instead of guessing it.
+
+Close with one short line noting that these dates can change year to year.
+
+Under 250 words. Markdown with **bold** lead-ins.`;
+      }
+      return `${base}
+
+Explain what deadlines and key dates apply here and which office or agency administers them ${loc}.
+
+Do NOT state a specific date, dollar amount, phone number, or web address as fact — these vary by jurisdiction and change year to year, and you cannot verify them. Name the exact office the user should contact to confirm. If you are not confident about the rule where they live, say so plainly rather than guessing.
+
+Under 200 words. Markdown with **bold** lead-ins.`;
 
     case "guidance_companies":
       return `${base}\n\nReturn a JSON object (no markdown wrapper, no code fences) with exactly two fields:
@@ -77,6 +102,21 @@ Under 150 words. Markdown bullets, each starting with a **bold** lead-in.`;
 Return ONLY valid JSON. No text outside the JSON object.`;
 
     case "jurisdiction":
+      if (search) {
+        return `${base}
+
+This task is governed by state and local law, and the user is ${loc}. Search for the rules that actually apply to them.
+
+Prefer the responsible office's own site — the state court, county clerk, DMV, vital records, or equivalent agency — over law-firm marketing pages, blogs, or aggregator sites.
+
+Cover: which specific office handles this, the state and county rules that apply, any residency or waiting-period requirement, the current filing fee or cost, any deadline the user is on the hook for, and what they need to bring or prepare.
+
+Cite your source as a markdown link for every fee, dollar amount, deadline, and phone number you state. If your search did not surface a reliable official source for one of those details, do NOT guess it — say it varies and name the exact office to call. If the rule differs between their state and their county, say which one you found.
+
+Close with one short line noting that fees and deadlines are set locally and change, so the office confirms current amounts.
+
+Under 250 words. Markdown with **bold** lead-ins.`;
+      }
       return `${base}
 
 This task is governed by state and local law, and the user is ${loc}.

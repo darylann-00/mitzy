@@ -54,22 +54,29 @@ async function mockLifeEventEndpoints(page) {
 // Marker text the stubbed /api/assist returns, so the assertion can't pass on
 // anything the app renders on its own.
 const ASSIST_MARKER = 'Travis County District Clerk';
+const ASSIST_FEE    = '$350 filing fee';
 
+// Captures what the client actually posted so the test can assert the request
+// shape, not just that a response rendered.
 async function mockAssistEndpoint(page) {
-  await page.route('**/api/assist', route =>
-    route.fulfill({
+  const captured = {};
+  await page.route('**/api/assist', route => {
+    Object.assign(captured, route.request().postDataJSON());
+    return route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        text: `**Where you file:** Petitions go to the ${ASSIST_MARKER}.`,
+        text: `**Where you file:** Petitions go to the ${ASSIST_MARKER}. `
+            + `The ${ASSIST_FEE} is listed on [their fee schedule](https://example.gov/fees).`,
       }),
-    }),
-  );
+    });
+  });
+  return captured;
 }
 
 test('user starts a divorce life event self-represented and opens assist on a jurisdiction task', async ({ page }) => {
   await mockLifeEventEndpoints(page);
-  await mockAssistEndpoint(page);
+  const assistRequest = await mockAssistEndpoint(page);
   await seedReturnUser(page);
   await page.goto('/');
 
@@ -137,4 +144,28 @@ test('user starts a divorce life event self-represented and opens assist on a ju
   await assistBtn.click();
 
   await expect(page.getByText(new RegExp(ASSIST_MARKER))).toBeVisible({ timeout: 15000 });
+
+  // A real fee and a source link now render — the whole point of giving this
+  // assist type a live lookup.
+  await expect(page.getByText(new RegExp(ASSIST_FEE.replace('$', '\\$')))).toBeVisible();
+  await expect(page.getByRole('link', { name: 'their fee schedule' })).toHaveAttribute(
+    'href', 'https://example.gov/fees',
+  );
+
+  // The request shape is what switches web search on server-side. If the client
+  // stops sending assistType, search silently never runs — the panel still
+  // renders, the answers just quietly get vaguer. Assert it explicitly.
+  expect(assistRequest.assistType).toBe('jurisdiction');
+
+  // Search variant asks the model to cite what it looked up...
+  expect(assistRequest.prompt).toContain('Cite your source as a markdown link');
+  // ...and carries a real resolved place, not the "near zip code N" or "in my
+  // area" fallback. Matched by shape, not by name — the county follows whatever
+  // zip the test account has, so hard-coding one couples this to that profile.
+  expect(assistRequest.prompt).toMatch(/the user is in .+, .+ \(zip \d{5}\)\./);
+
+  // ...and the fallback the server uses when a search fails still forbids
+  // stating a fee it cannot verify.
+  expect(assistRequest.fallbackPrompt).toContain('Do NOT state a specific filing fee');
+  expect(assistRequest.fallbackPrompt).not.toContain('Cite your source as a markdown link');
 });
