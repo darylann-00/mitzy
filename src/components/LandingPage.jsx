@@ -218,7 +218,7 @@ export function LandingPage({ onGetStarted, onSignIn }) {
         <div style={{ margin: '64px 0' }}>
           <h2 className="lp-h2">The stuff you're supposed to remember</h2>
           <p className="lp-sub">
-            Mitzy is a household task manager. It knows 60+ of these and shows you
+            Mitzy is a household task manager. It knows 200+ of these and shows you
             only the ones your household actually has.
           </p>
           <div className="lp-chips">
@@ -228,7 +228,7 @@ export function LandingPage({ onGetStarted, onSignIn }) {
                 {label}
               </span>
             ))}
-            <span className="lp-chip lp-chip-more">+ 50 more</span>
+            <span className="lp-chip lp-chip-more">+ 190 more</span>
           </div>
         </div>
 
@@ -237,7 +237,7 @@ export function LandingPage({ onGetStarted, onSignIn }) {
           <h2 className="lp-h2">How it works</h2>
           <div className="lp-steps">
             <Step n="1" title="Answer a few questions" desc="Your home, cars, kids, pets, zip. Three minutes, once." />
-            <Step n="2" title="Get a list you didn't write" desc="Sorted so the top of it is what actually matters today." />
+            <Step n="2" title="Get a custom list specific to you" desc="Sorted so the top of it is what actually matters today." />
             <Step n="3" title="Mitzy helps you close it" desc="The local rules, the deadline, who to call, what to say." />
           </div>
         </div>
@@ -249,8 +249,8 @@ export function LandingPage({ onGetStarted, onSignIn }) {
             <Benefit
               icon={<CalendarIcon size={20} />}
               tint="#FFF3E0"
-              title="Reads your calendar"
-              desc="Already booked the vet? Mitzy sees it and stops asking."
+              title="Works with your calendar"
+              desc="Already booked the vet? Mitzy spots it and stops asking. Need to book one? It puts the appointment on your calendar."
             />
             <Benefit
               icon={<LightningIcon size={20} />}
@@ -268,40 +268,11 @@ export function LandingPage({ onGetStarted, onSignIn }) {
               icon={<MovingBoxIcon size={20} color={C.brand} bg={C.brandTint} />}
               tint={C.brandTint}
               title="Handles the big stuff"
-              desc="Moving, a new baby, a divorce, a death in the family. Mitzy knows the paperwork."
+              desc="Moving, a new baby, a marriage, a name change. Mitzy knows the paperwork."
             />
           </div>
         </div>
 
-        {/* Google account + calendar — what data is used and why. Kept short and
-            quiet, but explicit: this is what OAuth branding review looks for. */}
-        <div style={{
-          background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 16,
-          padding: '24px 24px 20px', margin: '64px auto', maxWidth: 780,
-        }}>
-          <h2 style={{
-            fontFamily: "'Righteous', cursive", fontSize: 16, color: C.ink,
-            margin: '0 0 14px', fontWeight: 400,
-          }}>
-            Mitzy and your Google account
-          </h2>
-          <DataLine>
-            <strong style={{ color: C.ink, fontWeight: 600 }}>Sign in with Google</strong> — Mitzy uses
-            your name and email to load your account. Nothing else.
-          </DataLine>
-          <DataLine>
-            <strong style={{ color: C.ink, fontWeight: 600 }}>Google Calendar (optional)</strong> — Mitzy
-            reads your upcoming events to spot appointments you've already booked, so it stops
-            reminding you about them.
-          </DataLine>
-          <DataLine>
-            <strong style={{ color: C.ink, fontWeight: 600 }}>Read-only, always</strong> — Mitzy never
-            creates, edits, or deletes events, and never sells or shares your data.
-          </DataLine>
-          <p style={{ fontSize: 13, color: C.muted, margin: '14px 0 0' }}>
-            <a href="/privacy.html" style={{ color: C.brand, fontWeight: 500 }}>Read the Privacy Policy</a>
-          </p>
-        </div>
 
         <Divider />
 
@@ -399,15 +370,6 @@ function Step({ n, title, desc }) {
       <h3 style={{ fontFamily: "'Righteous', cursive", fontSize: 16, color: C.ink, margin: '0 0 6px', fontWeight: 400 }}>{title}</h3>
       <p style={{ fontSize: 13, lineHeight: 1.6, color: C.muted, margin: 0 }}>{desc}</p>
     </div>
-  );
-}
-
-function DataLine({ children }) {
-  return (
-    <p style={{ fontSize: 13, lineHeight: 1.6, color: C.muted, margin: '0 0 10px', display: 'flex', gap: 10 }}>
-      <span style={{ width: 5, height: 5, borderRadius: '50%', background: C.green, flexShrink: 0, marginTop: 7 }} />
-      <span>{children}</span>
-    </p>
   );
 }
 

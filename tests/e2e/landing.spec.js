@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 // The landing page is what Google's OAuth reviewers read to decide whether the
-// app's purpose and its use of Google data are explained. These assertions guard
-// that copy — if it disappears, branding verification breaks again.
+// app's purpose is explained. These assertions guard that copy — if it
+// disappears, branding verification breaks again.
 
-test('landing page states what the app is and how it uses Google data', async ({ page }) => {
+test('landing page states what the app is and what it does', async ({ page }) => {
   await page.goto('/');
 
   // Category label above the fold, plus the plain descriptor sentence.
@@ -19,13 +19,15 @@ test('landing page states what the app is and how it uses Google data', async ({
   // How it works.
   await expect(page.getByRole('heading', { name: 'How it works' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Answer a few questions' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Get a custom list specific to you' })).toBeVisible();
 
-  // Google account / calendar scope explanation.
-  await expect(page.getByRole('heading', { name: 'Mitzy and your Google account' })).toBeVisible();
-  await expect(page.getByText('Sign in with Google', { exact: true })).toBeVisible();
-  await expect(page.getByText('Google Calendar (optional)', { exact: true })).toBeVisible();
-  await expect(page.getByText('never creates, edits, or deletes events')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Read the Privacy Policy' })).toBeVisible();
+  // Calendar behaviour is described honestly — Mitzy both reads events and
+  // creates them (api/schedule.js POSTs to calendars/primary/events), so the
+  // page must never claim read-only access.
+  await expect(page.getByRole('heading', { name: 'Works with your calendar' })).toBeVisible();
+  await expect(page.getByText('puts the appointment on your calendar')).toBeVisible();
+
+  await expect(page.getByRole('link', { name: 'Privacy' }).first()).toBeVisible();
 });
 
 test('static boot fallback never flashes once the app mounts', async ({ page }) => {
