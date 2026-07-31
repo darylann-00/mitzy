@@ -148,7 +148,7 @@ describe("new baby — due dates", () => {
 });
 
 describe("divorce", () => {
-  const base = { stage: 'starting', hasKids: true, sharedFinances: true, hasInsuranceOrRetirement: true };
+  const base = { stage: 'starting', hasKids: true, sharedFinances: true, hasInsuranceOrRetirement: true, representation: 'attorney' };
 
   it("includes kid tasks only when the profile has kids", () => {
     const withKids = divorceTasks(base).map(t => t.id);
@@ -181,6 +181,69 @@ describe("divorce", () => {
   it("drops tasks the user marked already done", () => {
     const ids = divorceTasks({ ...base, alreadyDone: ['open-own-account'] }).map(t => t.id);
     expect(ids).not.toContain('open-own-account');
+  });
+
+  it("gives self-represented users the procedural tasks instead of an attorney consult", () => {
+    const ids = divorceTasks({ ...base, representation: 'self' }).map(t => t.id);
+    expect(ids).not.toContain('consult-attorney');
+    expect(ids).toContain('legal-aid-check');
+    expect(ids).toContain('court-forms');
+    expect(ids).toContain('check-uncontested');
+    expect(ids).toContain('serve-papers');
+    expect(ids).toContain('final-hearing');
+    // Filing still happens on every path — it's the guidance that differs.
+    expect(ids).toContain('file-respond-petition');
+  });
+
+  it("gives the mediation path its own tasks and no attorney consult", () => {
+    const ids = divorceTasks({ ...base, representation: 'mediation' }).map(t => t.id);
+    expect(ids).not.toContain('consult-attorney');
+    expect(ids).toContain('find-mediator');
+    expect(ids).toContain('prepare-mediation');
+    expect(ids).toContain('file-mediation-agreement');
+    // Court-procedure tasks belong to the self path, not this one.
+    expect(ids).not.toContain('serve-papers');
+    expect(ids).not.toContain('court-forms');
+  });
+
+  it("keeps the attorney path free of self-filing and mediation tasks", () => {
+    const ids = divorceTasks(base).map(t => t.id);
+    expect(ids).toContain('consult-attorney');
+    ['legal-aid-check', 'court-forms', 'check-uncontested', 'serve-papers', 'final-hearing',
+     'find-mediator', 'prepare-mediation', 'file-mediation-agreement']
+      .forEach(id => expect(ids, `${id} leaked into the attorney path`).not.toContain(id));
+  });
+
+  it("swaps in path-specific guidance for the petition and never leaks the variant map", () => {
+    const forPath = (representation) =>
+      divorceTasks({ ...base, representation }).find(t => t.id === 'file-respond-petition');
+
+    const attorney = forPath('attorney');
+    const self     = forPath('self');
+    const mediation = forPath('mediation');
+
+    expect(attorney.guidance).toContain('your attorney');
+    // The whole point: a self-filer's steps must not route through a lawyer.
+    expect(self.guidance).not.toContain('attorney');
+    expect(self.guidance).toContain('clerk');
+    expect(mediation.guidance).toContain('mediator');
+
+    [attorney, self, mediation].forEach(t => expect(t.guidanceFor).toBeUndefined());
+  });
+
+  it("treats an event started before the representation question as undecided", () => {
+    // Existing rows in Supabase have no `representation` in intake_answers —
+    // those users keep the task set they already had.
+    const { representation, ...legacy } = base;
+    const ids = divorceTasks(legacy).map(t => t.id);
+    expect(ids).toContain('consult-attorney');
+    expect(ids).not.toContain('court-forms');
+  });
+
+  it("respects the representation gate inside the retro checklist too", () => {
+    const selfRetro = divorceRetro({ ...base, stage: 'filed', representation: 'self' }).map(t => t.id);
+    expect(selfRetro).not.toContain('consult-attorney');
+    expect(selfRetro).toContain('court-forms');
   });
 });
 

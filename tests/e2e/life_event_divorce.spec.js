@@ -74,7 +74,7 @@ async function mockAssistEndpoint(page) {
   return captured;
 }
 
-test('user starts a divorce life event and opens assist on a jurisdiction task', async ({ page }) => {
+test('user starts a divorce life event self-represented and opens assist on a jurisdiction task', async ({ page }) => {
   await mockLifeEventEndpoints(page);
   const assistRequest = await mockAssistEndpoint(page);
   await seedReturnUser(page);
@@ -94,7 +94,12 @@ test('user starts a divorce life event and opens assist on a jurisdiction task',
   await expect(page.getByText('Where are you in the process?')).toBeVisible();
   await page.getByRole('button', { name: 'Just getting started', exact: true }).click();
 
-  // Step 2: two yes/no gates — answer No to both so gated tasks drop out
+  // Step 2: representation — self-filing swaps the attorney consult for the
+  // court-procedure tasks an attorney would otherwise absorb.
+  await expect(page.getByText('How are you handling the legal side?')).toBeVisible();
+  await page.getByRole('button', { name: 'Representing myself', exact: true }).click();
+
+  // Step 3: two yes/no gates — answer No to both so gated tasks drop out
   await expect(page.getByText('Two quick questions.')).toBeVisible();
   const noButtons = page.getByRole('button', { name: 'No', exact: true });
   await noButtons.nth(0).click();
@@ -112,6 +117,12 @@ test('user starts a divorce life event and opens assist on a jurisdiction task',
   // All tab — event group at the top
   await page.getByText('All', { exact: true }).click();
   await expect(page.getByText('Divorce or separation').first()).toBeVisible({ timeout: 5000 });
+
+  // The self-filing path is present and the attorney consult is not.
+  await expect(page.getByText("Find your court's divorce forms and self-help resources").first())
+    .toBeVisible({ timeout: 5000 });
+  await expect(page.getByText('Serve the papers and file proof of service').first()).toBeVisible();
+  await expect(page.getByText('Consult a family law attorney')).toHaveCount(0);
 
   // Open the divorce-petition task. It carries assistType 'jurisdiction', so this
   // also guards the AssistPanel render gate: if 'jurisdiction' is ever dropped from
