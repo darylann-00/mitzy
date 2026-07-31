@@ -103,12 +103,14 @@ test('user starts a new-baby life event from Profile', async ({ page }) => {
   await page.getByText('All', { exact: true }).click();
   await expect(page.getByText('Choose an OB or midwife').first()).toBeVisible({ timeout: 5000 });
 
-  // These tasks have a computed due date (even though most aren't due for
-  // months, since the due date was set ~8 months out) — they're known tasks,
-  // not ones needing the "have you done this?" Explore treatment.
-  await expect(page.getByText(/tasks to explore/)).toHaveCount(0);
-
   // The "New baby" chip narrows the list down to just event tasks.
   await page.getByRole('button', { name: 'New baby' }).click();
   await expect(page.getByText('Choose an OB or midwife').first()).toBeVisible({ timeout: 5000 });
+
+  // These tasks have a computed due date (even though most aren't due for
+  // months, since the due date was set ~8 months out) — they're known tasks,
+  // not ones needing the "have you done this?" Explore treatment. Asserted
+  // behind the event chip, where Explore only ever holds event tasks: under
+  // "All" the account's untouched library tasks legitimately fill that pile.
+  await expect(page.getByText(/tasks to explore/)).toHaveCount(0);
 });
