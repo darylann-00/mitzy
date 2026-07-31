@@ -9,10 +9,11 @@ export const config = { runtime: "edge" };
 // keeps the original no-tools cost and latency profile.
 const SEARCH_ASSIST_TYPES = new Set(['jurisdiction', 'deadline']);
 
-// Web search needs a model that supports the current `web_search_20260209` tool,
-// which filters results before they reach the context window. Haiku 4.5 only
-// supports the older basic variant, so search requests route to Sonnet 5 while
-// everything else stays on Haiku.
+// Web search needs a model that supports the current `web_search_20260209`
+// tool. Haiku 4.5 only supports the older basic variant, so search requests
+// route to Sonnet 5 while everything else stays on Haiku. (That tool's headline
+// feature, dynamic filtering, is deliberately turned OFF at the call site — see
+// `allowed_callers` there.)
 const SEARCH_MODEL  = "claude-sonnet-5";
 const DEFAULT_MODEL = "claude-haiku-4-5-20251001";
 
@@ -107,7 +108,7 @@ async function readSSE(res, onEvent) {
 //
 // Only text is forwarded to the caller as it arrives; everything else is
 // accumulated silently.
-async function streamTurn(apiKey, body, { onText, onSearch, signal } = {}) {
+async function streamTurn(apiKey, body, { onText, onSearch, onResults, signal } = {}) {
   const res = await anthropic(apiKey, { ...body, stream: true }, signal);
   if (!res.ok) {
     throw new Error(`${res.status} ${await res.text()}`);
@@ -124,11 +125,16 @@ async function streamTurn(apiKey, body, { onText, onSearch, signal } = {}) {
         const block = ev.content_block ?? {};
         blocks[ev.index]  = { ...block };
         partial[ev.index] = '';
-        // With dynamic filtering the search runs inside code execution, so the
-        // block that opens may be either the code_execution call or the nested
-        // web_search one. Both mean "a lookup is happening" — which is all the
-        // client is told.
         if (block.type === 'server_tool_use') onSearch?.();
+        // Results arrive whole, no deltas. This is the moment the wait stops
+        // being blind, so it's worth a second progress signal — the dead air
+        // before the first word is where a slow lookup actually hurts. Only the
+        // fact that results landed crosses to the client, never their content:
+        // search results are untrusted text and have no business in the UI
+        // except through the model's own answer.
+        if (block.type === 'web_search_tool_result' && Array.isArray(block.content) && block.content.length) {
+          onResults?.();
+        }
         break;
       }
 
@@ -224,7 +230,20 @@ async function runWithSearch(apiKey, prompt, handlers) {
         // it" task, not one that needs deep reasoning, and effort is the main
         // lever on how long the user waits.
         output_config: { effort: "low" },
-        tools: [{ type: "web_search_20260209", name: "web_search", max_uses: MAX_SEARCHES }],
+        tools: [{
+          type: "web_search_20260209",
+          name: "web_search",
+          max_uses: MAX_SEARCHES,
+          // `web_search_20260209` defaults to running every search from inside
+          // code execution ("dynamic filtering"), which means provisioning a
+          // sandbox and having the model write filtering code before a single
+          // result comes back. That exists to cut TOKEN use on search-heavy
+          // requests — it is not a speed feature, and it is a large part of why
+          // this route was blowing past 60s. We do at most 3 searches and read a
+          // 250-word answer, so tokens were never the constraint; latency is.
+          // Calling direct skips the sandbox entirely.
+          allowed_callers: ["direct"],
+        }],
         messages,
       }, {
         ...handlers,
@@ -357,7 +376,7 @@ export default async function handler(req) {
   // than the whole request.
   //
   // Line-delimited JSON, one event per line:
-  //   {"type":"status","phase":"search"|"fallback"}
+  //   {"type":"status","phase":"search"|"reading"|"fallback"}
   //   {"type":"text","delta":"..."}
   //   {"type":"reset"}   discard everything streamed so far
   //   {"type":"done"}    complete — safe to cache
@@ -398,9 +417,10 @@ export default async function handler(req) {
       let text = '';
       try {
         text = await runWithSearch(apiKey, prompt, {
-          signal:   upstream.signal,
-          onSearch: () => send({ type: 'status', phase: 'search' }),
-          onText:   (delta) => { emitted = true; send({ type: 'text', delta }); },
+          signal:    upstream.signal,
+          onSearch:  () => send({ type: 'status', phase: 'search' }),
+          onResults: () => send({ type: 'status', phase: 'reading' }),
+          onText:    (delta) => { emitted = true; send({ type: 'text', delta }); },
         });
         console.log(
           `Assist web search ok (${assistType}) in ${Date.now() - startedAt}ms, ` +

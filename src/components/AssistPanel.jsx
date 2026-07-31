@@ -482,7 +482,8 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
     const subject = task.searchQuery || task.label;
     // Once the stream starts reporting, say what's actually happening instead
     // of rotating through guesses on a timer.
-    if (phase === 'search')   return ['Looking up official sources...', 'Reading what it found...'];
+    if (phase === 'search')   return ['Looking up official sources...', 'Checking the agency\'s own site...'];
+    if (phase === 'reading')  return ['Reading what it found...', 'Pulling out what applies to you...'];
     if (phase === 'fallback') return ['Putting this together...'];
     if (task.assistType === 'providers')          return [`Finding ${subject} services near you...`, 'Checking reviews and hours...', 'Almost there...'];
     if (task.assistType === 'script')             return ['Drafting your script...', 'Choosing the right words...', 'Almost ready...'];
