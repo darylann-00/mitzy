@@ -124,6 +124,10 @@
   margin: 0 auto;
 }
 
+.lp-footer-note {
+  max-width: 480px;
+}
+
 /* ─── Desktop layout ─────────────────────────────────────── */
 @media (min-width: 900px) {
   .lp-inner {
@@ -188,6 +192,10 @@
 
   .lp-pricing-grid {
     max-width: 620px;
+  }
+
+  .lp-footer-note {
+    max-width: 760px;
   }
 
   .lp-bottom-cta {

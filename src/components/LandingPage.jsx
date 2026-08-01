@@ -356,9 +356,9 @@ export function LandingPage({ onGetStarted, onSignIn }) {
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
             <Logo size="small" />
           </div>
-          <p style={{
+          <p className="lp-footer-note" style={{
             fontSize: 12, lineHeight: 1.7, color: C.muted, margin: '0 auto 14px',
-            maxWidth: 620, textAlign: 'center',
+            textAlign: 'center',
           }}>
             Mitzy asks for your household details — home, cars, kids, pets, zip code — so it can
             work out which tasks apply to you. Signing in with Google gives Mitzy your name and
