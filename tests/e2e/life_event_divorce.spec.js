@@ -155,6 +155,16 @@ async function startDivorceAndOpenAssist(page) {
   // that gate, the request still succeeds but the panel renders empty.
   await page.getByText('File or respond to the divorce petition').first().click();
 
+  // The static "What to expect" card now carries verified links from the
+  // officialLinks registry. This is the surface a self-filer reads before they
+  // ever tap Assist, and its renderer is hand-rolled — a regression there shows
+  // up as a literal "[label](url)" on screen rather than an error.
+  const formsLink = page.getByRole('link', { name: /LawHelp\.org lists free court forms/ });
+  await expect(formsLink).toBeVisible({ timeout: 5000 });
+  await expect(formsLink).toHaveAttribute('href', 'https://www.lawhelp.org/findforms');
+  await expect(formsLink).toHaveAttribute('target', '_blank');
+  await expect(page.getByText('](https://')).toHaveCount(0);
+
   const assistBtn = page.getByRole('button', { name: /Want Mitzy to help/ });
   await expect(assistBtn).toBeVisible({ timeout: 5000 });
   await assistBtn.click();
@@ -180,9 +190,16 @@ test('user starts a divorce life event self-represented and opens assist on a ju
   // stops sending assistType, search silently never runs — the panel still
   // renders, the answers just quietly get vaguer. Assert it explicitly.
   expect(assistRequest.assistType).toBe('jurisdiction');
+  // The explicit flag is what lets a single task opt into search without
+  // changing its assistType. The server ORs the two.
+  expect(assistRequest.search).toBe(true);
 
   // Search variant asks the model to cite what it looked up...
   expect(assistRequest.prompt).toContain('Cite your source as a markdown link');
+  // ...and to always hand back somewhere to go. Citations alone weren't enough:
+  // they were owed only when the model stated a fee or a date, so an answer that
+  // carefully stated neither came back with no link at all.
+  expect(assistRequest.prompt).toContain('**Where to go**');
   // ...and carries a real resolved place, not the "near zip code N" or "in my
   // area" fallback. Matched by shape, not by name — the county follows whatever
   // zip the test account has, so hard-coding one couples this to that profile.

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { buildAssistPrompt, isSearchAssistType } from './assistPrompt.js';
+import { buildAssistPrompt, isSearchAssistType, shouldUseSearch } from './assistPrompt.js';
+import { OFFICIAL_LINKS } from '../data/officialLinks.js';
 import * as geoModule from './geo.js';
 
 vi.mock('./geo.js', () => ({
@@ -178,6 +179,74 @@ describe('isSearchAssistType', () => {
   });
 });
 
+describe('shouldUseSearch', () => {
+  it('follows the assist type by default', () => {
+    expect(shouldUseSearch({ assistType: 'jurisdiction' })).toBe(true);
+    expect(shouldUseSearch({ assistType: 'guidance' })).toBe(false);
+  });
+
+  it('lets a single task opt in without changing its assist type', () => {
+    expect(shouldUseSearch({ assistType: 'guidance', searchAssist: true })).toBe(true);
+  });
+
+  it('tolerates a missing task', () => {
+    expect(shouldUseSearch(undefined)).toBe(false);
+  });
+});
+
+describe('buildAssistPrompt — link rules', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(geoModule.resolveLocation).mockResolvedValue(null);
+  });
+
+  // A task with no registry entry. On the no-tools path the model cannot check
+  // a URL, so the only safe instruction is "write none".
+  it('bans URLs outright when the task has no verified links', async () => {
+    const prompt = await buildAssistPrompt(guidanceTask, profile);
+    expect(prompt).toContain('Do not write any URL or web address');
+  });
+
+  it('offers the verified links when the task has them', async () => {
+    const task = { ...guidanceTask, id: 'fin-cred' };
+    const prompt = await buildAssistPrompt(task, profile);
+    expect(prompt).toContain(OFFICIAL_LINKS['annual-credit-report'].url);
+    expect(prompt).toContain('not write any other URL');
+    expect(prompt).not.toContain('Do not write any URL or web address');
+  });
+
+  it('matches life event tasks on their bundle key, not their instance id', async () => {
+    const task = {
+      id: 'lf-namechange-42-update-passport',
+      eventBundleKey: 'update-passport',
+      label: 'Update your passport',
+      assistType: 'guidance',
+      guidance: '1. Get a certified copy of your court order.',
+    };
+    const prompt = await buildAssistPrompt(task, profile);
+    expect(prompt).toContain(OFFICIAL_LINKS['passport-change'].url);
+  });
+
+  it('scopes the ban to the prose for guidance_companies, which returns real company URLs', async () => {
+    const prompt = await buildAssistPrompt({ ...guidanceTask, assistType: 'guidance_companies' }, profile);
+    expect(prompt).toContain('In the "guidance" text, do not write any URL');
+    expect(prompt).toContain('"website":"https://..."');
+  });
+
+  it('treats the list as a floor, not a ceiling, on the search path', async () => {
+    const task = { id: 'court-forms', label: "Find your court's divorce forms", assistType: 'jurisdiction' };
+    const prompt = await buildAssistPrompt(task, profile, { search: true });
+    expect(prompt).toContain(OFFICIAL_LINKS['lawhelp-forms'].url);
+    expect(prompt).toContain('is more useful than any of these');
+    expect(prompt).not.toContain('never write any other URL');
+  });
+
+  it('leaves script prompts free of link rules', async () => {
+    const prompt = await buildAssistPrompt({ ...guidanceTask, assistType: 'script' }, profile);
+    expect(prompt).not.toContain('URL');
+  });
+});
+
 describe('buildAssistPrompt — search variants', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -237,9 +306,20 @@ describe('buildAssistPrompt — search variants', () => {
 
   it('forbids unverifiable dates and phone numbers in the deadline fallback', async () => {
     const prompt = await buildAssistPrompt(deadlineTask, profile);
-    expect(prompt).toContain('Do NOT state a specific date, dollar amount, phone number');
+    expect(prompt).toContain('Do NOT state a specific date, dollar amount, or phone number');
     expect(prompt).toContain('Name the exact office the user should contact');
     expect(prompt).not.toContain('Cite your source as a markdown link');
+  });
+
+  it('requires a "Where to go" link on both search variants', async () => {
+    // The gap this closes: citations were owed only when the model stated a
+    // fee or a date. An answer that carefully stated neither owed nothing, and
+    // came back with no link at all — which is what a user actually needs.
+    for (const task of [divorceTask, deadlineTask]) {
+      const prompt = await buildAssistPrompt(task, profile, { search: true });
+      expect(prompt).toContain('**Where to go**');
+      expect(prompt).toContain('Never leave the answer with no link at all');
+    }
   });
 
   it('ignores the search flag for assist types that never search', async () => {

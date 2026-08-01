@@ -1,3 +1,5 @@
+import { officialLink } from './officialLinks';
+
 // Task factory — args: id, cat, label, intervalDays, windowDays, stakes,
 //   activeMonths, requires, assistType, note
 // Schema fields not yet filled are set to null for forward compatibility.
@@ -1409,7 +1411,7 @@ export const ALL_TASKS = [
     oneTime: false,
     note: "Federal deadline is April 15. State deadlines vary.",
     why: "Filing late results in penalties based on the amount owed. Filing on time — even without payment — avoids the larger failure-to-file penalty.",
-    guidance: "1. Gather your W-2s, 1099s, and any deduction records before you start. 2. Use last year's return as a reference for what documents you'll need. 3. If using a tax professional provide all documents at least 3 weeks before the deadline. 4. If you need more time file for an extension — it's free and automatic but does not extend the time to pay if you owe.",
+    guidance: `1. Gather your W-2s, 1099s, and any deduction records before you start. 2. Use last year's return as a reference for what documents you'll need. 3. If using a tax professional provide all documents at least 3 weeks before the deadline. 4. If you need more time file for an extension — it's free and automatic but does not extend the time to pay if you owe. 5. If your income is under the IRS threshold you can ${officialLink('irs-free-file', 'file federal for free')} — start from the IRS site, not a search result, so you get the free version.`,
     lastGuidanceUpdate: "2025-01",
   },
   {
@@ -1432,7 +1434,7 @@ export const ALL_TASKS = [
     oneTime: false,
     note: "Every 4 months. Rotate through the 3 bureaus.",
     why: "Credit report errors occur and can affect loan rates and rental applications. Unauthorized accounts or inquiries can indicate identity theft.",
-    guidance: "1. Go to annualcreditreport.com — the federally authorized free source. 2. Request one bureau at a time and rotate every 4 months: Equifax, then Experian, then TransUnion. 3. Look for accounts you don't recognize, addresses you've never lived at, and hard inquiries you didn't initiate. 4. Dispute errors directly with the bureau online — the process is free.",
+    guidance: `1. Go to ${officialLink('annual-credit-report', 'annualcreditreport.com')} — the federally authorized free source. 2. Request one bureau at a time and rotate every 4 months: Equifax, then Experian, then TransUnion. 3. Look for accounts you don't recognize, addresses you've never lived at, and hard inquiries you didn't initiate. 4. Dispute errors directly with the bureau online — the process is free. 5. If anything looks like fraud, ${officialLink('ftc-credit-freeze', 'freeze your credit')} — it's free and it stops new accounts being opened in your name.`,
     lastGuidanceUpdate: "2025-01",
   },
   {
@@ -1789,7 +1791,7 @@ export const ALL_TASKS = [
     oneTime: false,
     note: "Annually. States are holding billions in forgotten accounts.",
     why: "Financial assets that go unclaimed — forgotten accounts, old deposits, uncashed checks — are turned over to the state after a period of inactivity.",
-    guidance: "1. Go to missingmoney.com or your state's official unclaimed property website. 2. Search your full name and any previous names or addresses. 3. Search the names of any deceased family members — you may be an heir to unclaimed funds. 4. Claims are free — the site will walk you through the process.",
+    guidance: `1. Go to ${officialLink('unclaimed-property', "your state's official unclaimed property search")} — it's run by the state treasurers' association, so you land on the real state site rather than a paid finder. 2. Search your full name and any previous names or addresses. 3. Search the names of any deceased family members — you may be an heir to unclaimed funds. 4. Claims are free — the site will walk you through the process. Never pay a service to claim money for you.`,
     lastGuidanceUpdate: "2025-01",
   },
 
@@ -1816,7 +1818,7 @@ export const ALL_TASKS = [
     oneTime: true,
     note: "Do this once. Review if your household changes.",
     why: "In a house fire seconds matter. Knowing exit routes and a meeting point in advance removes the need to make decisions under pressure.",
-    guidance: "1. Identify two exit routes from every room — a door and a window where possible. 2. Choose a meeting spot outside the home that everyone can get to easily — the end of the driveway or a neighbor's yard. 3. Make sure everyone in the household including children knows the plan. 4. Write it down and keep a copy somewhere accessible.",
+    guidance: `1. Identify two exit routes from every room — a door and a window where possible. 2. Choose a meeting spot outside the home that everyone can get to easily — the end of the driveway or a neighbor's yard. 3. Make sure everyone in the household including children knows the plan. 4. Write it down and keep a copy somewhere accessible — ${officialLink('ready-plan', "Ready.gov's fill-in plan")} is a good template if you'd rather not start from blank.`,
     lastGuidanceUpdate: "2025-01",
   },
   {
@@ -1885,7 +1887,7 @@ export const ALL_TASKS = [
     oneTime: true,
     note: "Do this once. Check inventory annually.",
     why: "An emergency kit that is incomplete or has expired supplies may not be adequate when needed.",
-    guidance: "1. Gather the following and store in a waterproof accessible container: three days of water (one gallon per person per day), non-perishable food, a flashlight with extra batteries, a battery or hand-crank radio, a first aid kit, a whistle, dust masks, plastic sheeting and duct tape, moist towelettes, garbage bags, a wrench or pliers to shut off utilities, a manual can opener, and local maps. 2. Include a phone charger. 3. Store the kit somewhere everyone in the household knows about.",
+    guidance: `1. Gather the following and store in a waterproof accessible container: three days of water (one gallon per person per day), non-perishable food, a flashlight with extra batteries, a battery or hand-crank radio, a first aid kit, a whistle, dust masks, plastic sheeting and duct tape, moist towelettes, garbage bags, a wrench or pliers to shut off utilities, a manual can opener, and local maps. 2. Include a phone charger. 3. Store the kit somewhere everyone in the household knows about. 4. ${officialLink('ready-kit', "FEMA's full checklist")} covers add-ons for kids, pets, and medical needs.`,
     lastGuidanceUpdate: "2025-01",
   },
   {

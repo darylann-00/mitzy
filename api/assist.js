@@ -321,9 +321,9 @@ export default async function handler(req) {
     });
   }
 
-  let prompt, fallbackPrompt, assistType;
+  let prompt, fallbackPrompt, assistType, search;
   try {
-    ({ prompt, fallbackPrompt, assistType } = await req.json());
+    ({ prompt, fallbackPrompt, assistType, search } = await req.json());
   } catch {
     return new Response("Invalid JSON", { status: 400 });
   }
@@ -349,7 +349,14 @@ export default async function handler(req) {
     return new Response("API key not configured", { status: 500 });
   }
 
-  const useSearch = typeof assistType === 'string' && SEARCH_ASSIST_TYPES.has(assistType);
+  // `search` lets a single task opt into the lookup without changing its
+  // assistType (see `shouldUseSearch`). It's client-supplied, but so is
+  // assistType — a caller could already ask for the expensive path by sending
+  // `assistType: 'jurisdiction'`, so this adds no reach. The per-user rate
+  // limiter above is what bounds the spend either way.
+  const useSearch =
+    (typeof assistType === 'string' && SEARCH_ASSIST_TYPES.has(assistType)) ||
+    search === true;
 
   // Every other assist type keeps the original one-shot JSON response. Only the
   // search-backed types stream, so guidance/script/guidance_companies are

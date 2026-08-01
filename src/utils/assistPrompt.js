@@ -1,4 +1,5 @@
 import { resolveLocation } from './geo.js';
+import { linksForTask } from '../data/officialLinks.js';
 
 const THIS_YEAR = new Date().getFullYear();
 const getAge = (birthYear) => birthYear ? THIS_YEAR - parseInt(birthYear, 10) : null;
@@ -16,6 +17,39 @@ const sanitizeZip = (zip) =>
 const SEARCH_ASSIST_TYPES = new Set(['jurisdiction', 'deadline']);
 
 export const isSearchAssistType = (assistType) => SEARCH_ASSIST_TYPES.has(assistType);
+
+// A single task can opt into the search path without changing its assistType —
+// `searchAssist: true` on a `guidance` task keeps the guidance rendering and
+// prompt shape but runs it on the model that can actually look things up. Use
+// it sparingly: search costs roughly an order of magnitude more per call and
+// adds ~12s of latency.
+export const shouldUseSearch = (task) =>
+  isSearchAssistType(task?.assistType) || task?.searchAssist === true;
+
+// The link allowlist.
+//
+// On the no-tools path the model cannot verify a URL, so it gets a short list
+// of pre-verified links and an explicit ban on writing any other one. On the
+// search path it can cite what it actually found, so the same list is offered
+// as a floor rather than a ceiling.
+function linkRules(task, { search, jsonMode = false } = {}) {
+  const links = linksForTask(task);
+  const list  = links.map(l => `- [${l.label}](${l.url})`).join('\n');
+
+  if (search) {
+    return links.length
+      ? `\n\nThese national resources are verified and safe to link:\n${list}\nA page you found for their own state or county is more useful than any of these — lead with that and use these only as a supplement.`
+      : '';
+  }
+
+  // `guidance_companies` returns real company URLs in its JSON, so the ban has
+  // to be scoped to the prose or it contradicts the schema.
+  const where = jsonMode ? 'In the "guidance" text, do' : 'Do';
+
+  return links.length
+    ? `\n\nYou may link to these — they are verified. Use the exact URL as a markdown link, only where it genuinely helps the user act, and never more than two:\n${list}\n${where} not write any other URL or web address. You cannot verify one, and a broken link is worse than no link. Name the office, agency, or company instead.`
+    : `\n\n${where} not write any URL or web address — you cannot verify one, and a broken link is worse than no link. Name the office, agency, or company the user needs instead.`;
+}
 
 export async function buildAssistPrompt(task, profile, { search = false } = {}) {
   const zip  = sanitizeZip(profile.zip);
@@ -60,7 +94,7 @@ ${task.guidance}
 
 The user's household: ${ctx}
 
-Add ONLY what is specific to this user's situation. Do not repeat, rephrase, or summarize the steps above — they can already read them. Consider: timing keyed to their region's climate, age- or model-specific notes for their home, car, kids, or pets, what their insurance may cover, and red flags specific to their setup. Include a bullet only if a different household would get materially different advice — never pad. If you mention a cost, give a rough range and mark it as approximate. If you have nothing meaningful to add beyond the steps, say so in one sentence.
+Add ONLY what is specific to this user's situation. Do not repeat, rephrase, or summarize the steps above — they can already read them. Consider: timing keyed to their region's climate, age- or model-specific notes for their home, car, kids, or pets, what their insurance may cover, and red flags specific to their setup. Include a bullet only if a different household would get materially different advice — never pad. If you mention a cost, give a rough range and mark it as approximate. If you have nothing meaningful to add beyond the steps, say so in one sentence.${linkRules(task, { search })}
 
 Under 150 words. Markdown bullets, each starting with a **bold** lead-in.`;
   }
@@ -82,6 +116,8 @@ Search for the deadlines and key dates that apply to the user ${loc}, and for th
 
 Prefer the responsible agency's own site over blogs, aggregators, or marketing pages. Cite your source as a markdown link for every date, dollar amount, and phone number you state. If a date depends on their county or their individual circumstances, say so and name the office that confirms it rather than presenting one date as universal. If your search did not surface a reliable official source for something, say so instead of guessing it.
 
+Always end with a **Where to go** line: a markdown link to the page the user actually needs — where the dates are published, or where they file or pay. Include this link even if you state no specific date. Never leave the answer with no link at all.${linkRules(task, { search })}
+
 Close with one short line noting that these dates can change year to year.
 
 Under 250 words. Markdown with **bold** lead-ins.`;
@@ -90,14 +126,14 @@ Under 250 words. Markdown with **bold** lead-ins.`;
 
 Explain what deadlines and key dates apply here and which office or agency administers them ${loc}.
 
-Do NOT state a specific date, dollar amount, phone number, or web address as fact — these vary by jurisdiction and change year to year, and you cannot verify them. Name the exact office the user should contact to confirm. If you are not confident about the rule where they live, say so plainly rather than guessing.
+Do NOT state a specific date, dollar amount, or phone number as fact — these vary by jurisdiction and change year to year, and you cannot verify them. Name the exact office the user should contact to confirm. If you are not confident about the rule where they live, say so plainly rather than guessing.${linkRules(task, { search })}
 
 Under 200 words. Markdown with **bold** lead-ins.`;
 
     case "guidance_companies":
       return `${base}\n\nReturn a JSON object (no markdown wrapper, no code fences) with exactly two fields:
 1. "guidance": practical advice in markdown. Use prose where it reads naturally, bullets where there are distinct items, and ## headers to separate sections. Under 200 words.
-2. "companies": array of exactly 3 actual companies or services for this task — not comparison sites, aggregators, or brokers. Pick well-known, reputable names the user would recognize. For each: {"name":"","blurb":"1–2 sentences with **bold** key phrases on why it stands out","website":"https://..."}.
+2. "companies": array of exactly 3 actual companies or services for this task — not comparison sites, aggregators, or brokers. Pick well-known, reputable names the user would recognize. For each: {"name":"","blurb":"1–2 sentences with **bold** key phrases on why it stands out","website":"https://..."}. Use each company's plain homepage — no deep links into a signup or pricing path, which go stale.${linkRules(task, { search, jsonMode: true })}
 
 Return ONLY valid JSON. No text outside the JSON object.`;
 
@@ -113,6 +149,8 @@ Cover: which specific office handles this, the state and county rules that apply
 
 Cite your source as a markdown link for every fee, dollar amount, deadline, and phone number you state. If your search did not surface a reliable official source for one of those details, do NOT guess it — say it varies and name the exact office to call. If the rule differs between their state and their county, say which one you found.
 
+Always end with a **Where to go** line: a markdown link to the page where the user can actually get the forms, read the instructions, or file online. This link is required even when you state no fee and no deadline — naming an office without linking it leaves the user to go hunting. If you could not find their specific county's page, link the state court's or agency's own self-help page and say the county office is the one to confirm with. Never leave the answer with no link at all.${linkRules(task, { search })}
+
 Close with one short line noting that fees and deadlines are set locally and change, so the office confirms current amounts.
 
 Under 250 words. Markdown with **bold** lead-ins.`;
@@ -123,11 +161,11 @@ This task is governed by state and local law, and the user is ${loc}.
 
 Explain how this works in their state: which specific office handles it, what the state-level rules are, any residency or waiting-period requirements, and what they need to bring or prepare.
 
-Do NOT state a specific filing fee, dollar amount, phone number, or web address, and do NOT state a local deadline as fact — these are set locally and you cannot verify them. Instead, name the exact office they should contact to confirm those details. If you are not confident about this particular state's rule, say so plainly rather than guessing.
+Do NOT state a specific filing fee, dollar amount, or phone number, and do NOT state a local deadline as fact — these are set locally and you cannot verify them. Instead, name the exact office they should contact to confirm those details. If you are not confident about this particular state's rule, say so plainly rather than guessing.${linkRules(task, { search })}
 
 Under 200 words. Markdown with **bold** lead-ins.`;
 
     default:
-      return `${base}\n\nGive practical guidance: what to look for, what to ask, red flags, the single most important thing to know. Under 200 words.`;
+      return `${base}\n\nGive practical guidance: what to look for, what to ask, red flags, the single most important thing to know.${linkRules(task, { search })}\n\nUnder 200 words.`;
   }
 }
