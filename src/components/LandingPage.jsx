@@ -162,8 +162,10 @@ export function LandingPage({ onGetStarted, onSignIn }) {
         <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 0 56px' }}>
           <Logo size="small" />
           <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            {/* Absolute so the rendered href is a byte-for-byte match with the
+                privacy policy URL configured on the OAuth consent screen. */}
             <a
-              href="/privacy.html"
+              href="https://mitzy.io/privacy.html"
               style={{
                 fontSize: 14, color: C.muted, fontWeight: 500,
                 fontFamily: "'DM Sans', sans-serif", textDecoration: 'none',
@@ -346,15 +348,29 @@ export function LandingPage({ onGetStarted, onSignIn }) {
           </button>
         </div>
 
-        {/* Footer */}
-        <div style={{ textAlign: 'center', padding: '0 0 32px' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+        {/* Footer. The data paragraph is not decoration: Google's OAuth
+            branding review requires the homepage to state why the app asks for
+            user data, and it must stay in sync with what the app actually does
+            (Mitzy both reads and creates calendar events). */}
+        <div style={{ borderTop: `1px solid ${C.cardBorder}`, paddingTop: 28, margin: '16px 0 0' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
             <Logo size="small" />
           </div>
-          <p style={{ fontSize: 12, color: C.muted, margin: 0 }}>
-            <a href="/privacy.html" style={{ color: C.muted, textDecoration: 'none' }}>Privacy</a>
+          <p className="lp-footer-note" style={{
+            fontSize: 12, lineHeight: 1.7, color: C.muted, margin: '0 auto 14px',
+            textAlign: 'center',
+          }}>
+            Mitzy asks for your household details — home, cars, kids, pets, zip code — so it can
+            work out which tasks apply to you. Signing in with Google gives Mitzy your name and
+            email address to create and load your account. Connecting Google Calendar is optional:
+            Mitzy reads your upcoming events to recognize appointments you've already booked, and
+            adds an event to your calendar when you ask it to schedule a task. Mitzy never sells
+            or shares your data.
+          </p>
+          <p style={{ fontSize: 12, color: C.muted, margin: '0 0 32px', textAlign: 'center' }}>
+            <a href="https://mitzy.io/privacy.html" style={{ color: C.brand, textDecoration: 'none', fontWeight: 500 }}>Privacy Policy</a>
             {' · '}
-            <a href="/terms.html" style={{ color: C.muted, textDecoration: 'none' }}>Terms</a>
+            <a href="https://mitzy.io/terms.html" style={{ color: C.brand, textDecoration: 'none', fontWeight: 500 }}>Terms</a>
           </p>
         </div>
       </div>
