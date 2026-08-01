@@ -1,13 +1,39 @@
 import React from 'react';
 
-// Renders inline **bold** and *italic* within a text string
+// Only http(s) is allowed through. Guidance strings are ours, not user input,
+// but a link renderer that will happily emit `javascript:` is a footgun left
+// lying around for whoever adds AI-written guidance later.
+const SAFE_HREF = /^https?:\/\//i;
+
+// Renders inline **bold**, *italic*, and [label](url) within a text string.
+// The split keeps one regex per pass so a link label can itself contain bold.
 function renderInline(text) {
+  return text.split(/(\[[^\]]+\]\([^)\s]+\))/).flatMap((chunk, ci) => {
+    const link = chunk.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/);
+    if (link && SAFE_HREF.test(link[2])) {
+      return (
+        <a
+          key={`l${ci}`}
+          href={link[2]}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: '#1A5C3A', textDecoration: 'underline', textDecorationColor: '#9BC4AC' }}
+        >
+          {renderEmphasis(link[1], `l${ci}`)}
+        </a>
+      );
+    }
+    return renderEmphasis(chunk, `t${ci}`);
+  });
+}
+
+function renderEmphasis(text, keyPrefix) {
   return text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/).map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) {
-      return <strong key={i}>{part.slice(2, -2)}</strong>;
+      return <strong key={`${keyPrefix}-${i}`}>{part.slice(2, -2)}</strong>;
     }
     if (part.startsWith('*') && part.endsWith('*')) {
-      return <em key={i}>{part.slice(1, -1)}</em>;
+      return <em key={`${keyPrefix}-${i}`}>{part.slice(1, -1)}</em>;
     }
     return part;
   });

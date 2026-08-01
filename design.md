@@ -25,6 +25,8 @@ C.surface     = '#F0EDE4'  // raised surface / divider background
 
 Snooze uses `#6B8DD6` (periwinkle blue) directly in components — not a named constant.
 
+Outbound links (assist answers, task guidance) are `C.brand` underlined, and always open in a new tab with `rel="noopener noreferrer"` — the app is a PWA, so navigating away in-place loses the user's place. Static guidance links use a softer `#9BC4AC` underline so a step full of them doesn't read as a wall of blue.
+
 ---
 
 ## Typography

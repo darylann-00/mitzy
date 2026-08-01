@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 import { saveS, ASSIST_CACHE_PREFIX, ASSIST_CACHE_TTL, ASSIST_CACHE_TTL_SEARCH } from "../utils/storage";
-import { buildAssistPrompt, isSearchAssistType } from "../utils/assistPrompt";
+import { buildAssistPrompt, shouldUseSearch } from "../utils/assistPrompt";
 import { useProfileContext } from "../contexts/ProfileContext";
 import { supabase } from "../lib/supabase";
 
@@ -352,7 +352,7 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
   const cacheKey = `${ASSIST_CACHE_PREFIX}-${task.id}`;
   // Web-search-backed answers are expensive and slow-moving, so they're held
   // much longer than the 7-day default.
-  const searchBacked = isSearchAssistType(task.assistType);
+  const searchBacked = shouldUseSearch(task);
   const cacheTtl = searchBacked ? ASSIST_CACHE_TTL_SEARCH : ASSIST_CACHE_TTL;
 
   const parsedProviders = useMemo(() => {
@@ -424,7 +424,7 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
         const res = await fetch('/api/assist', {
           method: 'POST',
           headers: { 'content-type': 'application/json', ...authHeader },
-          body: JSON.stringify({ prompt, fallbackPrompt, assistType: task.assistType }),
+          body: JSON.stringify({ prompt, fallbackPrompt, assistType: task.assistType, search: searchBacked }),
         });
         if (!res.ok) throw new Error(`${res.status}`);
         if (searchBacked) {
