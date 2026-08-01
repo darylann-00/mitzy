@@ -21,22 +21,21 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Righteous&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-      /* The #boot-fallback block below is a plain-HTML summary of the app for
-         crawlers and no-JS visitors. React clears #root when it mounts, but the
-         block is painted before the bundle loads, so it flashed on every visit.
-         Hide it the moment we know scripts run; the timer below puts it back if
-         the app never actually mounted. */
-      html.js-boot #boot-fallback { display: none; }
+      /* #boot-fallback (in <body>) is a plain-HTML summary of the app for
+         crawlers and no-JS visitors. It's painted before the React bundle
+         loads, so it must start hidden or it flashes on every visit; the
+         <noscript> block below reveals it when scripts can't run.
+
+         This has to stay CSS-only. vercel.json sets script-src without
+         'unsafe-inline', so an inline <script> toggling a class is silently
+         blocked in production — it works in `vite preview`, which sends no
+         CSP, and then does nothing on mitzy.io. style-src does allow
+         'unsafe-inline', so these rules apply. */
+      #boot-fallback { display: none; }
     </style>
-    <script>
-      document.documentElement.classList.add('js-boot');
-      setTimeout(function () {
-        // Still present means React never rendered — show the fallback for real.
-        if (document.getElementById('boot-fallback')) {
-          document.documentElement.classList.remove('js-boot');
-        }
-      }, 4000);
-    </script>
+    <noscript>
+      <style>#boot-fallback { display: block; }</style>
+    </noscript>
   </head>
   <body>
     <div id="root">
