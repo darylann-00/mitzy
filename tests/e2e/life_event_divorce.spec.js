@@ -56,27 +56,41 @@ async function mockLifeEventEndpoints(page) {
 const ASSIST_MARKER = 'Travis County District Clerk';
 const ASSIST_FEE    = '$350 filing fee';
 
+// jurisdiction is a search-backed assist type, so /api/assist answers it with a
+// stream of line-delimited JSON events rather than one JSON body. The answer is
+// split across several `text` events on purpose — the client has to assemble
+// them, and a mock that sent it in one delta wouldn't exercise that.
+const ASSIST_STREAM = [
+  { type: 'status', phase: 'search' },
+  { type: 'text', delta: `**Where you file:** Petitions go to the ${ASSIST_MARKER}. ` },
+  // The markdown link is deliberately split mid-token: it only renders as a
+  // link if the client concatenated the deltas before parsing.
+  { type: 'text', delta: `The ${ASSIST_FEE} is listed on [their fee ` },
+  { type: 'text', delta: 'schedule](https://example.gov/fees).' },
+  { type: 'done' },
+];
+
+const ndjson = (events) => events.map(e => JSON.stringify(e)).join('\n') + '\n';
+
 // Captures what the client actually posted so the test can assert the request
 // shape, not just that a response rendered.
-async function mockAssistEndpoint(page) {
+async function mockAssistEndpoint(page, events = ASSIST_STREAM) {
   const captured = {};
   await page.route('**/api/assist', route => {
     Object.assign(captured, route.request().postDataJSON());
     return route.fulfill({
       status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        text: `**Where you file:** Petitions go to the ${ASSIST_MARKER}. `
-            + `The ${ASSIST_FEE} is listed on [their fee schedule](https://example.gov/fees).`,
-      }),
+      contentType: 'application/x-ndjson; charset=utf-8',
+      body: ndjson(events),
     });
   });
   return captured;
 }
 
-test('user starts a divorce life event self-represented and opens assist on a jurisdiction task', async ({ page }) => {
-  await mockLifeEventEndpoints(page);
-  const assistRequest = await mockAssistEndpoint(page);
+// Walks a fresh self-represented divorce event up to an open AssistPanel on the
+// petition task. Shared so the assist assertions can vary without paying for a
+// second login and intake.
+async function startDivorceAndOpenAssist(page) {
   await seedReturnUser(page);
   await page.goto('/');
 
@@ -144,7 +158,15 @@ test('user starts a divorce life event self-represented and opens assist on a ju
   const assistBtn = page.getByRole('button', { name: /Want Mitzy to help/ });
   await expect(assistBtn).toBeVisible({ timeout: 5000 });
   await assistBtn.click();
+}
 
+test('user starts a divorce life event self-represented and opens assist on a jurisdiction task', async ({ page }) => {
+  await mockLifeEventEndpoints(page);
+  const assistRequest = await mockAssistEndpoint(page);
+  await startDivorceAndOpenAssist(page);
+
+  // The streamed deltas have to assemble into one answer before the markdown
+  // means anything — the source link below is split across two of them.
   await expect(page.getByText(new RegExp(ASSIST_MARKER))).toBeVisible({ timeout: 15000 });
 
   // A real fee and a source link now render — the whole point of giving this
@@ -170,4 +192,27 @@ test('user starts a divorce life event self-represented and opens assist on a ju
   // stating a fee it cannot verify.
   expect(assistRequest.fallbackPrompt).toContain('Do NOT state a specific filing fee');
   expect(assistRequest.fallbackPrompt).not.toContain('Cite your source as a markdown link');
+});
+
+test('a jurisdiction assist stream that ends mid-answer is not shown or cached as complete', async ({ page }) => {
+  await mockLifeEventEndpoints(page);
+  // Same answer, cut off before the `done` event — what the user sees if the
+  // function is killed or the connection drops partway through. The text that
+  // did arrive is half-sourced legal guidance, so it must not be presented as
+  // the answer, and it must not land in the 30-day cache.
+  await mockAssistEndpoint(page, ASSIST_STREAM.filter(e => e.type !== 'done').slice(0, 3));
+  await startDivorceAndOpenAssist(page);
+
+  await expect(page.getByText('Something went wrong. Try again?')).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole('button', { name: 'Retry' })).toBeVisible();
+
+  // The partial answer is gone, not left on screen behind the error.
+  await expect(page.getByText(new RegExp(ASSIST_MARKER))).toHaveCount(0);
+
+  // Nothing written under the assist cache prefix, so reopening the panel
+  // refetches instead of serving a truncated answer for the next 30 days.
+  const cachedKeys = await page.evaluate(() =>
+    Object.keys(localStorage).filter(k => k.startsWith('mitzy-assist-')),
+  );
+  expect(cachedKeys).toEqual([]);
 });
