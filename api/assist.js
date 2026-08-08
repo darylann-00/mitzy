@@ -1,5 +1,7 @@
 import { requireUser } from './_auth.js';
 import { assistLimiter } from './_ratelimit.js';
+import { checkAccess, upgradeResponse } from './_entitlement.js';
+import { refund } from './_quota.js';
 
 export const config = { runtime: "edge" };
 
@@ -358,6 +360,20 @@ export default async function handler(req) {
     (typeof assistType === 'string' && SEARCH_ASSIST_TYPES.has(assistType)) ||
     search === true;
 
+  // Mitzy Pro gate. The search path is Pro-only rather than something a free
+  // account can spend its monthly allowance on: it's the one call in the
+  // product expensive enough to matter, and `useSearch` is computed here from
+  // the request, so asking for it via either `assistType` or `search: true`
+  // lands on the same check. A free user asking for a search-backed task still
+  // gets the no-tools answer — the client re-requests without the flag.
+  //
+  // This sits before the stream opens, so it comes back as a real 402 rather
+  // than an in-band error event.
+  const access = await checkAccess({ userId, feature: 'assist', requirePro: useSearch });
+  if (!access.ok) {
+    return upgradeResponse(access, corsHeaders(req));
+  }
+
   // Every other assist type keeps the original one-shot JSON response. Only the
   // search-backed types stream, so guidance/script/guidance_companies are
   // untouched by any of this.
@@ -367,6 +383,8 @@ export default async function handler(req) {
       text = await runPlain(apiKey, fallbackPrompt || prompt);
     } catch (err) {
       console.error(`Anthropic error: ${err}`);
+      // The user never got an answer, so don't charge them for one.
+      if (access.consumed) await refund('assist', userId);
       return new Response("Service error", { status: 502 });
     }
     return new Response(JSON.stringify({ text }), {

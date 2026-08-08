@@ -1,5 +1,7 @@
 import { requireUser } from './_auth.js';
 import { providersLimiter, providerSearchLimiter } from './_ratelimit.js';
+import { checkAccess, upgradeResponse } from './_entitlement.js';
+import { refund } from './_quota.js';
 
 export const config = { runtime: "edge" };
 
@@ -104,6 +106,19 @@ export default async function handler(req) {
     return new Response("API keys not configured", { status: 500 });
   }
 
+  // Mitzy Pro gate — full provider search only. skipBlurbs lookups are the
+  // live autocomplete behind the provider name field: metering keystrokes
+  // against a 3-a-month allowance would make that input unusable, and with no
+  // Claude call they're cheap enough that their own 60/h limiter is the right
+  // bound.
+  let access = { ok: true };
+  if (!skipBlurbs) {
+    access = await checkAccess({ userId, feature: 'assist' });
+    if (!access.ok) {
+      return upgradeResponse(access, corsHeaders(req));
+    }
+  }
+
   // ── 1. Google Places Text Search (New API) ──────────────────────────────────
   const placesRes = await fetch("https://places.googleapis.com/v1/places:searchText", {
     method: "POST",
@@ -133,6 +148,7 @@ export default async function handler(req) {
   if (!placesRes.ok) {
     const err = await placesRes.text();
     console.error(`Places API error: ${err}`);
+    if (access.consumed) await refund('assist', userId);
     return new Response("Service error", { status: 502 });
   }
 
@@ -140,6 +156,8 @@ export default async function handler(req) {
   const places = placesData.places || [];
 
   if (!places.length) {
+    // No results is not an answer worth charging for.
+    if (access.consumed) await refund('assist', userId);
     return new Response(JSON.stringify({ text: "[]" }), {
       headers: { "content-type": "application/json", ...corsHeaders(req) },
     });
@@ -219,6 +237,7 @@ Return ONLY a JSON array (no markdown, no explanation), one object per place, in
   if (!anthropicRes.ok) {
     const err = await anthropicRes.text();
     console.error(`Anthropic error: ${err}`);
+    if (access.consumed) await refund('assist', userId);
     return new Response("Service error", { status: 502 });
   }
 

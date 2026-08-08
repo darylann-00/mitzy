@@ -5,6 +5,7 @@ import remarkGfm from "remark-gfm";
 import { saveS, ASSIST_CACHE_PREFIX, ASSIST_CACHE_TTL, ASSIST_CACHE_TTL_SEARCH } from "../utils/storage";
 import { buildAssistPrompt, shouldUseSearch } from "../utils/assistPrompt";
 import { useProfileContext } from "../contexts/ProfileContext";
+import { UpgradeSheet } from "./UpgradeSheet";
 import { supabase } from "../lib/supabase";
 
 // ─── Pulsing dot loader ────────────────────────────────────────────────────────
@@ -340,11 +341,14 @@ function parseProviders(text) {
 
 // ─── AssistPanel ───────────────────────────────────────────────────────────────
 export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
-  const { profile, providerHistory, saveProvider } = useProfileContext();
+  const { profile, providerHistory, saveProvider, entitlement } = useProfileContext();
   const [status,    setStatus]    = useState('idle');
   const [result,    setResult]    = useState(null);
   const [cached,    setCached]    = useState(null);
   const [errorKind, setErrorKind] = useState('general');
+  // The server's 402 body, once we've hit one.
+  const [upgrade,   setUpgrade]   = useState(null);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   // What the server says it's doing right now, for the search-backed types.
   // Null until the stream reports something.
   const [phase,     setPhase]     = useState(null);
@@ -387,6 +391,17 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
     try { saveS(cacheKey, { data, ts: Date.now() }); } catch {}
   };
 
+  // A 402 carries a JSON body describing why (allowance spent vs. Mitzy Pro
+  // only) and what the limits are. Every other status keeps the bare-code
+  // throw the catch below already understands. The .catch() matters: a 402 with
+  // a non-JSON body would otherwise raise a SyntaxError and get misread as
+  // 'bad_response'.
+  const assistError = async (res) => {
+    const err = new Error(`${res.status}`);
+    if (res.status === 402) err.payload = await res.json().catch(() => null);
+    return err;
+  };
+
   const fetchResult = async (force = false) => {
     if (!force) {
       const hit = loadCache();
@@ -413,7 +428,7 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
             searchQuery: task.searchQuery,
           }),
         });
-        if (!res.ok) throw new Error(`${res.status}`);
+        if (!res.ok) throw await assistError(res);
         ({ text } = await res.json());
       } else {
         // Search-backed types send both wordings: `prompt` asks the model to
@@ -426,7 +441,7 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
           headers: { 'content-type': 'application/json', ...authHeader },
           body: JSON.stringify({ prompt, fallbackPrompt, assistType: task.assistType, search: searchBacked }),
         });
-        if (!res.ok) throw new Error(`${res.status}`);
+        if (!res.ok) throw await assistError(res);
         if (searchBacked) {
           // These stream, because the lookup behind them is slow enough that a
           // static loader was the whole complaint. Everything else still gets
@@ -452,15 +467,36 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
       const msg = err?.message ?? '';
       let kind = 'general';
       if (typeof navigator !== 'undefined' && !navigator.onLine) kind = 'offline';
+      else if (msg === '402') kind = 'upgrade';
       else if (msg === '429') kind = 'rate_limit';
       else if (msg === '504' || msg === '408' || msg === '524') kind = 'timeout';
       else if (err instanceof SyntaxError) kind = 'bad_response';
+      if (kind === 'upgrade') setUpgrade(err.payload || { reason: 'quota_exhausted' });
       setErrorKind(kind);
       setStatus('error');
     }
   };
 
-  useEffect(() => { fetchResult(false); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Opening the panel is not the same as asking to spend an assist. A cached
+  // answer costs nothing and shows straight away; a Mitzy Pro account fetches
+  // as it always did; a free account is asked first, because otherwise merely
+  // tapping "Want Mitzy to help?" would burn a third of the month's allowance.
+  useEffect(() => {
+    if (status !== 'idle') return;
+    const hit = loadCache();
+    if (hit) { setCached(hit); setResult(hit.data); setStatus('done'); return; }
+    if (entitlement.loading) return; // don't decide before we know the plan
+    if (entitlement.isPro) { fetchResult(true); return; }
+    if (searchBacked) {
+      // The monthly allowance never covers a live lookup, so say so here
+      // rather than spending a round trip to be told.
+      setUpgrade({ reason: 'pro_only' });
+      setErrorKind('upgrade');
+      setStatus('error');
+      return;
+    }
+    setStatus('confirm');
+  }, [entitlement.loading, entitlement.isPro, status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const cacheAgeHours = cached ? Math.floor((Date.now() - cached.ts) / (1000 * 60 * 60)) : null;
   const savedProviders = providerHistory[task.id] || [];
@@ -552,8 +588,23 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
           {/* Loading */}
           {status === 'loading' && <PulseLoader messages={getLoadingMessages()} />}
 
+          {/* Spend confirmation — free accounts only, before the first fetch */}
+          {status === 'confirm' && (
+            <div style={{ textAlign:'center', padding:'36px 20px' }}>
+              <div style={{ fontSize:14, color:'#4A6256', marginBottom:18, fontFamily:'DM Sans, sans-serif', lineHeight:1.6 }}>
+                Mitzy can look into this for you. It uses one of your free assists this month.
+              </div>
+              <button
+                onClick={() => fetchResult(true)}
+                style={{ fontSize:14, fontWeight:700, background:'#1A5C3A', color:'#E8F5EE', border:'none', borderRadius:10, padding:'12px 24px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+              >
+                Yes, help me with this
+              </button>
+            </div>
+          )}
+
           {/* Error */}
-          {status === 'error' && (() => {
+          {status === 'error' && errorKind !== 'upgrade' && (() => {
             const errorMessages = {
               offline:      'No internet connection. Check your connection and try again.',
               rate_limit:   'Too many requests right now. Wait a moment, then retry.',
@@ -577,6 +628,23 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
               </div>
             );
           })()}
+
+          {/* Needs Mitzy Pro — no Retry, retrying a 402 just earns another one */}
+          {status === 'error' && errorKind === 'upgrade' && (
+            <div style={{ textAlign:'center', padding:'40px 20px' }}>
+              <div style={{ fontSize:14, color:'#4A6256', marginBottom:18, fontFamily:'DM Sans, sans-serif', lineHeight:1.6 }}>
+                {upgrade?.reason === 'pro_only'
+                  ? 'This answer needs a live lookup of your local rules — that\'s a Mitzy Pro feature.'
+                  : 'You\'ve used your free assists for this month.'}
+              </div>
+              <button
+                onClick={() => setUpgradeOpen(true)}
+                style={{ fontSize:14, fontWeight:700, background:'#1A5C3A', color:'#E8F5EE', border:'none', borderRadius:10, padding:'12px 24px', cursor:'pointer', fontFamily:'DM Sans, sans-serif' }}
+              >
+                See Mitzy Pro
+              </button>
+            </div>
+          )}
 
           {/* Done — providers */}
           {status === 'done' && task.assistType === 'providers' && (
@@ -644,6 +712,10 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
 
         </div>
       </div>
+
+      {upgradeOpen && (
+        <UpgradeSheet {...(upgrade || {})} onClose={() => setUpgradeOpen(false)} />
+      )}
 
       {/* CSS for pulse animation */}
       <style>{`

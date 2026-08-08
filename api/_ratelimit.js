@@ -1,7 +1,9 @@
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
-const redis = Redis.fromEnv();
+// Exported so `_quota.js` and `_entitlement.js` share one connection rather
+// than opening their own.
+export const redis = Redis.fromEnv();
 
 export const assistLimiter = new Ratelimit({
   redis,
