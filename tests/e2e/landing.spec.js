@@ -37,6 +37,26 @@ test('landing page states what the app is and what it does', async ({ page }) =>
   await expect(privacy).toHaveAttribute('href', 'https://mitzy.io/privacy.html');
 });
 
+// The pricing table is a promise the app has to keep. The server gates AI
+// assist, provider search, and the brain-dump creator, giving free accounts a
+// small monthly allowance — so the Free column has to say so. If someone
+// removes that line, free users hit a paywall the page never warned them about.
+test('pricing table matches what the app actually enforces', async ({ page }) => {
+  await page.goto('/');
+
+  await expect(page.getByRole('heading', { name: 'Free' })).toBeVisible();
+  await expect(page.getByText('$0 / forever')).toBeVisible();
+  await expect(page.getByText('3 AI assists a month')).toBeVisible();
+
+  await expect(page.getByRole('heading', { name: 'Mitzy Pro' })).toBeVisible();
+  await expect(page.getByText('$4.99 / month')).toBeVisible();
+  await expect(page.getByText('Unlimited AI task assistant')).toBeVisible();
+
+  // Freemium, not a trial — the CTA must not promise one.
+  await expect(page.getByRole('button', { name: 'Get started free' }).first()).toBeVisible();
+  await expect(page.getByText('Start my free trial')).toHaveCount(0);
+});
+
 test('static boot fallback never flashes before the app mounts', async ({ page }) => {
   // Block the app bundle so the page is frozen in its pre-React state — the
   // exact moment the fallback used to flash. The first version of this fix

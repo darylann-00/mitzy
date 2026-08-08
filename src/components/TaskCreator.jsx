@@ -5,6 +5,7 @@ import { useTaskContext } from "../contexts/TaskContext";
 import { supabase } from "../lib/supabase";
 import { TaskConfirmCard } from "./TaskConfirmCard";
 import { BrainDumpReview } from "./BrainDumpReview";
+import { UpgradeSheet } from "./UpgradeSheet";
 import { CategoryTile, LIFE_EVENT_ICON_CONFIG } from "./CategoryIcons";
 import { LIFE_EVENT_DEFS } from "../data/lifeEvents";
 
@@ -77,6 +78,8 @@ export function TaskCreator({ onClose, lifeEventId }) {
   const [generated, setGenerated] = useState(null);
   const [multiTasks, setMultiTasks] = useState(null);
   const [refusal, setRefusal] = useState(null);
+  const [upgrade, setUpgrade] = useState(null);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [manual, setManual] = useState(null);
   const [errorKind, setErrorKind] = useState(null);
   const [regenerating, setRegenerating] = useState(false);
@@ -135,7 +138,13 @@ export function TaskCreator({ onClose, lifeEventId }) {
         activeEvent: activeEvent ? { type: activeEvent.type, label: activeEventDef?.label } : null,
       }),
     });
-    if (!res.ok) throw new Error(String(res.status));
+    if (!res.ok) {
+      const err = new Error(String(res.status));
+      // A 402 explains itself in the body — allowance spent vs. Mitzy Pro only.
+      // The .catch() keeps a non-JSON body from surfacing as a parse error.
+      if (res.status === 402) err.payload = await res.json().catch(() => null);
+      throw err;
+    }
     return res.json();
   };
 
@@ -201,6 +210,13 @@ export function TaskCreator({ onClose, lifeEventId }) {
     } catch (err) {
       if (err.name === 'AbortError') return;
       const msg = err?.message ?? '';
+      // Early return: the fall-through below puts the user back on the input
+      // screen, which is the wrong place for a paywall.
+      if (msg === '402') {
+        setUpgrade(err.payload || { reason: 'quota_exhausted' });
+        setStage('upgrade');
+        return;
+      }
       let kind = 'general';
       if (typeof navigator !== 'undefined' && !navigator.onLine) kind = 'offline';
       else if (msg === '429') kind = 'rate_limit';
@@ -240,7 +256,12 @@ export function TaskCreator({ onClose, lifeEventId }) {
             }));
           }
         } catch (err) {
-          if (err.name !== 'AbortError') setRegenError("Couldn't update — try a different option");
+          if (err.name === 'AbortError') return;
+          // Don't blow the whole screen away on a 402 here — the task is
+          // already generated and still saveable; only the re-roll is blocked.
+          setRegenError(err?.message === '402'
+            ? "That's your last free assist for this month — the task above is still yours to save."
+            : "Couldn't update — try a different option");
         } finally {
           setRegenerating(false);
         }
@@ -372,6 +393,7 @@ export function TaskCreator({ onClose, lifeEventId }) {
     if (stage === 'confirm')      return 'Review and tweak before saving';
     if (stage === 'multi-review') return 'Uncheck any you don\'t need';
     if (stage === 'refusal')      return 'Resources for this';
+    if (stage === 'upgrade')      return 'Brain dump is a Mitzy Pro feature';
     if (stage === 'manual')       return 'Add it as a basic reminder';
     return '';
   })();
@@ -753,6 +775,43 @@ export function TaskCreator({ onClose, lifeEventId }) {
             </div>
           )}
 
+          {/* Needs Mitzy Pro — always offers the manual route out, since that
+              path needs no API call and gets the task written down either way */}
+          {stage === 'upgrade' && (
+            <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #EAE4DA', padding: '18px 16px', textAlign: 'center' }}>
+              <div style={{ fontSize: 14, color: C.ink, lineHeight: 1.6, fontFamily: 'DM Sans, sans-serif', marginBottom: 18 }}>
+                {upgrade?.reason === 'pro_only'
+                  ? 'Turning a brain dump into tasks is a Mitzy Pro feature.'
+                  : "You've used your free AI assists for this month."}
+              </div>
+              <button
+                onClick={() => setUpgradeOpen(true)}
+                style={{
+                  display: 'inline-block', padding: '12px 20px', background: C.brand,
+                  color: '#E8F5EE', border: 'none', borderRadius: 12, fontSize: 14, fontWeight: 700,
+                  fontFamily: 'DM Sans, sans-serif', cursor: 'pointer', marginBottom: 14,
+                }}
+              >
+                See Mitzy Pro
+              </button>
+              <div>
+                <button
+                  onClick={() => {
+                    setManual({ label: prompt.trim().slice(0, 80), cat: 'home' });
+                    setStage('manual');
+                  }}
+                  style={{
+                    padding: '10px 20px', background: 'transparent', color: C.muted,
+                    border: '1.5px solid #EAE4DA', borderRadius: 10,
+                    fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+                  }}
+                >
+                  Add it myself instead
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Manual fallback (tier 0) */}
           {stage === 'manual' && manual && (
             <div>
@@ -809,6 +868,10 @@ export function TaskCreator({ onClose, lifeEventId }) {
 
         </div>
       </div>
+
+      {upgradeOpen && (
+        <UpgradeSheet {...(upgrade || {})} onClose={() => setUpgradeOpen(false)} />
+      )}
 
       <style>{`
         @keyframes mitzyPulse {

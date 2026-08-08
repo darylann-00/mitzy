@@ -2,6 +2,7 @@ import { createContext, useContext } from "react";
 import { useProfile } from "../hooks/useProfile";
 import { useProviders } from "../hooks/useProviders";
 import { useLifeEvents } from "../hooks/useLifeEvents";
+import { useEntitlement } from "../hooks/useEntitlement";
 import { getClimateRegion } from "../utils/climateRegion";
 
 const ProfileContext = createContext(null);
@@ -17,6 +18,7 @@ export function ProfileProvider({ user, welcomeChoice, children }) {
   } = useProfile(user, welcomeChoice);
   const { providerHistory, saveProvider, updateProvider, removeProvider } = useProviders(user);
   const lifeEvents = useLifeEvents({ user, customTasks, addCustomTasksBulk, removeCustomTasksByLifeEvent });
+  const entitlement = useEntitlement(user);
   const region = getClimateRegion(profile?.zip);
 
   return (
@@ -29,6 +31,7 @@ export function ProfileProvider({ user, welcomeChoice, children }) {
       providerHistory, saveProvider, updateProvider, removeProvider,
       region,
       lifeEvents,
+      entitlement,
     }}>
       {children}
     </ProfileContext.Provider>

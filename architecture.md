@@ -49,14 +49,20 @@ Read this when touching state, data, or non-trivial component wiring.
   schedule.js       — Vercel Function → Google Calendar event creation
   _auth.js          — Shared auth helper
   _helpers.js       — Shared utilities
-  _ratelimit.js     — Upstash rate limiting
+  _ratelimit.js     — Upstash rate limiting (also exports the shared `redis`)
+  _entitlement.js   — Mitzy Pro plan lookup + the `checkAccess` gate
+  _quota.js         — Free monthly assist counter (consume/peek/refund)
 ```
 
 ---
 
 ## State Architecture
 
-- `ProfileContext` (`src/contexts/ProfileContext.jsx`) wraps `useProfile` + `useProviders` + `region`.
+- `ProfileContext` (`src/contexts/ProfileContext.jsx`) wraps `useProfile` + `useProviders` + `useLifeEvents` + `useEntitlement` + `region`.
+- **Entitlement is deliberately not on `profiles`.** The `profiles_update_own` RLS policy lets a user UPDATE any column on their own row, so a `plan`/`is_pro` column there would be forgeable from the browser console. It lives in its own `subscriptions` table (`20260807_add_subscriptions.sql`) whose only policy is `select own` — with RLS on and no insert/update/delete policies, the `authenticated` role cannot write it at all, and only the service role (the Stripe webhook) can. For the same reason it is kept out of `useProfile`: that hook's `PROFILE_FIELDS` drives the sign-in conflict modal, and it mirrors the whole profile into localStorage, where a hand-edited `plan: 'pro'` would survive reloads. `useEntitlement` is UI-only and fails closed to `'free'` **silently** — every e2e spec triggers its select, so it must never throw or surface a sync error. The server re-checks the same row on every gated request via `getEntitlement()` and never trusts the client.
+- **The gate** (`checkAccess` in `_entitlement.js`) runs after auth, rate limiting, and input validation, but before any billable call — placing it after validation is what stops a malformed request from spending someone's allowance on a 400. `requirePro: true` marks a feature the free allowance never covers (the web-search assist path). Blocked calls return **402** with `{ error, reason, feature, used, limit, resetAt }`; both client callers must attach that body to the thrown error, since the codebase's `throw new Error(String(res.status))` idiom otherwise discards it. On `/api/assist` the gate is placed after `useSearch` is computed so it covers both ways of asking for a search (`assistType` and the `search` flag) and still lands before the stream opens, keeping the 402 a real HTTP status rather than an in-band event.
+- **Quota is a plain Redis counter, not a `Ratelimit`.** `q:assist:{userId}:{YYYY-MM}` (UTC month) with a ~40d TTL. A sliding window was rejected because it returns tokens fractionally and its `reset` is epoch-aligned, so "resets on the 1st" would be a lie. Callers that consume must refund on their own failure paths (`access.consumed` → `refund()`); a 502 must never cost a free user an assist.
+- `PAYWALL_ENABLED` must be `'true'` or `checkAccess` is a no-op that returns pro. This is the kill switch that lets the paywall ship before Stripe exists, and the one-flip rollback if it misbehaves. `MITZY_PRO_ALLOWLIST` (comma-separated user ids) grants Pro without a DB write.
 - `TaskContext` (`src/contexts/TaskContext.jsx`) wraps `useTasks` + all derived lists (`activeTasks`, `visibleTasks`, `scoredDue`, `focusTasks`, `doneThisWeek`) + helpers (`getStatus`, `getDays`, `getNext`).
 - `CalendarContext` (`src/contexts/CalendarContext.jsx`) manages Google Calendar OAuth tokens, event fetching, and task-event matching state.
 - `TaskProvider` is nested inside `ProfileProvider`.

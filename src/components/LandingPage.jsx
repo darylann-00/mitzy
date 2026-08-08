@@ -207,7 +207,7 @@ export function LandingPage({ onGetStarted, onSignIn }) {
                 onMouseLeave={() => setHoveredCta(false)}
                 style={ctaStyle}
               >
-                Start my free trial
+                Get started free
               </button>
               <span style={{ fontSize: 13, color: C.muted, marginTop: 12 }}>
                 No credit card required
@@ -300,6 +300,7 @@ export function LandingPage({ onGetStarted, onSignIn }) {
                 <PricingItem>Weekly planning</PricingItem>
                 <PricingItem>Calendar matching</PricingItem>
                 <PricingItem>Snooze and schedule</PricingItem>
+                <PricingItem>3 AI assists a month</PricingItem>
               </ul>
             </div>
             {/* Pro tier */}
@@ -315,7 +316,8 @@ export function LandingPage({ onGetStarted, onSignIn }) {
               <p style={{ fontSize: 14, color: C.muted, margin: '0 0 16px' }}>$4.99 / month</p>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                 <PricingItem>Everything in Free</PricingItem>
-                <PricingItem>AI task assistant</PricingItem>
+                <PricingItem>Unlimited AI task assistant</PricingItem>
+                <PricingItem>Live local fee and deadline lookups</PricingItem>
                 <PricingItem>Smart provider search</PricingItem>
                 <PricingItem>Brain dump task creator</PricingItem>
               </ul>
@@ -344,7 +346,7 @@ export function LandingPage({ onGetStarted, onSignIn }) {
               position: 'relative',
             }}
           >
-            Start my free trial
+            Get started free
           </button>
         </div>
 

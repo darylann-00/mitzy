@@ -1,5 +1,7 @@
 import { requireUser } from './_auth.js';
 import { generateTaskLimiter } from './_ratelimit.js';
+import { checkAccess, upgradeResponse } from './_entitlement.js';
+import { refund } from './_quota.js';
 
 export const config = { runtime: "edge" };
 
@@ -280,6 +282,15 @@ export default async function handler(req) {
     return new Response("API key not configured", { status: 500, headers: corsHeaders(req) });
   }
 
+  // Mitzy Pro gate. Free accounts get a monthly allowance shared with AI
+  // assist, then fall back to the manual "Do it myself" form, which needs no
+  // API call. Placed after validation so a malformed request can't spend
+  // someone's allowance on a 400.
+  const access = await checkAccess({ userId, feature: 'assist' });
+  if (!access.ok) {
+    return upgradeResponse(access, corsHeaders(req));
+  }
+
   const cleanPrompt = sanitize(prompt).slice(0, 2000);
   const profileCtx = buildProfileContext(profile);
   const safeLabels = Array.isArray(existingTaskLabels)
@@ -323,6 +334,8 @@ ${labelsLine}${eventLine}${regenLine}`;
   if (!anthropicRes.ok) {
     const err = await anthropicRes.text();
     console.error(`Anthropic error: ${err}`);
+    // The user got nothing usable, so give the allowance back.
+    if (access.consumed) await refund('assist', userId);
     return new Response("Service error", { status: 502, headers: corsHeaders(req) });
   }
 
