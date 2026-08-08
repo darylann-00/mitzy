@@ -1,5 +1,20 @@
 import { supabase } from "../lib/supabase";
 
+// Whether the client should show paywall UI *before* the server says no — the
+// "use one of your free assists?" confirm and the pre-emptive Mitzy Pro screen.
+//
+// These must never appear while the server's PAYWALL_ENABLED kill switch is
+// off, or creating the subscriptions table alone would start nagging everyone.
+// The browser can't read a server env var, so it's mirrored here and the two
+// get flipped together. The window hook mirrors the existing
+// __MITZY_FAKE_CAL_TOKEN__ pattern so e2e can drive this without a rebuild.
+//
+// Reacting to a 402 is deliberately NOT gated on this: that response only
+// arrives when the server is genuinely enforcing.
+export const paywallActive = () =>
+  import.meta.env.VITE_PAYWALL_ENABLED === 'true' ||
+  (typeof window !== 'undefined' && window.__MITZY_PAYWALL__ === true);
+
 // Kicks off a hosted Stripe Checkout session and hands the browser over to it.
 //
 // Hosted Checkout (rather than Stripe Elements) is a deliberate choice: it's a

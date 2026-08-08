@@ -38,6 +38,10 @@ async function mockAssistEndpoints(page, { status, body }) {
 }
 
 async function signIn(page) {
+  // Mirrors the server's PAYWALL_ENABLED. Without it the client shows no
+  // pre-emptive paywall UI at all, which is exactly the point — the prompts
+  // stay invisible until the paywall is deliberately switched on.
+  await page.addInitScript(() => { window.__MITZY_PAYWALL__ = true; });
   await mockProfile(page);
   await mockCustomTasks(page);
   await mockTaskRecords(page);

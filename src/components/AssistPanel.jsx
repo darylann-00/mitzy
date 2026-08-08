@@ -6,6 +6,7 @@ import { saveS, ASSIST_CACHE_PREFIX, ASSIST_CACHE_TTL, ASSIST_CACHE_TTL_SEARCH }
 import { buildAssistPrompt, shouldUseSearch } from "../utils/assistPrompt";
 import { useProfileContext } from "../contexts/ProfileContext";
 import { UpgradeSheet } from "./UpgradeSheet";
+import { paywallActive } from "../utils/billing";
 import { supabase } from "../lib/supabase";
 
 // ─── Pulsing dot loader ────────────────────────────────────────────────────────
@@ -486,12 +487,13 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
     const hit = loadCache();
     if (hit) { setCached(hit); setResult(hit.data); setStatus('done'); return; }
     if (entitlement.loading) return; // don't decide before we know the plan
-    // `knownFree` — not `!isPro`. If the subscriptions row couldn't be read
-    // (table not migrated yet, RLS, offline) we know nothing, and must behave
-    // exactly as before the paywall existed: fetch, and let the server decide.
-    // Gating on a guess here would block people even with the server's
-    // PAYWALL_ENABLED kill switch off.
-    if (!entitlement.knownFree) { fetchResult(true); return; }
+    // Two independent conditions, both required. `paywallActive()` mirrors the
+    // server's kill switch, so merely creating the subscriptions table can't
+    // start prompting people. `knownFree` — not `!isPro` — means we actually
+    // read a row; if the read failed we know nothing and must behave exactly
+    // as before the paywall existed. Either way: fetch, and let the server
+    // decide, which is the only side that was ever authoritative.
+    if (!paywallActive() || !entitlement.knownFree) { fetchResult(true); return; }
     if (searchBacked) {
       // The monthly allowance never covers a live lookup, so say so here
       // rather than spending a round trip to be told.
