@@ -486,7 +486,12 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
     const hit = loadCache();
     if (hit) { setCached(hit); setResult(hit.data); setStatus('done'); return; }
     if (entitlement.loading) return; // don't decide before we know the plan
-    if (entitlement.isPro) { fetchResult(true); return; }
+    // `knownFree` — not `!isPro`. If the subscriptions row couldn't be read
+    // (table not migrated yet, RLS, offline) we know nothing, and must behave
+    // exactly as before the paywall existed: fetch, and let the server decide.
+    // Gating on a guess here would block people even with the server's
+    // PAYWALL_ENABLED kill switch off.
+    if (!entitlement.knownFree) { fetchResult(true); return; }
     if (searchBacked) {
       // The monthly allowance never covers a live lookup, so say so here
       // rather than spending a round trip to be told.
@@ -496,7 +501,7 @@ export const AssistPanel = memo(function AssistPanel({ task, onClose }) {
       return;
     }
     setStatus('confirm');
-  }, [entitlement.loading, entitlement.isPro, status]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [entitlement.loading, entitlement.knownFree, status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const cacheAgeHours = cached ? Math.floor((Date.now() - cached.ts) / (1000 * 60 * 60)) : null;
   const savedProviders = providerHistory[task.id] || [];
