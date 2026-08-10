@@ -42,3 +42,26 @@ export async function startCheckout() {
     return "Couldn't start checkout just now — try again in a moment.";
   }
 }
+
+// Opens the Stripe Billing Portal so a Mitzy Pro subscriber can update their
+// card or cancel. Same shape as startCheckout: resolves to an error string on
+// failure, or hands the browser to Stripe and resolves null.
+export async function openBillingPortal() {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) return 'Sign in first to manage your subscription.';
+
+  try {
+    const res = await fetch('/api/billing-portal', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return "Couldn't open billing settings just now — try again in a moment.";
+    const { url } = await res.json();
+    if (!url) return "Couldn't open billing settings just now — try again in a moment.";
+    window.location.assign(url);
+    return null;
+  } catch {
+    return "Couldn't open billing settings just now — try again in a moment.";
+  }
+}
