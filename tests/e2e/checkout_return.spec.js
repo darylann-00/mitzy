@@ -35,21 +35,35 @@ async function signInWithCheckoutParam(page, checkoutParam) {
   await mockCustomTasks(page);
   await mockTaskRecords(page);
   await seedReturnUser(page);
-  await page.goto(`/?checkout=${checkoutParam}`);
-  // loginWithDevCredentials reloads the *current* URL, so the query string
-  // set above survives the reload that actually establishes the session.
+
+  // Establish the session on a plain '/' load first, THEN navigate to the
+  // checkout URL as a separate goto. Doing it the other way around — goto
+  // the checkout URL, then loginWithDevCredentials's internal reload — mounts
+  // the app once *unauthenticated* on that first goto (useAuth's getSession()
+  // resolves quickly to no session, unblocking the app to render with
+  // user=null). App.js mounts and runs its cleanup effect on that premature
+  // mount too, stripping the checkout query string before the authenticated
+  // reload ever gets a chance to see it. In production this never happens —
+  // the user is already signed in throughout the Stripe round-trip — so the
+  // fix here is ordering the test to match that, not changing app code.
+  // addInitScript and page.route mocks both persist across this later goto.
+  await page.goto('/');
   await loginWithDevCredentials(page);
+  await page.goto(`/?checkout=${checkoutParam}`);
   await expect(page.getByText('Today', { exact: true }).first()).toBeVisible({ timeout: 15000 });
 }
 
 test('a successful checkout return settles on Mitzy Pro once the webhook lands, with no error', async ({ page }) => {
-  // First read (initial load) sees the free row from before checkout; the
-  // first backoff poll sees the row the webhook just flipped to pro. Setup
-  // itself (mocked routes, reload, waiting for the app to render) can eat
-  // more than the first 1s backoff delay, so by the time we start asserting
-  // the interim "unlocking" banner may already be gone — only the eventual
-  // settled state is timing-safe to assert on.
-  await mockPlanSequence(page, ['free', 'pro']);
+  // signInWithCheckoutParam does two real app mounts before the backoff loop
+  // ever starts — the authenticated reload of '/', then the fresh mount at
+  // the checkout-return URL itself — and useEntitlement's own initial fetch
+  // fires once per mount. Both of those reads should still see 'free' (the
+  // webhook hasn't landed yet); only the first *backoff poll*, a third read
+  // fired ~1s later from App.js's own effect, sees the row the webhook just
+  // flipped to pro. Setup itself can eat more than that 1s delay, so by the
+  // time we start asserting, the interim "unlocking" banner may already be
+  // gone — only the eventual settled state is timing-safe to assert on.
+  await mockPlanSequence(page, ['free', 'free', 'pro']);
 
   await signInWithCheckoutParam(page, 'success');
 
