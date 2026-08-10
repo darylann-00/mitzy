@@ -52,6 +52,22 @@ function SyncBanner({ loading, error }) {
   );
 }
 
+// ─── Post-checkout return banner ────────────────────────────────────────────────
+function CheckoutReturnBanner({ status }) {
+  if (!status) return null;
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 300,
+      background: '#1A5C3A', color: '#E8F5EE', fontSize: 12,
+      fontFamily: 'DM Sans, sans-serif', fontWeight: 600, textAlign: 'center', padding: '7px 16px',
+    }}>
+      {status === 'done'
+        ? "You're on Mitzy Pro!"
+        : 'Payment received — your Mitzy Pro features will unlock in a moment.'}
+    </div>
+  );
+}
+
 // ─── Bottom nav ────────────────────────────────────────────────────────────────
 function BottomDock({ view, setView, onAdd }) {
   const TodayIcon = ({ active }) => (
@@ -202,7 +218,7 @@ export default function Mitzy() {
 
 // ─── Inner app — consumes contexts ─────────────────────────────────────────────
 function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, signInWithPassword, welcomeChoice, setWelcomeChoice }) {
-  const { profile, taskLibrary, updateProfile, updateUiState, removeCustomTask, region, loading: profileLoading, syncError: profileSyncError, serverProfileChecked, serverProfileExists, lifeEvents } = useProfileContext();
+  const { profile, taskLibrary, updateProfile, updateUiState, removeCustomTask, region, loading: profileLoading, syncError: profileSyncError, serverProfileChecked, serverProfileExists, lifeEvents, entitlement } = useProfileContext();
   const { visibleTasks, taskState, setTaskState, setDisabledTasks, markDone, markNotApplicable, markNeeded, setIntervalOverride, setOneTimeOverride, setDueDate, setStepProgress, markScheduled, snoozeTask, unsnoozeTask, nextUpcomingTask, loading: tasksLoading, syncError: tasksSyncError } = useTaskContext();
   const { pendingCalendarMatches, dismissMatch } = useCalendarContext();
 
@@ -224,6 +240,49 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
   const [lifeEventIntake, setLifeEventIntake] = useState(null); // null | life event type key
   const [snoozePickerTask, setSnoozePickerTask] = useState(null);
   const nudgeState = profile.uiState?.lifeEventNudge ?? { discoveryDismissed: false, wrapupDismissed: {} };
+
+  // ─── Post-checkout return ───────────────────────────────────────────────────
+  // Stripe's success_url lands back on /app?checkout=success|cancelled. The URL
+  // sync effect below drives the address bar off auth/onboarding state (not
+  // routes), and while auth is still resolving it can call navigate() with a
+  // bare pathname — dropping the query string before this component would ever
+  // get a chance to read it. A useState initializer runs before any effect, so
+  // it's the only place guaranteed to see the param.
+  const [checkoutParam] = useState(() => new URLSearchParams(window.location.search).get('checkout'));
+  const [checkoutBanner, setCheckoutBanner] = useState(checkoutParam === 'success' ? 'unlocking' : null);
+
+  useEffect(() => {
+    if (!checkoutParam) return;
+    // The query string has done its job — drop it so a refresh doesn't restart
+    // the poll or resurface the banner.
+    window.history.replaceState(null, '', '/app');
+  }, [checkoutParam]);
+
+  useEffect(() => {
+    if (checkoutParam !== 'success') return;
+    const delaysMs = [1000, 2000, 3000, 5000, 8000, 13000];
+    let cancelled = false;
+    (async () => {
+      for (const delay of delaysMs) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+        if (cancelled) return;
+        const plan = await entitlement.refetch();
+        if (plan === 'pro') {
+          if (!cancelled) {
+            setCheckoutBanner('done');
+            setTimeout(() => { if (!cancelled) setCheckoutBanner(null); }, 4000);
+          }
+          return;
+        }
+      }
+      // Stripe's webhook is the source of truth and still hasn't landed — the
+      // next normal load will pick up the row once it does. Never show this as
+      // an error; just stop polling quietly.
+      if (!cancelled) setCheckoutBanner(null);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkoutParam]);
 
   // ─── Session (trickle + hazards) ───────────────────────────────────────────
   const { trickleTask, dismissTrickle, answerTrickle, pendingHazards, setPendingHazards } = useSession({ onboarded, profile, activeTasks: visibleTasks, taskState, tasksLoading, updateUiState });
@@ -472,7 +531,7 @@ function MitzyApp({ user, authError, signOut, sendMagicLink, signInWithGoogle, s
 
   return (
     <div style={{ background: '#FDFAF2', minHeight: '100vh' }}>
-      <SyncBanner loading={syncLoading} error={syncError} />
+      {checkoutBanner ? <CheckoutReturnBanner status={checkoutBanner} /> : <SyncBanner loading={syncLoading} error={syncError} />}
       <Overlays {...overlayProps} />
 
       {view === "home" && (

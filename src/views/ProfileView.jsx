@@ -10,6 +10,7 @@ import { LIFE_EVENT_DEFS } from "../data/lifeEvents";
 import { INSURANCE_PROVIDERS } from "../data/insuranceProviders";
 import { PROVIDER_TYPES } from "../data/providerTypes";
 import { supabase } from "../lib/supabase";
+import { startCheckout, openBillingPortal } from "../utils/billing";
 
 // ─── Car data (shared with SlimOnboarding) ─────────────────────────────────────
 const CAR_DATA = {
@@ -392,9 +393,11 @@ function LifeEventsIcon({ size = 16 }) {
 
 // ─── Main view ─────────────────────────────────────────────────────────────────
 export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTasks, user, onSignOut, onStartLifeEvent }) {
-  const { profile, providerHistory, updateProfile: onUpdateProfile, lifeEvents, saveProvider, updateProvider, removeProvider } = useProfileContext();
+  const { profile, providerHistory, updateProfile: onUpdateProfile, lifeEvents, saveProvider, updateProvider, removeProvider, entitlement } = useProfileContext();
   const { taskState } = useTaskContext();
   const { calGranted, connectCalendar } = useCalendarContext();
+  const [billingBusy,    setBillingBusy]    = useState(false);
+  const [billingError,   setBillingError]   = useState(null);
   const [confirmReset,   setConfirmReset]   = useState(false);
   const [resetting,      setResetting]      = useState(false);
   const [resetError,     setResetError]     = useState(null);
@@ -470,6 +473,17 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
   const vehicleLabel = profile.cars?.length ? profile.cars.join(', ') : (profile.car || null);
 
   const HAZARD_LABELS = { earthquake:'Earthquake', wildfire:'Wildfire', hurricane:'Hurricane', tornado:'Tornado', winter:'Winter Storm', flood:'Flooding' };
+
+  // Not gated on the paywall's client mirror (billing.js's paywallActive()) —
+  // that gate is for the pre-emptive nags tied to AI feature usage. This is
+  // plain account/plan info, and Daryl needs to be able to click through a
+  // real checkout to test it before PAYWALL_ENABLED is ever flipped on.
+  const handleBillingClick = async () => {
+    setBillingBusy(true);
+    setBillingError(null);
+    const message = entitlement.isPro ? await openBillingPortal() : await startCheckout();
+    if (message) { setBillingError(message); setBillingBusy(false); }
+  };
 
   return (
     <div style={{ background:'#FDFAF2' }}>
@@ -1182,6 +1196,35 @@ export function ProfileView({ onReset, onPreviewHazardTasks, onConfirmHazardTask
                 >
                   Connect
                 </button>
+              )}
+            </div>
+            <div style={{ padding:'13px 16px', borderBottom:'1px solid #F5F0E8' }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: billingError ? 8 : 0 }}>
+                <span style={S.rowLabel}>Plan</span>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{
+                    fontSize:12, fontWeight:700, fontFamily:'DM Sans, sans-serif', borderRadius:20, padding:'5px 12px',
+                    color: entitlement.isPro ? '#1A5C3A' : '#4A6256',
+                    background: entitlement.isPro ? '#E8F5EE' : '#F0EDE4',
+                  }}>
+                    {entitlement.isPro ? 'Mitzy Pro' : 'Free'}
+                  </span>
+                  <button
+                    disabled={billingBusy}
+                    onClick={handleBillingClick}
+                    style={{
+                      fontSize:12, fontWeight:700, fontFamily:'DM Sans, sans-serif', border:'none', borderRadius:20,
+                      padding:'5px 12px', cursor: billingBusy ? 'default' : 'pointer', opacity: billingBusy ? 0.7 : 1,
+                      color: entitlement.isPro ? '#1A5C3A' : '#fff',
+                      background: entitlement.isPro ? '#E8F5EE' : '#1A5C3A',
+                    }}
+                  >
+                    {billingBusy ? 'Opening…' : entitlement.isPro ? 'Manage subscription' : 'Get Mitzy Pro'}
+                  </button>
+                </div>
+              </div>
+              {billingError && (
+                <div style={{ fontSize:12, color:'#D62828', fontFamily:'DM Sans, sans-serif' }}>{billingError}</div>
               )}
             </div>
             <div style={{ padding:'13px 16px', borderBottom:'1px solid #F5F0E8' }}>

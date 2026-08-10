@@ -31,6 +31,7 @@
   <p><strong>Task data.</strong> We store your task records, completion dates, snooze dates, scheduled dates, custom tasks, weekly plans, and life-event data so Mitzy can track what's due and what's done.</p>
   <p><strong>Google Calendar data.</strong> If you grant calendar access, we read your upcoming calendar events (title, date/time, and description) to match them against your tasks (e.g., finding a vet appointment on your calendar). Event details are sent to Anthropic's Claude API for matching only and are not stored on our servers — we only save the confirmed date once you approve a match. If you choose to schedule a task, Mitzy creates a new calendar event on your behalf (e.g., adding "Oil change" to your calendar with a reminder); we never edit or delete events we didn't create, and we never touch events unrelated to a task you scheduled.</p>
   <p><strong>Location (zip code only).</strong> Your zip code is sent to FEMA's National Risk Index API to identify local natural hazards and suggest relevant preparation tasks. We do not collect precise geolocation.</p>
+  <p><strong>Billing information.</strong> If you subscribe to Mitzy Pro, our payment processor Stripe handles your payment details directly — we never receive or store your full card number. We store only your Stripe customer and subscription IDs and your subscription status (e.g. active, canceled) so we can manage your access to Mitzy Pro.</p>
   <p><strong>Usage data.</strong> We collect standard analytics such as pages visited, features used, and session duration to improve the app.</p>
 
   <h2>2. How We Use Your Information</h2>
@@ -59,6 +60,7 @@
     <li><strong>Anthropic (Claude)</strong> — AI-powered features</li>
     <li><strong>Google Places API</strong> — local provider recommendations</li>
     <li><strong>FEMA National Risk Index</strong> — hazard detection by zip code</li>
+    <li><strong>Stripe</strong> — payment processing for Mitzy Pro subscriptions</li>
   </ul>
 
   <h2>6. Data Sharing</h2>
@@ -69,6 +71,7 @@
     <li><strong>Google Calendar access</strong> is optional. If you decline, the app works without it.</li>
     <li><strong>Profile details</strong> are optional. You can skip onboarding questions.</li>
     <li><strong>Delete your data</strong> at any time from Profile → Account → Reset. This removes your Supabase records and clears local data.</li>
+    <li><strong>Manage or cancel Mitzy Pro</strong> at any time from Profile → Account → Manage subscription, which opens Stripe's billing portal.</li>
     <li><strong>Sign out</strong> at any time from Profile → Account.</li>
   </ul>
 
