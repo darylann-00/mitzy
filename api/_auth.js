@@ -29,7 +29,7 @@ export async function requireUser(req) {
     }
 
     const data = await res.json();
-    return { userId: data.id };
+    return { userId: data.id, email: data.email };
   } catch {
     return { error: new Response('Unauthorized', { status: 401 }) };
   }
