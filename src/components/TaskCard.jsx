@@ -7,13 +7,17 @@ export function formatDueDate(days, lastDone) {
   if (days < -14) {
     if (lastDone) {
       const date = new Date(lastDone);
-      return `Last done ${date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+      return `last done ${date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
     }
-    return "Hasn't been done in a while";
+    return "hasn't been done in a while";
   }
   if (days < 0) {
     const n = Math.abs(days);
-    return `due ${n} day${n !== 1 ? 's' : ''} ago`;
+    const dueDate = new Date(Date.now() + days * 86400000);
+    const weekday = dueDate.toLocaleDateString("en-US", { weekday: "long" });
+    if (n === 1) return 'due yesterday';
+    if (n <= 6) return `due ${weekday}`;
+    return `due last ${weekday}`;
   }
   if (days === 0) return 'due today';
   if (days <= 7)  return 'due this week';
@@ -23,8 +27,13 @@ export function formatDueDate(days, lastDone) {
 
 export function formatOkDate(days) {
   if (days === null || days === undefined) return '';
-  if (days <= 30) return formatDueDate(days);
-  return `good for ${Math.round(days / 30)} month${Math.round(days / 30) !== 1 ? 's' : ''}`;
+  if (days <= 13) return `good for ${days} more day${days !== 1 ? 's' : ''}`;
+  if (days <= 60) {
+    const n = Math.round(days / 7);
+    return `good for ${n} more week${n !== 1 ? 's' : ''}`;
+  }
+  const n = Math.round(days / 30);
+  return `good for ${n} more month${n !== 1 ? 's' : ''}`;
 }
 
 const BAR_COLOR = {
@@ -54,12 +63,12 @@ export function TaskCard({
   // Show scheduled date if status is scheduled
   if (status === 'scheduled' && task.scheduledDate) {
     const date = new Date(task.scheduledDate);
-    dueText = `Scheduled: ${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+    dueText = `scheduled for ${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
   }
 
   if (isSnoozed && task.snoozedUntil) {
     const date = new Date(task.snoozedUntil + 'T12:00:00');
-    dueText = `Snoozed until ${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+    dueText = `snoozed until ${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
   }
 
   return (
